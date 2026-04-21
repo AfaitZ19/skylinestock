@@ -310,6 +310,7 @@ body.admin .admin-only{display:inline-flex}
       <div class="scrd">
         <h3>🗑️ จัดการข้อมูล</h3>
         <button class="bfull bout2 admin-only" onclick="exportCSV()">📥 Export CSV ประวัติ</button>
+        <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">🔤 จัดเรียง Device Sheet A-Z</button>
         <button class="bfull bout2 admin-only" onclick="changeApiUrl()">🔗 เปลี่ยน API URL</button>
         <p id="roleNote" style="font-size:11px;color:var(--mu);margin-top:6px;text-align:center"></p>
       </div>
@@ -506,7 +507,7 @@ async function doSetup() {
 
   if (!url) { showSetupErr('กรุณาใส่ Apps Script URL'); return; }
   if (!user) { showSetupErr('กรุณาใส่ชื่อผู้ใช้'); return; }
-  const loginRes = await apiFetch(url + '?action=login&user=' + encodeURIComponent(user) + '&pass=' + encodeURIComponent(pass));
+  const loginRes = await apiPost({ action:'login', user, pass }, url);
   if (!loginRes.ok) { showSetupErr(loginRes.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
 
   errEl.style.display = 'none';
@@ -536,6 +537,7 @@ async function doSetup() {
   toast('✅ เชื่อมต่อ Sheet สำเร็จ', 'ok');
   setPill('ok');
   await loadAll();
+  _lastSyncTime = Date.now();
   const rn = document.getElementById('roleNote');
   if (rn) rn.textContent = CUR_ROLE === 'admin'
     ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
@@ -576,8 +578,8 @@ async function apiFetch(url) {
   return r.json();
 }
 
-async function apiPost(body) {
-  const r = await fetch(API_URL, {
+async function apiPost(body, url) {
+  const r = await fetch(url || API_URL, {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1196,9 +1198,14 @@ function confirmQuickOut() {
   closeModal();
   if (!item) return;
 
+  // ใช้ out_by_id สำหรับ mask/accessory เพราะทราบ _sheetRow แน่นอน → แม่นยำกว่า
+  // Device ใช้ action=out ตาม SN เพราะ sortDeviceSheet อาจเปลี่ยน row index หลังจ่ายออก
+  const useById = item._sheetRow && item._type !== 'device';
+
   const payload = {
-    action: 'out',
+    action: useById ? 'out_by_id' : 'out',
     type: item._type,
+    ...(useById ? { sheetRow: item._sheetRow } : {}),
     name: item['Product Name'] || '',
     brand: item['Brand'] || '',
     model: item['Model'] || '',
@@ -1244,7 +1251,7 @@ function updateStats() {
   const WARN_DAYS = 90, LOW_QTY = 3;
   let alerts = 0;
   [...CACHE.mask, ...CACHE.accessory].forEach(it => {
-    if (Number(it['Qty'] || 1) <= LOW_QTY) alerts++;
+    if (Number(it['Qty'] || 0) <= LOW_QTY) alerts++;
     const expRaw = it['Expiry'] || it['Expiry Date'] || '';
     if (expRaw) {
       const parts = String(expRaw).split('/');
@@ -1303,7 +1310,7 @@ function renderStock() {
     const lot   = it['LOT Number'] || '-';
     const gtin  = it['GTIN / Barcode'] || '-';
     const sn    = it['Serial Number (SN)'] || '-';
-    const qty   = Number(it['Qty'] || 1);
+    const qty   = Number(it['Qty'] || 0);
     const loc   = it['Location'] || it['Location / Hospital'] || '-';
     const expRaw = it['Expiry'] || it['Expiry Date'] || '';
 
@@ -1326,7 +1333,7 @@ function renderStock() {
     }
 
     // Low stock alert
-    const lowBadge = (it._type !== 'device' && qty <= LOW_QTY)
+    const lowBadge = (it._type !== 'device' && Number(it['Qty'] || 0) <= LOW_QTY)
       ? `<span class="badge-low">สต็อกต่ำ (${qty})</span>` : '';
 
     return `
@@ -1359,9 +1366,9 @@ function renderStock() {
   });
 }
 
-function renderHist(append) {
+function renderHist(append, items) {
   const list = document.getElementById('hiList');
-  const items = CACHE.history || [];
+  items = items || CACHE.history || [];
 
   if (!items.length && !append) {
     list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>ยังไม่มีประวัติ</div></div>`;
@@ -1402,12 +1409,9 @@ async function loadMoreHist() {
     if (!res.ok) throw new Error(res.error);
     const more = res.history || [];
 
-    // เก็บ cache เดิมไว้ก่อน render เฉพาะรายการใหม่ แล้วสะสม
-    const prevHistory = CACHE.history;
-    CACHE.history = more;
-    renderHist(true);
-    // สะสม history ทั้งหมดไว้ใน cache (loadAll จะ reset เองด้วย HIST_OFFSET = 0)
-    CACHE.history = prevHistory.concat(more);
+    // concat ก่อนแล้วค่อย render เฉพาะรายการใหม่ ป้องกัน cache ผิดชั่วคราว
+    CACHE.history = CACHE.history.concat(more);
+    renderHist(true, more);
 
     if (more.length < HIST_PAGE) document.getElementById('hiMore').style.display = 'none';
   } catch(e) {
@@ -1448,6 +1452,22 @@ function escapeHtml(str) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#039;');
+}
+
+async function sortDeviceSheetNow() {
+  if (!API_URL) { toast('ยังไม่ได้เชื่อมต่อ API', 'warn'); return; }
+  toast('⏳ กำลังจัดเรียง...', 'ok');
+  setPill('busy');
+  try {
+    const res = await apiPost({ action: 'sort', user: CUR_USER });
+    if (!res.ok) throw new Error(res.error || 'API error');
+    toast('✅ จัดเรียง Device Sheet A-Z แล้ว', 'ok');
+    setPill('ok');
+    await loadAll();  // รีโหลด cache ให้ตรงกับ Sheet
+  } catch(e) {
+    setPill('err');
+    toast('❌ ' + e.message, 'err');
+  }
 }
 
 async function exportCSV() {
