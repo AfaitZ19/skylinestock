@@ -406,10 +406,35 @@ function focusManualInput() {
   document.getElementById('mc').focus();
 }
 
+/* ── ตรวจจับและถอดรหัส Alt-code decimal input ─────────────────
+ *  บาง BT scanner (เช่น YK2870BGD) ส่งอักขระผ่าน Windows Alt code:
+ *  `0` → Alt+0048 → ถ้า Alt หาย → ส่งตัวเลข `4` `8` แทน
+ *  ผลคือ "010695894998..." กลายเป็น "484948545753565752575756..."
+ *  ── เงื่อนไขในการ detect: all digits, even length, ทุก pair อยู่ใน printable ASCII ──
+ * ──────────────────────────────────────────────────────────────*/
+function decodeAltCodeIfNeeded(s) {
+  if (!s || s.length < 4 || s.length % 2 !== 0) return s;
+  if (!/^\d+$/.test(s)) return s;          // ต้องเป็นตัวเลขทั้งหมด
+  let decoded = '';
+  for (let i = 0; i < s.length; i += 2) {
+    const code = parseInt(s.substr(i, 2), 10);
+    // ยอมรับ GS (29 = \x1D) สำหรับ GS1-128 field separator
+    // และ printable ASCII (32-126) เท่านั้น
+    if (code !== 29 && (code < 32 || code > 126)) return s;
+    decoded += String.fromCharCode(code);
+  }
+  // ผลลัพธ์ต้องขึ้นต้นด้วย GS1 AI (digit) หรือ parenthesized format
+  if (/^[\d(]/.test(decoded) && decoded.length >= 6) return decoded;
+  return s;
+}
+
 function processScannerText(text) {
   // trim แค่ whitespace ด้านนอก แต่คง GS (0x1D) ไว้ทั้งหมด
-  const code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
+  let code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
+
+  // ถอดรหัส Alt-code ถ้าตรวจพบ
+  code = decodeAltCodeIfNeeded(code);
   if (IS_PROCESSING) return;
 
   parseCode(code);
@@ -485,7 +510,7 @@ function setupHidScanner() {
         processScannerText(code);
       }
       focusHidInput();
-    }, 250);
+    }, 800);  // 800ms รองรับ Alt-code BT scanner ที่ส่งข้อมูลช้า
   });
 
   document.addEventListener('click', () => {
