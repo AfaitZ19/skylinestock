@@ -693,7 +693,10 @@ const _GS1F = {
 const _GS1V = new Set(['10','21','22','30','37',
   '240','241','250','251','400','401','410','411','412','413','414','415','416',
   '420','421','422','7001','8002','8003','8004','8005','8006','8007','8008',
-  '8010','8011','8012','8013','8020']);
+  '8010','8011','8012','8013','8020',
+  // GS1 company-specific (91-99) — ต้อง consume ทิ้งเพื่อไม่ให้ content ใน AI 91 (เช่น C.03.05.01...)
+  // ถูกอ่านผิดว่าเป็น AI 01 (GTIN) ซ้ำอีกรอบ
+  '91','92','93','94','95','96','97','98','99']);
 
 /* ── ฟังก์ชันหลัก ──────────────────────────────────────── */
 function gs1Decode(raw) {
@@ -784,10 +787,17 @@ function _gs1Scan(s, out) {
 function _gs1VarEnd(s, from) {
   const MIN_VAL = 2;
   const NEXT = [
-    { ai:'10', ok: a => /^[A-Z0-9][A-Z0-9\-]/.test(a) },   // lot ขึ้นต้นด้วยตัวอักษรหรือตัวเลขก็ได้
+    // ── AI 10 (LOT) / AI 21 (SN): ค่าต้องขึ้นต้นด้วยตัวอักษรเท่านั้น ──────────────
+    // เหตุผล: lot ของ Beyond เช่น "BY-C2603R20I109" มีลำดับ "10" ฝังอยู่
+    // ถ้า ok รับตัวเลขได้ด้วย → parser จะตัด lot ผิดตรง "10" ใน "R20I109"
+    { ai:'10', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
     { ai:'11', ok: a => /^\d{6}/.test(a) },
     { ai:'17', ok: a => /^\d{6}/.test(a) },
-    { ai:'21', ok: a => /^[A-Z0-9][A-Z0-9\-]/.test(a) },   // SN ขึ้นต้นด้วยตัวอักษรหรือตัวเลขก็ได้
+    { ai:'21', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
+    // ── AI 91/92 (GS1 company-specific) — ใช้เป็น boundary ท้าย label ───────────
+    // AI 91/92 ต้องตามด้วยตัวอักษร (ป้องกัน "91" ใน SN เช่น "CEEC3C00419" ถูกอ่านผิด)
+    { ai:'91', ok: a => /^[A-Z]/.test(a) },
+    { ai:'92', ok: a => /^[A-Z]/.test(a) },
   ];
   for (let j = from + MIN_VAL; j < s.length - 1; j++) {
     for (const { ai, ok } of NEXT) {
@@ -857,7 +867,8 @@ function parseCode(raw) {
     const plain = key.replace(/\x1D/g,'');
     if (plain.startsWith('BY-') || /^[A-Z]{2}-/.test(plain)) {
       d.lot = _gs1NormLot(plain);
-    } else if (/^\d{14}$/.test(plain)) {
+    } else if (/^\d{12,14}$/.test(plain)) {
+      // EAN-8/12/13/14 → ตีความเป็น GTIN (ไม่ใช่ SN)
       d.gtin = plain.replace(/^0+/,'');
     } else {
       d.sn = plain;
@@ -903,8 +914,12 @@ const _LOT_RULES = [
   { test: l => l.includes('NM5A'), type:'mask',      model:'EaseFit NM5A', name:'Beyond EaseFit NM5A', brand:'Hunan Beyond' },
   { test: l => l.includes('NM5'),  type:'mask',      model:'EaseFit NM5',  name:'Beyond EaseFit NM5',  brand:'Hunan Beyond' },
   { test: l => l.includes('PMI'),  type:'mask',      model:'EaseFit PMI',  name:'Beyond EaseFit PMI',  brand:'Hunan Beyond' },
-  { test: l => l.includes('R20'),  type:'device',    model:'R-20i',        name:'Beyond R-20i CPAP',   brand:'Hunan Beyond' },
-  { test: l => l.includes('SPO2'), type:'accessory', model:'SpO2 Kit',     name:'Beyond SpO2 Kits',    brand:'Hunan Beyond' },
+  // Breathing Tube HP1 — ตรวจจาก lot ที่มี HP (BY-C????HP หรือ HP1) → ต้องมาก่อน R20 เพราะ R20I อาจมี HP
+  { test: l => /HP\d*$/.test(l) || l.includes('HP1'), type:'accessory', model:'HP1', name:'Breathing Tube HP1', brand:'Hunan Beyond' },
+  { test: l => l.includes('R30F107') || l.includes('R30F'), type:'device', model:'R-30F', name:'Beyond R-30F BPAP',   brand:'Hunan Beyond' },
+  { test: l => l.includes('R25V'),  type:'device',    model:'R-25V',        name:'Beyond R-25V BPAP',   brand:'Hunan Beyond' },
+  { test: l => l.includes('R20'),   type:'device',    model:'R-20i',        name:'Beyond R-20i CPAP',   brand:'Hunan Beyond' },
+  { test: l => l.includes('SPO2'),  type:'accessory', model:'SpO2 Kit',     name:'Beyond SpO2 Kits',    brand:'Hunan Beyond' },
 ];
 
 const _SIZE_RULES = [
