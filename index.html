@@ -823,7 +823,9 @@ function _gs1NormLot(lot) {
 
 function _gs1Fmt6(s) {
   if (!s || !/^\d{6}$/.test(s)) return s || '';
-  return '20' + s.slice(0,2) + '-' + s.slice(2,4) + '-' + s.slice(4,6);
+  const day = s.slice(4,6);
+  if (day === '00') return '20' + s.slice(0,2) + '-' + s.slice(2,4);  // Beyond ใส่ 00 = ไม่ระบุวัน
+  return '20' + s.slice(0,2) + '-' + s.slice(2,4) + '-' + day;
 }
 
 // ใช้งานได้ทั้งจาก lookup() และภายนอก
@@ -903,7 +905,36 @@ function lookup(d) {
     if (p.lot_pfx && lot.startsWith(p.lot_pfx)) return p;
   }
 
+  // ── APEX GTIN-based lookup (before generic inferFromLot) ─────────────────
+  if (gtinRaw) {
+    const apexMatch = _apexGtinLookup(gtinRaw);
+    if (apexMatch) return apexMatch;
+  }
+
   return inferFromLot(lot);
+}
+
+/* ── APEX GTIN prefix map ──────────────────────────────────────────────────
+ * GTIN-13 ของ APEX SS series: 471302500 [3-digit product code] [check]
+ * ตาม UDI Type 2 (shipped after 2023/6/1)
+ * ─────────────────────────────────────────────────────────────────────── */
+const _APEX_GTIN_PRODUCTS = {
+  // XT / iX series
+  '007': { name:'APEX XT Auto',                type:'device',     model:'XT Auto',            brand:'APEX Medical' },
+  '022': { name:'APEX iX Auto Humidifier',     type:'device',     model:'iX Auto Humidifier', brand:'APEX Medical' },
+  '040': { name:'APEX iX Auto',                type:'device',     model:'iX Auto',            brand:'APEX Medical' },
+  // Domus 1 G2 series (SS – Airway Clearance)
+  '100': { name:'APEX Domus 1 G2 Pump',        type:'device',     model:'Domus 1 G2 Pump',    brand:'APEX Medical' },
+  '101': { name:'APEX Domus 1 G2 Mattress',    type:'accessory',  model:'Domus 1 G2 Mattress',brand:'APEX Medical' },
+  // เพิ่มเติมตาม product code ที่พบในอนาคต (ดูจาก 3 หลักหลัง 4713025 ใน GTIN-13)
+};
+
+function _apexGtinLookup(gtinRaw) {
+  // APEX SS: GTIN ขึ้นต้นด้วย 4713025 (13 หลัก) หรือ 14713025 (14 หลัก)
+  const g = gtinRaw.replace(/^1(?=4713025)/, '');  // normalize 14-digit → 13-digit
+  if (!g.startsWith('4713025') || g.length !== 13) return null;
+  const code = g.slice(7, 10);  // 3-digit product code ตำแหน่ง 7-9
+  return _APEX_GTIN_PRODUCTS[code] || { name:'APEX Device ('+code+')', type:'device', model:'', brand:'APEX Medical' };
 }
 
 // ── Lookup tables สำหรับ inferFromLot (maintainable แทน if-else chain) ──────
@@ -920,12 +951,14 @@ const _LOT_RULES = [
   { test: l => l.includes('R25V'),  type:'device',    model:'R-25V',        name:'Beyond R-25V BPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('R20'),   type:'device',    model:'R-20i',        name:'Beyond R-20i CPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('SPO2'),  type:'accessory', model:'SpO2 Kit',     name:'Beyond SpO2 Kits',    brand:'Hunan Beyond' },
+  // APEX LOT format: FFYYMMNNNN — 2 letters (factory) + YY + MM (01-12) + 4-digit seq
+  { test: l => /^[A-Z]{2}\d{2}(0[1-9]|1[0-2])\d{4}$/.test(l), type:'device', model:'', name:'APEX Device', brand:'APEX Medical' },
 ];
 
 const _SIZE_RULES = [
-  { test: l => l.includes('NM5AL') || l.includes('NM6AL') || l.includes('NM6L') || (/L$/.test(l) && !l.endsWith('LOT')), size:'L' },
-  { test: l => l.includes('NM5AM') || l.includes('NM6AM') || /M$/.test(l), size:'M' },
-  { test: l => l.includes('NM5AS') || l.includes('NM6AS') || /S$/.test(l), size:'S' },
+  { test: l => l.includes('NM5AL') || l.includes('NM6AL') || l.includes('NM6L') || l.includes('NM5L') || (/L$/.test(l) && !l.endsWith('LOT')), size:'L' },
+  { test: l => l.includes('NM5AM') || l.includes('NM6AM') || l.includes('NM6M') || l.includes('NM5M') || /M$/.test(l), size:'M' },
+  { test: l => l.includes('NM5AS') || l.includes('NM6AS') || l.includes('NM6S') || l.includes('NM5S') || /S$/.test(l), size:'S' },
 ];
 
 const _REF_RULES = [
