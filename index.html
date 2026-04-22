@@ -334,6 +334,7 @@ body.admin .admin-only{display:inline-flex}
     <div class="modal-hd">🔺 จ่ายออก</div>
     <div class="modal-sub" id="modalItemName">—</div>
     <input type="text" id="modalWho" placeholder="จ่ายให้เซลล์คนไหน? เช่น Mint, Ploy">
+    <input type="number" id="modalQty" placeholder="จำนวน (ชิ้น)" min="1" max="9999" value="1" style="display:none">
     <div class="modal-row">
       <button class="mbtn-cancel" onclick="closeModal()">ยกเลิก</button>
       <button class="mbtn-confirm" onclick="confirmQuickOut()">✅ ยืนยัน</button>
@@ -472,10 +473,10 @@ function setupHidScanner() {
   el.addEventListener('keydown', (e) => {
     if (!HID_ENABLED) return;
 
-    // Enter = จบ barcode → ประมวลผลทันที
-    if (e.key === 'Enter') {
+    // Enter หรือ LF (Line Feed) = จบ barcode → ประมวลผลทันที
+    if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
       e.preventDefault();
-      const code = hidBuf || el.value;
+      const code = (hidBuf + el.value).trim();  // ← fix: ต้องต่อกัน ไม่ใช่ ||
       hidBuf = '';
       clearHidInput();
       clearTimeout(hidBufferTimer);
@@ -502,6 +503,17 @@ function setupHidScanner() {
     if (!HID_ENABLED) return;
 
     clearTimeout(hidBufferTimer);
+
+    // ถ้า value มี LF (\n) = scanner ส่ง suffix LF → ประมวลผลทันที
+    if (el.value.includes('\n')) {
+      const code = (hidBuf + el.value).replace(/\n/g, '').trim();
+      hidBuf = '';
+      clearHidInput();
+      if (code) processScannerText(code);
+      focusHidInput();
+      return;
+    }
+
     hidBufferTimer = setTimeout(() => {
       const code = hidBuf + el.value;
       if (code && code.replace(/\x1D/g,'').length >= 4) {
@@ -573,6 +585,8 @@ async function doSetup() {
 function signOut() {
   CUR_USER = '';
   LAST = null;
+  clearTimeout(_bgSyncTimer);
+  _bgSyncTimer = null;
   stopScannerOnly();
   document.getElementById('scApp').classList.remove('on');
   document.getElementById('scSetup').classList.add('on');
@@ -759,19 +773,21 @@ function _gs1Scan(s, out) {
 
 /* ── หาจุดสิ้นสุดของ variable field เมื่อไม่มี GS ───────────
  *  จำกัดให้มองหาเฉพาะ AI ที่สมเหตุสมผลหลัง variable field:
- *  10 (LOT)  → ตามด้วย [A-Z0-9\-]{2,}
+ *  10 (LOT)  → ตามด้วยตัวอักษรก่อน (e.g. BY-, C-) ไม่ใช่ตัวเลข
  *  11 (MFG)  → ตามด้วย \d{6} เท่านั้น
  *  17 (EXP)  → ตามด้วย \d{6} เท่านั้น
- *  21 (SN)   → ตามด้วย [A-Z0-9\-]{2,}
+ *  21 (SN)   → ตามด้วยตัวอักษรก่อน ไม่ใช่ตัวเลข
  *  ไม่รวม 00/01 เพราะอาจปรากฏเป็นส่วนหนึ่งของข้อมูล field ได้
+ *  NOTE: AI 10/21 ต้องขึ้นต้นด้วยตัวอักษร เพื่อป้องกัน "10" ที่อยู่ใน
+ *        lot value เช่น "R20I1099" ถูกตีความผิดว่าเป็น AI boundary
  * ──────────────────────────────────────────────────────────*/
 function _gs1VarEnd(s, from) {
   const MIN_VAL = 2;
   const NEXT = [
-    { ai:'10', ok: a => /^[A-Z0-9\-]{2}/.test(a) },
+    { ai:'10', ok: a => /^[A-Z0-9][A-Z0-9\-]/.test(a) },   // lot ขึ้นต้นด้วยตัวอักษรหรือตัวเลขก็ได้
     { ai:'11', ok: a => /^\d{6}/.test(a) },
     { ai:'17', ok: a => /^\d{6}/.test(a) },
-    { ai:'21', ok: a => /^[A-Z0-9\-]{2}/.test(a) },
+    { ai:'21', ok: a => /^[A-Z0-9][A-Z0-9\-]/.test(a) },   // SN ขึ้นต้นด้วยตัวอักษรหรือตัวเลขก็ได้
   ];
   for (let j = from + MIN_VAL; j < s.length - 1; j++) {
     for (const { ai, ok } of NEXT) {
@@ -786,8 +802,12 @@ function _gs1VarEnd(s, from) {
 function _gs1NormLot(lot) {
   if (!lot) return '';
   lot = String(lot).toUpperCase().replace(/\s/g,'');
-  const i = lot.indexOf('BY-');
-  if (i !== -1) return lot.substring(i);
+  const idx = lot.indexOf('BY-');
+  if (idx !== -1) {
+    // ตัด catalog suffix เช่น "1C.03.05.01.03.000002" ที่ต่อท้าย lot
+    // ใช้ \dC(?:\.\d+){4,} เพื่อ match รูปแบบ "1C.03.05.01.03.000002" (≥4 groups)
+    return lot.substring(idx).replace(/\dC(?:\.\d+){4,}.*$/, '').trim();
+  }
   return lot.replace(/^\d{10,}/, '').replace(/C\.\d+(?:\.\d+)+/g,'').trim();
 }
 
@@ -1084,7 +1104,9 @@ function _patchCache(action, b) {
     } else {
       const arr = type === 'mask' ? CACHE.mask : CACHE.accessory;
       const hit = arr.find(x =>
-        _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '')
+        _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '') &&
+        (x['Product Name'] || '') === (b.name || '') &&
+        (type !== 'mask' || (x['Size'] || '') === (b.size || ''))
       );
       if (hit) {
         hit['Qty'] = Math.max(0, (Number(hit['Qty']) || 0) - qty);
@@ -1206,6 +1228,13 @@ function quickOut(item) {
   document.getElementById('modalItemName').textContent =
     (item['Product Name'] || '-') + (item['Brand'] ? ' · ' + item['Brand'] : '');
   document.getElementById('modalWho').value = '';
+  // แสดงช่อง qty เฉพาะ mask/accessory (device ออกได้แค่ทีละ 1 เครื่อง)
+  const isAgg = item._type === 'mask' || item._type === 'accessory';
+  const qtyEl = document.getElementById('modalQty');
+  qtyEl.style.display = isAgg ? 'block' : 'none';
+  qtyEl.value = '1';
+  const maxQty = isAgg ? Number(item['Qty'] || 1) : 1;
+  qtyEl.max = maxQty;
   document.getElementById('quickOutModal').classList.add('on');
   setTimeout(() => document.getElementById('modalWho').focus(), 80);
 }
@@ -1227,6 +1256,12 @@ function confirmQuickOut() {
   // Device ใช้ action=out ตาม SN เพราะ sortDeviceSheet อาจเปลี่ยน row index หลังจ่ายออก
   const useById = item._sheetRow && item._type !== 'device';
 
+  const isAgg = item._type === 'mask' || item._type === 'accessory';
+  const _parsedQty = parseInt(document.getElementById('modalQty').value || '1', 10);
+  const outQty = isAgg
+    ? Math.min(Number(item['Qty'] || 1), Math.max(1, isNaN(_parsedQty) ? 1 : _parsedQty))
+    : 1;
+
   const payload = {
     action: useById ? 'out_by_id' : 'out',
     type: item._type,
@@ -1240,7 +1275,7 @@ function confirmQuickOut() {
     gtin: item['GTIN / Barcode'] || '',
     location: who,
     note: 'quick out from stock card',
-    qty: 1,
+    qty: outQty,
     user: CUR_USER
   };
 
