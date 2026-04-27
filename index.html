@@ -360,6 +360,9 @@ let HID_ENABLED = false;
 let hidBufferTimer = null;
 let HID_BUFFER = '';
 let HID_AUTO_RESUME = false;
+// ปิดการถอดรหัส Alt-code ฝั่งเว็บเป็นค่าเริ่มต้น
+// เพื่อหลีกเลี่ยงการถอดผิดและทำให้ข้อมูลเพี้ยน
+const WEB_ALT_DECODE_ENABLED = false;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -487,12 +490,8 @@ function processScannerText(text) {
   }
 
   if (MODE === 'out') {
-    const loc = document.getElementById('locI')?.value.trim();
-    if (loc) {
-      setTimeout(() => {
-        if (LAST === scannedItem && !IS_PROCESSING) doAct('out');
-      }, 80);
-    }
+    // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
+    toast('สแกนสำเร็จ — ตรวจสอบข้อมูลแล้วกด 🔺 จ่ายออก', 'warn');
   }
 }
 
