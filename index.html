@@ -471,9 +471,11 @@ function processScannerText(text) {
   let code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // ถอดรหัส Alt-code ถ้าตรวจพบ
-  code = decodeAltCodeIfNeeded(code);
-  if (IS_PROCESSING) return;
+  // ถอดรหัส Alt-code เฉพาะเมื่อเปิดใช้งานเท่านั้น
+  // (ค่าเริ่มต้นปิด เพื่อลด false decode)
+  if (WEB_ALT_DECODE_ENABLED) {
+    code = decodeAltCodeIfNeeded(code);
+  }
 
   parseCode(code);
 
