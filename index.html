@@ -515,7 +515,9 @@ function setupHidScanner() {
       return;
     }
 
-    if (e.keyCode === 29 || e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
+    // บาง browser รายงาน keyCode เพี้ยนได้ จึงไม่ใช้ keyCode===29 แล้ว
+    // รับ GS เฉพาะกรณีที่ระบุได้ชัดเจนเท่านั้น
+    if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
       e.preventDefault();
       HID_BUFFER += el.value + '\x1D';
       clearHidInput();
