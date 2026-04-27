@@ -358,6 +358,8 @@ const HIST_PAGE = 50;
 
 let HID_ENABLED = false;
 let hidBufferTimer = null;
+let HID_BUFFER = '';
+let HID_AUTO_RESUME = false;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -401,23 +403,43 @@ function disableHIDMode(focusMc = true) {
   if (focusMc) document.getElementById('mc')?.focus();
 }
 
-function toggleHIDMode() {
-  HID_ENABLED = !HID_ENABLED;
+function enableHIDMode(showToast = false) {
+  HID_ENABLED = true;
   const btn = document.getElementById('hidToggleBtn');
-  if (HID_ENABLED) {
+  if (btn) {
     btn.classList.add('on');
     btn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
-    setTimeout(focusHidInput, 50);
-    toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
-  } else {
+  }
+  if (showToast) toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
+  setTimeout(focusHidInput, 50);
+}
+
+function tryAutoResumeHID() {
+  if (!HID_AUTO_RESUME || HID_ENABLED) return;
+  const ae = document.activeElement;
+  const tag = (ae?.tagName || '').toLowerCase();
+  const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea');
+  if (isTypingField) return;
+  HID_AUTO_RESUME = false;
+  enableHIDMode(true);
+}
+
+function toggleHIDMode() {
+  if (HID_ENABLED) {
+    HID_AUTO_RESUME = false;
     disableHIDMode(true);
     toast('ปิดโหมดเครื่องยิงแล้ว', 'ok');
+  } else {
+    HID_AUTO_RESUME = false;
+    enableHIDMode(true);
   }
 }
 
 function focusManualInput() {
+  HID_AUTO_RESUME = false;
   disableHIDMode(true);
 }
+
 
 /* ── ตรวจจับและถอดรหัส Alt-code decimal input ─────────────────
  *  บาง BT scanner (เช่น YK2870BGD) ส่งอักขระผ่าน Windows Alt code:
@@ -563,7 +585,7 @@ async function doSetup() {
   setPill('busy');
 
   try {
-    const r = await apiFetch(url + '?action=ping');
+    const r = await apiFetch(buildApiUrl(url, { action:'ping' }));
     if (!r.ok) throw new Error(r.error || 'API error');
   } catch(e) {
     showSetupErr('เชื่อมต่อ API ไม่ได้: ' + e.message);
@@ -591,12 +613,13 @@ async function doSetup() {
   if (rn) rn.textContent = CUR_ROLE === 'admin'
     ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
     : '🔒 Stock User — ทำได้เฉพาะรับเข้า/จ่ายออก';
-  document.getElementById('mc').focus();
+  enableHIDMode(false); // เปิด HID อัตโนมัติหลัง login
 }
 
 function signOut() {
   CUR_USER = '';
   LAST = null;
+  HID_AUTO_RESUME = false;
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = null;
   stopScannerOnly();
@@ -625,8 +648,26 @@ async function apiFetch(url) {
     // Network/CORS error บน attempt แรก → retry โดยไม่ใช้ credentials
     r = await fetch(url, { redirect:'follow', credentials:'omit' });
   }
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
+}
+
+function buildApiUrl(base, params = {}) {
+  try {
+    const u = new URL(base);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
+    });
+    return u.toString();
+  } catch {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => [k, String(v)])
+    ).toString();
+    if (!qs) return base;
+    return base + (base.includes('?') ? '&' : '?') + qs;
+  }
 }
 
 async function apiPost(body, url) {
@@ -647,10 +688,10 @@ async function loadAll() {
   HIST_OFFSET = 0;
   try {
     const [stock, hist, prods] = await Promise.all([
-      apiFetch(API_URL + '?action=stock'),
-      apiFetch(API_URL + `?action=history&n=${HIST_PAGE}&offset=0`),
-      CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})
-                             : apiFetch(API_URL + '?action=products'),
+      apiFetch(buildApiUrl(API_URL, { action:'stock' })),
+      apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
+      CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})␊
+                             : apiFetch(buildApiUrl(API_URL, { action:'products' })),
     ]);
 
     if (!stock.ok) throw new Error(stock.error);
@@ -1091,6 +1132,7 @@ function showResult(d) {
 
 function resetScan() {
   LAST = null;
+  HID_AUTO_RESUME = false;
   clearScanDedup();
   HID_BUFFER = '';
   clearTimeout(hidBufferTimer);
@@ -1529,7 +1571,7 @@ function renderHist(append, items) {
 async function loadMoreHist() {
   HIST_OFFSET += HIST_PAGE;
   try {
-    const res = await apiFetch(API_URL + `?action=history&n=${HIST_PAGE}&offset=${HIST_OFFSET}`);
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:HIST_OFFSET }));
     if (!res.ok) throw new Error(res.error);
     const more = res.history || [];
 
@@ -1599,7 +1641,7 @@ async function exportCSV() {
   toast('⏳ กำลัง export...', 'ok');
   try {
     // ดึงประวัติทั้งหมด (สูงสุด 9999 รายการ) ไม่ใช้แค่ cache หน้าปัจจุบัน
-    const res = await apiFetch(API_URL + '?action=history&n=9999&offset=0');
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:9999, offset:0 }));
     if (!res.ok) throw new Error(res.error);
     const items = res.history || [];
     if (!items.length) { toast('ยังไม่มีประวัติให้ export', 'warn'); return; }
