@@ -383,6 +383,24 @@ function clearHidInput() {
   if (el) el.value = '';
 }
 
+function clearScanDedup() {
+  LAST_SCAN_TEXT = '';
+  LAST_SCAN_TIME = 0;
+}
+
+function disableHIDMode(focusMc = true) {
+  HID_ENABLED = false;
+  const btn = document.getElementById('hidToggleBtn');
+  if (btn) {
+    btn.classList.remove('on');
+    btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
+  }
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
+  if (focusMc) document.getElementById('mc')?.focus();
+}
+
 function toggleHIDMode() {
   HID_ENABLED = !HID_ENABLED;
   const btn = document.getElementById('hidToggleBtn');
@@ -392,19 +410,13 @@ function toggleHIDMode() {
     setTimeout(focusHidInput, 50);
     toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
   } else {
-    btn.classList.remove('on');
-    btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
-    document.getElementById('mc').focus();
+    disableHIDMode(true);
     toast('ปิดโหมดเครื่องยิงแล้ว', 'ok');
   }
 }
 
 function focusManualInput() {
-  HID_ENABLED = false;
-  const btn = document.getElementById('hidToggleBtn');
-  btn.classList.remove('on');
-  btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
-  document.getElementById('mc').focus();
+  disableHIDMode(true);
 }
 
 /* ── ตรวจจับและถอดรหัส Alt-code decimal input ─────────────────
@@ -466,18 +478,13 @@ function setupHidScanner() {
   const el = getHidInput();
   if (!el) return;
 
-  // Buffer สำหรับเก็บ GS character ที่เครื่องสแกนส่งมา
-  // (GS = Ctrl+] = keyCode 29 = ASCII 0x1D)
-  let hidBuf = '';
-
   el.addEventListener('keydown', (e) => {
     if (!HID_ENABLED) return;
 
-    // Enter หรือ LF (Line Feed) = จบ barcode → ประมวลผลทันที
     if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
       e.preventDefault();
-      const code = (hidBuf + el.value).trim();  // ← fix: ต้องต่อกัน ไม่ใช่ ||
-      hidBuf = '';
+      const code = (HID_BUFFER + el.value).trim();
+      HID_BUFFER = '';
       clearHidInput();
       clearTimeout(hidBufferTimer);
       if (code) processScannerText(code);
@@ -485,18 +492,14 @@ function setupHidScanner() {
       return;
     }
 
-    // GS character: Ctrl+] หรือ key='GS' หรือ keyCode=29
-    // เครื่องสแกน GS1-128 ส่ง GS เป็น field separator
     if (e.keyCode === 29 || e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
       e.preventDefault();
-      hidBuf += el.value + '\x1D';  // เก็บ \x1D ไว้ใน buffer
+      HID_BUFFER += el.value + '\x1D';
       clearHidInput();
       return;
     }
 
-    if (e.key === 'Tab') {
-      e.preventDefault();
-    }
+    if (e.key === 'Tab') e.preventDefault();
   });
 
   el.addEventListener('input', () => {
@@ -504,10 +507,9 @@ function setupHidScanner() {
 
     clearTimeout(hidBufferTimer);
 
-    // ถ้า value มี LF (\n) = scanner ส่ง suffix LF → ประมวลผลทันที
     if (el.value.includes('\n')) {
-      const code = (hidBuf + el.value).replace(/\n/g, '').trim();
-      hidBuf = '';
+      const code = (HID_BUFFER + el.value).replace(/\n/g, '').trim();
+      HID_BUFFER = '';
       clearHidInput();
       if (code) processScannerText(code);
       focusHidInput();
@@ -515,18 +517,28 @@ function setupHidScanner() {
     }
 
     hidBufferTimer = setTimeout(() => {
-      const code = hidBuf + el.value;
+      const code = HID_BUFFER + el.value;
       if (code && code.replace(/\x1D/g,'').length >= 4) {
-        hidBuf = '';
+        HID_BUFFER = '';
         clearHidInput();
         processScannerText(code);
       }
       focusHidInput();
-    }, 800);  // 800ms รองรับ Alt-code BT scanner ที่ส่งข้อมูลช้า
+    }, 800);
   });
 
   document.addEventListener('click', () => {
     if (HID_ENABLED) setTimeout(focusHidInput, 50);
+  });
+
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!HID_ENABLED || !t || t.id === 'hidInput') return;
+    const tag = (t.tagName || '').toLowerCase();
+    const isTypingField = tag === 'input' || tag === 'textarea';
+    if (!isTypingField) return;
+    disableHIDMode(false);
+    toast('ปิดโหมดเครื่องยิงอัตโนมัติ เพื่อให้พิมพ์ต่อได้', 'warn');
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -561,7 +573,7 @@ async function doSetup() {
 
   API_URL  = url;
   CUR_USER = user;
-  CUR_ROLE = loginRes.user || user;  // 'admin' หรือ 'stock'
+  CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
   localStorage.setItem('skl_api', url);
 
   // ตั้ง class body ตาม role
@@ -1079,6 +1091,10 @@ function showResult(d) {
 
 function resetScan() {
   LAST = null;
+  clearScanDedup();
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
   document.getElementById('rkv').innerHTML = '';
   document.getElementById('rbox').classList.remove('on');
   document.getElementById('sf').style.display = 'none';
