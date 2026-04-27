@@ -690,7 +690,7 @@ async function loadAll() {
     const [stock, hist, prods] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'stock' })),
       apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
-      CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})␊
+      CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})
                              : apiFetch(buildApiUrl(API_URL, { action:'products' })),
     ]);
 
