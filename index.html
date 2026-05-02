@@ -331,6 +331,7 @@ body.admin .admin-only{display:inline-flex}
 <!-- Quick Out Modal -->
 <div class="modal-bg" id="quickOutModal">
   <div class="modal">
+
     <div class="modal-hd">🔺 จ่ายออก</div>
     <div class="modal-sub" id="modalItemName">—</div>
     <input type="text" id="modalWho" placeholder="จ่ายให้เซลล์คนไหน? เช่น Mint, Ploy">
@@ -360,9 +361,7 @@ let HID_ENABLED = false;
 let hidBufferTimer = null;
 let HID_BUFFER = '';
 let HID_AUTO_RESUME = false;
-// ปิดการถอดรหัส Alt-code ฝั่งเว็บเป็นค่าเริ่มต้น
-// เพื่อหลีกเลี่ยงการถอดผิดและทำให้ข้อมูลเพี้ยน
-const WEB_ALT_DECODE_ENABLED = false;
+const AUTO_SAVE_ON_SCAN_IN = true;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -388,37 +387,7 @@ function clearHidInput() {
   if (el) el.value = '';
 }
 
-function clearScanDedup() {
-  LAST_SCAN_TEXT = '';
-  LAST_SCAN_TIME = 0;
-}
-
-function disableHIDMode(focusMc = true) {
-  HID_ENABLED = false;
-  const btn = document.getElementById('hidToggleBtn');
-  if (btn) {
-    btn.classList.remove('on');
-    btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
-  }
-  HID_BUFFER = '';
-  clearTimeout(hidBufferTimer);
-  clearHidInput();
-  if (focusMc) document.getElementById('mc')?.focus();
-}
-
-function enableHIDMode(showToast = false) {
-  HID_ENABLED = true;
-  const btn = document.getElementById('hidToggleBtn');
-  if (btn) {
-    btn.classList.add('on');
-    btn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
-  }
-  if (showToast) toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
-  setTimeout(focusHidInput, 50);
-}
-
-function tryAutoResumeHID() {
-  if (!HID_AUTO_RESUME || HID_ENABLED) return;
+@@ -422,96 +420,71 @@ function tryAutoResumeHID() {
   const ae = document.activeElement;
   const tag = (ae?.tagName || '').toLowerCase();
   const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea');
@@ -444,38 +413,12 @@ function focusManualInput() {
 }
 
 
-/* ── ตรวจจับและถอดรหัส Alt-code decimal input ─────────────────
- *  บาง BT scanner (เช่น YK2870BGD) ส่งอักขระผ่าน Windows Alt code:
- *  `0` → Alt+0048 → ถ้า Alt หาย → ส่งตัวเลข `4` `8` แทน
- *  ผลคือ "010695894998..." กลายเป็น "484948545753565752575756..."
- *  ── เงื่อนไขในการ detect: all digits, even length, ทุก pair อยู่ใน printable ASCII ──
- * ──────────────────────────────────────────────────────────────*/
-function decodeAltCodeIfNeeded(s) {
-  if (!s || s.length < 4 || s.length % 2 !== 0) return s;
-  if (!/^\d+$/.test(s)) return s;          // ต้องเป็นตัวเลขทั้งหมด
-  let decoded = '';
-  for (let i = 0; i < s.length; i += 2) {
-    const code = parseInt(s.substr(i, 2), 10);
-    // ยอมรับ GS (29 = \x1D) สำหรับ GS1-128 field separator
-    // และ printable ASCII (32-126) เท่านั้น
-    if (code !== 29 && (code < 32 || code > 126)) return s;
-    decoded += String.fromCharCode(code);
-  }
-  // ผลลัพธ์ต้องขึ้นต้นด้วย GS1 AI (digit) หรือ parenthesized format
-  if (/^[\d(]/.test(decoded) && decoded.length >= 6) return decoded;
-  return s;
-}
-
 function processScannerText(text) {
   // trim แค่ whitespace ด้านนอก แต่คง GS (0x1D) ไว้ทั้งหมด
   let code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // ถอดรหัส Alt-code เฉพาะเมื่อเปิดใช้งานเท่านั้น
-  // (ค่าเริ่มต้นปิด เพื่อลด false decode)
-  if (WEB_ALT_DECODE_ENABLED) {
-    code = decodeAltCodeIfNeeded(code);
-  }
+  // อ่านค่าตามที่ scanner ส่งเข้ามาโดยตรง (no decode)
 
   parseCode(code);
 
@@ -484,12 +427,40 @@ function processScannerText(text) {
   const scannedItem = LAST;
   if (!scannedItem) return;
 
-  if (MODE === 'in') {
+  if (MODE === 'in' && AUTO_SAVE_ON_SCAN_IN) {
+    // สแกนรับเข้า = บันทึกอัตโนมัติทันที
     setTimeout(() => {
       if (LAST === scannedItem && !IS_PROCESSING) doAct('in');
-    }, 80);
+    }, 120);
     return;
   }
+
+  if (MODE === 'out') {
+    // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
+    toast('สแกนสำเร็จ — ตรวจสอบข้อมูลแล้วกด 🔺 จ่ายออก', 'warn');
+  }
+}
+
+function setupHidScanner() {
+  const el = getHidInput();
+  if (!el) return;
+
+  el.addEventListener('keydown', (e) => {
+    if (!HID_ENABLED) return;
+
+    if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
+      e.preventDefault();
+      const code = (HID_BUFFER + el.value).trim();
+      HID_BUFFER = '';
+      clearHidInput();
+      clearTimeout(hidBufferTimer);
+      if (code) processScannerText(code);
+      focusHidInput();
+      return;
+    }
+
+
+
 
   if (MODE === 'out') {
     // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
