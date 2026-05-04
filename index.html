@@ -239,8 +239,8 @@ body.admin .admin-only{display:inline-flex}
           <option value="accessory">🔧 อุปกรณ์เสริม</option>
         </select>
 
-        <label class="flbl" id="locLabel">สถานที่ / โรงพยาบาล</label>
-        <input type="text" class="finp" id="locI" placeholder="คลังสินค้า / รพ...">
+        <label class="flbl" id="locLabel">รับเข้าโดยใคร</label>
+        <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
 
         <div id="qtyRow" style="display:none">
           <label class="flbl">จำนวน (ชิ้น)</label>
@@ -331,6 +331,7 @@ body.admin .admin-only{display:inline-flex}
 <!-- Quick Out Modal -->
 <div class="modal-bg" id="quickOutModal">
   <div class="modal">
+
     <div class="modal-hd">🔺 จ่ายออก</div>
     <div class="modal-sub" id="modalItemName">—</div>
     <input type="text" id="modalWho" placeholder="จ่ายให้เซลล์คนไหน? เช่น Mint, Ploy">
@@ -358,6 +359,9 @@ const HIST_PAGE = 50;
 
 let HID_ENABLED = false;
 let hidBufferTimer = null;
+let HID_BUFFER = '';
+let HID_AUTO_RESUME = false;
+const AUTO_SAVE_ON_SCAN_IN = true;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -365,6 +369,7 @@ window.onload = () => {
   if (API_URL) document.getElementById('apiUrl').value = API_URL;
   updateModeUI();
   setupHidScanner();
+  setupManualScanner();
 };
 
 function getHidInput() {
@@ -383,60 +388,99 @@ function clearHidInput() {
   if (el) el.value = '';
 }
 
+function focusScanInput(delay = 80) {
+  setTimeout(() => {
+    if (HID_ENABLED) {
+      focusHidInput();
+      return;
+    }
+    const el = document.getElementById('mc');
+    if (!el) return;
+    try {
+      el.focus();
+      el.select();
+    } catch (e) {}
+  }, delay);
+}
+
+function enableHIDMode(auto = false) {
+  HID_ENABLED = true;
+  const hidBtn = document.getElementById('hidToggleBtn');
+  const manualBtn = document.getElementById('manualToggleBtn');
+  if (hidBtn) {
+    hidBtn.classList.add('on');
+    hidBtn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
+  }
+  if (manualBtn) manualBtn.classList.remove('on');
+  clearHidInput();
+  focusScanInput(80);
+  if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว — รองรับแปลงคีย์บอร์ดไทยเป็นอังกฤษ', 'ok');
+}
+
+function disableHIDMode(updateButtons = true) {
+  HID_ENABLED = false;
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
+  if (updateButtons) {
+    const hidBtn = document.getElementById('hidToggleBtn');
+    const manualBtn = document.getElementById('manualToggleBtn');
+    if (hidBtn) {
+      hidBtn.classList.remove('on');
+      hidBtn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
+    }
+    if (manualBtn) manualBtn.classList.add('on');
+  }
+}
+
+function tryAutoResumeHID() {
+  const ae = document.activeElement;
+  const tag = (ae?.tagName || '').toLowerCase();
+  const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea');
+  if (isTypingField) return;
+  HID_AUTO_RESUME = false;
+  enableHIDMode(true);
+}
+
 function toggleHIDMode() {
-  HID_ENABLED = !HID_ENABLED;
-  const btn = document.getElementById('hidToggleBtn');
   if (HID_ENABLED) {
-    btn.classList.add('on');
-    btn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
-    setTimeout(focusHidInput, 50);
-    toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
-  } else {
-    btn.classList.remove('on');
-    btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
-    document.getElementById('mc').focus();
+    HID_AUTO_RESUME = false;
+    disableHIDMode(true);
     toast('ปิดโหมดเครื่องยิงแล้ว', 'ok');
+  } else {
+    HID_AUTO_RESUME = false;
+    enableHIDMode(true);
   }
 }
 
 function focusManualInput() {
-  HID_ENABLED = false;
-  const btn = document.getElementById('hidToggleBtn');
-  btn.classList.remove('on');
-  btn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
-  document.getElementById('mc').focus();
+  HID_AUTO_RESUME = false;
+  disableHIDMode(true);
 }
 
-/* ── ตรวจจับและถอดรหัส Alt-code decimal input ─────────────────
- *  บาง BT scanner (เช่น YK2870BGD) ส่งอักขระผ่าน Windows Alt code:
- *  `0` → Alt+0048 → ถ้า Alt หาย → ส่งตัวเลข `4` `8` แทน
- *  ผลคือ "010695894998..." กลายเป็น "484948545753565752575756..."
- *  ── เงื่อนไขในการ detect: all digits, even length, ทุก pair อยู่ใน printable ASCII ──
- * ──────────────────────────────────────────────────────────────*/
-function decodeAltCodeIfNeeded(s) {
-  if (!s || s.length < 4 || s.length % 2 !== 0) return s;
-  if (!/^\d+$/.test(s)) return s;          // ต้องเป็นตัวเลขทั้งหมด
-  let decoded = '';
-  for (let i = 0; i < s.length; i += 2) {
-    const code = parseInt(s.substr(i, 2), 10);
-    // ยอมรับ GS (29 = \x1D) สำหรับ GS1-128 field separator
-    // และ printable ASCII (32-126) เท่านั้น
-    if (code !== 29 && (code < 32 || code > 126)) return s;
-    decoded += String.fromCharCode(code);
-  }
-  // ผลลัพธ์ต้องขึ้นต้นด้วย GS1 AI (digit) หรือ parenthesized format
-  if (/^[\d(]/.test(decoded) && decoded.length >= 6) return decoded;
-  return s;
+const THAI_KEDMANEE_TO_EN = {
+  'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0','ข':'-','ช':'=',
+  'ๆ':'q','ไ':'w','ำ':'e','พ':'r','ะ':'t','ั':'y','ี':'u','ร':'i','น':'o','ย':'p','บ':'[','ล':']','ฃ':'\\',
+  'ฟ':'a','ห':'s','ก':'d','ด':'f','เ':'g','้':'h','่':'j','า':'k','ส':'l','ว':';','ง':"'",
+  'ผ':'z','ป':'x','แ':'c','อ':'v','ิ':'b','ื':'n','ท':'m','ม':',','ใ':'.','ฝ':'/',
+  '๐':'Q','ฎ':'E','ฑ':'R','ธ':'T','ํ':'Y','๊':'U','ณ':'I','ฯ':'O','ญ':'P','ฐ':'{','ฅ':'|',
+  'ฤ':'A','ฆ':'S','ฏ':'D','โ':'F','ฌ':'G','็':'H','๋':'J','ษ':'K','ศ':'L','ซ':':',
+  'ฉ':'C','ฮ':'V','ฺ':'B','์':'N','ฒ':'<','ฬ':'>','ฦ':'?'
+};
+
+function normalizeScannerLayout(text) {
+  const s = String(text || '');
+  if (!/[ก-๛]/.test(s)) return s;
+  return s.replace(/[^\x1D]/g, ch => THAI_KEDMANEE_TO_EN[ch] || ch);
 }
+
 
 function processScannerText(text) {
   // trim แค่ whitespace ด้านนอก แต่คง GS (0x1D) ไว้ทั้งหมด
-  let code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
+  let code = normalizeScannerLayout(text).replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // ถอดรหัส Alt-code ถ้าตรวจพบ
-  code = decodeAltCodeIfNeeded(code);
-  if (IS_PROCESSING) return;
+  // แปลง layout แล้วค่อยอ่านค่า เพื่อกัน Windows ค้างอยู่คีย์บอร์ดไทย
 
   parseCode(code);
 
@@ -445,20 +489,17 @@ function processScannerText(text) {
   const scannedItem = LAST;
   if (!scannedItem) return;
 
-  if (MODE === 'in') {
+  if (MODE === 'in' && AUTO_SAVE_ON_SCAN_IN) {
+    // สแกนรับเข้า = บันทึกอัตโนมัติทันที
     setTimeout(() => {
       if (LAST === scannedItem && !IS_PROCESSING) doAct('in');
-    }, 80);
+    }, 120);
     return;
   }
 
   if (MODE === 'out') {
-    const loc = document.getElementById('locI')?.value.trim();
-    if (loc) {
-      setTimeout(() => {
-        if (LAST === scannedItem && !IS_PROCESSING) doAct('out');
-      }, 80);
-    }
+    // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
+    toast('สแกนสำเร็จ — ตรวจสอบข้อมูลแล้วกด 🔺 จ่ายออก', 'warn');
   }
 }
 
@@ -466,18 +507,13 @@ function setupHidScanner() {
   const el = getHidInput();
   if (!el) return;
 
-  // Buffer สำหรับเก็บ GS character ที่เครื่องสแกนส่งมา
-  // (GS = Ctrl+] = keyCode 29 = ASCII 0x1D)
-  let hidBuf = '';
-
   el.addEventListener('keydown', (e) => {
     if (!HID_ENABLED) return;
 
-    // Enter หรือ LF (Line Feed) = จบ barcode → ประมวลผลทันที
     if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
       e.preventDefault();
-      const code = (hidBuf + el.value).trim();  // ← fix: ต้องต่อกัน ไม่ใช่ ||
-      hidBuf = '';
+      const code = (HID_BUFFER + el.value).trim();
+      HID_BUFFER = '';
       clearHidInput();
       clearTimeout(hidBufferTimer);
       if (code) processScannerText(code);
@@ -485,18 +521,16 @@ function setupHidScanner() {
       return;
     }
 
-    // GS character: Ctrl+] หรือ key='GS' หรือ keyCode=29
-    // เครื่องสแกน GS1-128 ส่ง GS เป็น field separator
-    if (e.keyCode === 29 || e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
+    // บาง browser รายงาน keyCode เพี้ยนได้ จึงไม่ใช้ keyCode===29 แล้ว
+    // รับ GS เฉพาะกรณีที่ระบุได้ชัดเจนเท่านั้น
+    if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
       e.preventDefault();
-      hidBuf += el.value + '\x1D';  // เก็บ \x1D ไว้ใน buffer
+      HID_BUFFER += el.value + '\x1D';
       clearHidInput();
       return;
     }
 
-    if (e.key === 'Tab') {
-      e.preventDefault();
-    }
+    if (e.key === 'Tab') e.preventDefault();
   });
 
   el.addEventListener('input', () => {
@@ -504,10 +538,9 @@ function setupHidScanner() {
 
     clearTimeout(hidBufferTimer);
 
-    // ถ้า value มี LF (\n) = scanner ส่ง suffix LF → ประมวลผลทันที
     if (el.value.includes('\n')) {
-      const code = (hidBuf + el.value).replace(/\n/g, '').trim();
-      hidBuf = '';
+      const code = (HID_BUFFER + el.value).replace(/\n/g, '').trim();
+      HID_BUFFER = '';
       clearHidInput();
       if (code) processScannerText(code);
       focusHidInput();
@@ -515,24 +548,45 @@ function setupHidScanner() {
     }
 
     hidBufferTimer = setTimeout(() => {
-      const code = hidBuf + el.value;
+      const code = HID_BUFFER + el.value;
       if (code && code.replace(/\x1D/g,'').length >= 4) {
-        hidBuf = '';
+        HID_BUFFER = '';
         clearHidInput();
         processScannerText(code);
       }
       focusHidInput();
-    }, 800);  // 800ms รองรับ Alt-code BT scanner ที่ส่งข้อมูลช้า
+    }, 800);
   });
 
   document.addEventListener('click', () => {
     if (HID_ENABLED) setTimeout(focusHidInput, 50);
   });
 
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!HID_ENABLED || !t || t.id === 'hidInput') return;
+    const tag = (t.tagName || '').toLowerCase();
+    const isTypingField = tag === 'input' || tag === 'textarea';
+    if (!isTypingField) return;
+    disableHIDMode(false);
+    toast('ปิดโหมดเครื่องยิงอัตโนมัติ เพื่อให้พิมพ์ต่อได้', 'warn');
+  });
+
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && HID_ENABLED) {
       setTimeout(focusHidInput, 150);
     }
+  });
+}
+
+function setupManualScanner() {
+  const el = document.getElementById('mc');
+  if (!el) return;
+
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10) return;
+    e.preventDefault();
+    procM();
   });
 }
 
@@ -551,7 +605,7 @@ async function doSetup() {
   setPill('busy');
 
   try {
-    const r = await apiFetch(url + '?action=ping');
+    const r = await apiFetch(buildApiUrl(url, { action:'ping' }));
     if (!r.ok) throw new Error(r.error || 'API error');
   } catch(e) {
     showSetupErr('เชื่อมต่อ API ไม่ได้: ' + e.message);
@@ -561,7 +615,7 @@ async function doSetup() {
 
   API_URL  = url;
   CUR_USER = user;
-  CUR_ROLE = loginRes.user || user;  // 'admin' หรือ 'stock'
+  CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
   localStorage.setItem('skl_api', url);
 
   // ตั้ง class body ตาม role
@@ -579,12 +633,13 @@ async function doSetup() {
   if (rn) rn.textContent = CUR_ROLE === 'admin'
     ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
     : '🔒 Stock User — ทำได้เฉพาะรับเข้า/จ่ายออก';
-  document.getElementById('mc').focus();
+  enableHIDMode(false); // เปิด HID อัตโนมัติหลัง login
 }
 
 function signOut() {
   CUR_USER = '';
   LAST = null;
+  HID_AUTO_RESUME = false;
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = null;
   stopScannerOnly();
@@ -613,8 +668,26 @@ async function apiFetch(url) {
     // Network/CORS error บน attempt แรก → retry โดยไม่ใช้ credentials
     r = await fetch(url, { redirect:'follow', credentials:'omit' });
   }
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
+}
+
+function buildApiUrl(base, params = {}) {
+  try {
+    const u = new URL(base);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
+    });
+    return u.toString();
+  } catch {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => [k, String(v)])
+    ).toString();
+    if (!qs) return base;
+    return base + (base.includes('?') ? '&' : '?') + qs;
+  }
 }
 
 async function apiPost(body, url) {
@@ -635,10 +708,10 @@ async function loadAll() {
   HIST_OFFSET = 0;
   try {
     const [stock, hist, prods] = await Promise.all([
-      apiFetch(API_URL + '?action=stock'),
-      apiFetch(API_URL + `?action=history&n=${HIST_PAGE}&offset=0`),
+      apiFetch(buildApiUrl(API_URL, { action:'stock' })),
+      apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
       CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})
-                             : apiFetch(API_URL + '?action=products'),
+                             : apiFetch(buildApiUrl(API_URL, { action:'products' })),
     ]);
 
     if (!stock.ok) throw new Error(stock.error);
@@ -837,6 +910,7 @@ function normalizeLot(lot) { return _gs1NormLot(lot); }
  * ──────────────────────────────────────────────────────────*/
 function parseCode(raw) {
   if (!raw) return;
+  raw = normalizeScannerLayout(raw);
 
   // dedup key: ใช้ string ที่คงค่า GS ไว้เพื่อเปรียบเทียบที่แม่นยำ
   const key = String(raw).replace(/[^\x1D\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
@@ -1022,11 +1096,11 @@ function updateModeUI() {
   document.getElementById('mOut').classList.toggle('on', !isIn);
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
-  document.getElementById('locLabel').textContent = isIn ? 'สถานที่ / โรงพยาบาล' : 'จ่ายให้เซลล์คนไหน';
-  document.getElementById('locI').placeholder = isIn ? 'คลังสินค้า / รพ...' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
+  document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดยใคร' : 'จ่ายให้เซลล์คนไหน';
+  document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>โหมดรับเข้า — เล็งกล้องที่ QR / Barcode'
-    : '<span class="dot"></span>โหมดจ่ายออก — ยิงแล้วตัดสต็อกทันทีถ้ามีชื่อเซลล์';
+    : '<span class="dot"></span>โหมดจ่ายออก — ยิงเพื่อดึงข้อมูล แล้วกดจ่ายออกเอง';
 
   // แสดงช่อง Qty เฉพาะโหมด Stock In + ประเภทที่ไม่ใช่ device
   const curType = document.getElementById('iType')?.value || '';
@@ -1041,7 +1115,7 @@ function onTypeChange() {
 function procM() {
   const c = document.getElementById('mc').value.trim();
   if (c) {
-    parseCode(c);
+    processScannerText(c);
     document.getElementById('mc').value = '';
   }
 }
@@ -1077,18 +1151,28 @@ function showResult(d) {
   updateModeUI();
 }
 
-function resetScan() {
+function resetScan(opts = {}) {
   LAST = null;
+  HID_AUTO_RESUME = false;
+  clearScanDedup();
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
   document.getElementById('rkv').innerHTML = '';
   document.getElementById('rbox').classList.remove('on');
   document.getElementById('sf').style.display = 'none';
+  document.getElementById('mc').value = '';
+  document.getElementById('qtyI').value = '1';
   document.getElementById('noteI').value = '';
-  stopScannerOnly();
-  document.getElementById('reader').innerHTML = '';
+  if (opts.clearLocation) document.getElementById('locI').value = '';
+  if (!opts.keepScanner) {
+    stopScannerOnly();
+    document.getElementById('reader').innerHTML = '';
+  }
   if (HID_ENABLED) {
-    setTimeout(focusHidInput, 100);
+    focusScanInput(100);
   } else {
-    document.getElementById('mc').focus();
+    focusScanInput(100);
   }
 }
 
@@ -1248,11 +1332,17 @@ async function doAct(action) {
     renderHist(false);
     updateStats();
     setPill('ok');
-    resetScan();
+    resetScan({
+      clearLocation: action === 'in',
+      keepScanner: action === 'in' && scanOn
+    });
 
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
-      document.getElementById('sf').style.display = 'block';
+      focusScanInput(80);
+      toast('✅ จ่ายออกสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
+    } else {
+      toast('✅ รับเข้าสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
     }
 
     _scheduleBgSync();  // sync จริงใน background หลัง 30 วิ
@@ -1263,9 +1353,7 @@ async function doAct(action) {
     document.getElementById('bIn').disabled = false;
     document.getElementById('bOut').disabled = false;
     IS_PROCESSING = false;
-    if (HID_ENABLED) {
-      setTimeout(focusHidInput, 120);
-    }
+    focusScanInput(120);
   }
 }
 
@@ -1513,7 +1601,7 @@ function renderHist(append, items) {
 async function loadMoreHist() {
   HIST_OFFSET += HIST_PAGE;
   try {
-    const res = await apiFetch(API_URL + `?action=history&n=${HIST_PAGE}&offset=${HIST_OFFSET}`);
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:HIST_OFFSET }));
     if (!res.ok) throw new Error(res.error);
     const more = res.history || [];
 
@@ -1583,7 +1671,7 @@ async function exportCSV() {
   toast('⏳ กำลัง export...', 'ok');
   try {
     // ดึงประวัติทั้งหมด (สูงสุด 9999 รายการ) ไม่ใช้แค่ cache หน้าปัจจุบัน
-    const res = await apiFetch(API_URL + '?action=history&n=9999&offset=0');
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:9999, offset:0 }));
     if (!res.ok) throw new Error(res.error);
     const items = res.history || [];
     if (!items.length) { toast('ยังไม่มีประวัติให้ export', 'warn'); return; }
