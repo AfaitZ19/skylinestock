@@ -988,6 +988,37 @@ function lookup(d) {
   return inferFromLot(lot);
 }
 
+function findStockRowForScan(d, type) {
+  if (!d || !type) return null;
+  const lot = _gs1NormLot(d.lot);
+  const sn = String(d.sn || '').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
+  const gtin = String(d.gtin || '').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').replace(/^0+/,'').toUpperCase();
+
+  if (type === 'device') {
+    return CACHE.device.find(x => {
+      const rowSn = String(x['Serial Number (SN)'] || '').replace(/\s/g,'').toUpperCase();
+      const rowLot = _gs1NormLot(x['LOT Number'] || '');
+      const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g,'').replace(/^0+/,'').toUpperCase();
+      return (sn && rowSn === sn) ||
+        (lot && rowLot === lot) ||
+        (gtin && rowGtin === gtin && rowSn);
+    }) || null;
+  }
+
+  const arr = type === 'mask' ? CACHE.mask : CACHE.accessory;
+  const name = d.p?.name || '';
+  const size = d.p?.size || '';
+  return arr.find(x => {
+    const rowLot = _gs1NormLot(x['LOT Number'] || '');
+    const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g,'').replace(/^0+/,'').toUpperCase();
+    const sameLot = lot && rowLot === lot;
+    const sameGtin = gtin && rowGtin === gtin;
+    const sameName = !name || (x['Product Name'] || '') === name;
+    const sameSize = type !== 'mask' || !size || (x['Size'] || '') === size;
+    return (sameLot || sameGtin) && sameName && sameSize;
+  }) || null;
+}
+
 /* ── APEX GTIN prefix map ──────────────────────────────────────────────────
  * GTIN-13 ของ APEX SS series: 471302500 [3-digit product code] [check]
  * ตาม UDI Type 2 (shipped after 2023/6/1)
@@ -1285,6 +1316,8 @@ async function doAct(action) {
   const name = LAST.p?.name || LAST.sn || LAST.raw;
   const brand = LAST.p?.brand || '';
   const model = LAST.p?.model || '';
+  const stockRow = action === 'out' ? findStockRowForScan(LAST, type) : null;
+  const fastOut = action === 'out' && stockRow && stockRow._sheetRow;
 
   if (action === 'out' && !loc) {
     toast('กรุณาระบุว่าเอาไปให้เซลล์คนไหน', 'warn');
@@ -1298,8 +1331,9 @@ async function doAct(action) {
 
   try {
     const payload = {
-      action,
+      action: fastOut ? 'out_by_id' : action,
       type,
+      ...(fastOut ? { sheetRow: stockRow._sheetRow } : {}),
       name,
       brand,
       model,
