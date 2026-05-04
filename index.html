@@ -369,6 +369,7 @@ window.onload = () => {
   if (API_URL) document.getElementById('apiUrl').value = API_URL;
   updateModeUI();
   setupHidScanner();
+  setupManualScanner();
 };
 
 function getHidInput() {
@@ -560,6 +561,17 @@ function setupHidScanner() {
     if (!document.hidden && HID_ENABLED) {
       setTimeout(focusHidInput, 150);
     }
+  });
+}
+
+function setupManualScanner() {
+  const el = document.getElementById('mc');
+  if (!el) return;
+
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10) return;
+    e.preventDefault();
+    procM();
   });
 }
 
@@ -1073,7 +1085,7 @@ function updateModeUI() {
   document.getElementById('locI').placeholder = isIn ? 'คลังสินค้า / รพ...' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>โหมดรับเข้า — เล็งกล้องที่ QR / Barcode'
-    : '<span class="dot"></span>โหมดจ่ายออก — ยิงแล้วตัดสต็อกทันทีถ้ามีชื่อเซลล์';
+    : '<span class="dot"></span>โหมดจ่ายออก — ยิงเพื่อดึงข้อมูล แล้วกดจ่ายออกเอง';
 
   // แสดงช่อง Qty เฉพาะโหมด Stock In + ประเภทที่ไม่ใช่ device
   const curType = document.getElementById('iType')?.value || '';
@@ -1088,7 +1100,7 @@ function onTypeChange() {
 function procM() {
   const c = document.getElementById('mc').value.trim();
   if (c) {
-    parseCode(c);
+    processScannerText(c);
     document.getElementById('mc').value = '';
   }
 }
@@ -1312,7 +1324,7 @@ async function doAct(action) {
 
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
-      document.getElementById('sf').style.display = 'block';
+      toast('✅ จ่ายออกสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
     } else {
       toast('✅ รับเข้าสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
     }
