@@ -387,7 +387,37 @@ function clearHidInput() {
   if (el) el.value = '';
 }
 
-@@ -422,96 +420,71 @@ function tryAutoResumeHID() {
+function enableHIDMode(auto = false) {
+  HID_ENABLED = true;
+  const hidBtn = document.getElementById('hidToggleBtn');
+  const manualBtn = document.getElementById('manualToggleBtn');
+  if (hidBtn) {
+    hidBtn.classList.add('on');
+    hidBtn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
+  }
+  if (manualBtn) manualBtn.classList.remove('on');
+  clearHidInput();
+  setTimeout(focusHidInput, 80);
+  if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
+}
+
+function disableHIDMode(updateButtons = true) {
+  HID_ENABLED = false;
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
+  if (updateButtons) {
+    const hidBtn = document.getElementById('hidToggleBtn');
+    const manualBtn = document.getElementById('manualToggleBtn');
+    if (hidBtn) {
+      hidBtn.classList.remove('on');
+      hidBtn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
+    }
+    if (manualBtn) manualBtn.classList.add('on');
+  }
+}
+
+function tryAutoResumeHID() {
   const ae = document.activeElement;
   const tag = (ae?.tagName || '').toLowerCase();
   const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea');
@@ -434,33 +464,6 @@ function processScannerText(text) {
     }, 120);
     return;
   }
-
-  if (MODE === 'out') {
-    // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
-    toast('สแกนสำเร็จ — ตรวจสอบข้อมูลแล้วกด 🔺 จ่ายออก', 'warn');
-  }
-}
-
-function setupHidScanner() {
-  const el = getHidInput();
-  if (!el) return;
-
-  el.addEventListener('keydown', (e) => {
-    if (!HID_ENABLED) return;
-
-    if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
-      e.preventDefault();
-      const code = (HID_BUFFER + el.value).trim();
-      HID_BUFFER = '';
-      clearHidInput();
-      clearTimeout(hidBufferTimer);
-      if (code) processScannerText(code);
-      focusHidInput();
-      return;
-    }
-
-
-
 
   if (MODE === 'out') {
     // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
