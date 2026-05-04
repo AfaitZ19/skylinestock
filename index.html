@@ -398,7 +398,7 @@ function enableHIDMode(auto = false) {
   if (manualBtn) manualBtn.classList.remove('on');
   clearHidInput();
   setTimeout(focusHidInput, 80);
-  if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว', 'ok');
+  if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว — รองรับแปลงคีย์บอร์ดไทยเป็นอังกฤษ', 'ok');
 }
 
 function disableHIDMode(updateButtons = true) {
@@ -442,13 +442,29 @@ function focusManualInput() {
   disableHIDMode(true);
 }
 
+const THAI_KEDMANEE_TO_EN = {
+  'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0','ข':'-','ช':'=',
+  'ๆ':'q','ไ':'w','ำ':'e','พ':'r','ะ':'t','ั':'y','ี':'u','ร':'i','น':'o','ย':'p','บ':'[','ล':']','ฃ':'\\',
+  'ฟ':'a','ห':'s','ก':'d','ด':'f','เ':'g','้':'h','่':'j','า':'k','ส':'l','ว':';','ง':"'",
+  'ผ':'z','ป':'x','แ':'c','อ':'v','ิ':'b','ื':'n','ท':'m','ม':',','ใ':'.','ฝ':'/',
+  '๐':'Q','ฎ':'E','ฑ':'R','ธ':'T','ํ':'Y','๊':'U','ณ':'I','ฯ':'O','ญ':'P','ฐ':'{','ฅ':'|',
+  'ฤ':'A','ฆ':'S','ฏ':'D','โ':'F','ฌ':'G','็':'H','๋':'J','ษ':'K','ศ':'L','ซ':':',
+  'ฉ':'C','ฮ':'V','ฺ':'B','์':'N','ฒ':'<','ฬ':'>','ฦ':'?'
+};
+
+function normalizeScannerLayout(text) {
+  const s = String(text || '');
+  if (!/[ก-๛]/.test(s)) return s;
+  return s.replace(/[^\x1D]/g, ch => THAI_KEDMANEE_TO_EN[ch] || ch);
+}
+
 
 function processScannerText(text) {
   // trim แค่ whitespace ด้านนอก แต่คง GS (0x1D) ไว้ทั้งหมด
-  let code = String(text || '').replace(/^[\s]+|[\s]+$/g, '');
+  let code = normalizeScannerLayout(text).replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // อ่านค่าตามที่ scanner ส่งเข้ามาโดยตรง (no decode)
+  // แปลง layout แล้วค่อยอ่านค่า เพื่อกัน Windows ค้างอยู่คีย์บอร์ดไทย
 
   parseCode(code);
 
@@ -867,6 +883,7 @@ function normalizeLot(lot) { return _gs1NormLot(lot); }
  * ──────────────────────────────────────────────────────────*/
 function parseCode(raw) {
   if (!raw) return;
+  raw = normalizeScannerLayout(raw);
 
   // dedup key: ใช้ string ที่คงค่า GS ไว้เพื่อเปรียบเทียบที่แม่นยำ
   const key = String(raw).replace(/[^\x1D\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
@@ -1107,7 +1124,7 @@ function showResult(d) {
   updateModeUI();
 }
 
-function resetScan() {
+function resetScan(opts = {}) {
   LAST = null;
   HID_AUTO_RESUME = false;
   clearScanDedup();
@@ -1117,9 +1134,14 @@ function resetScan() {
   document.getElementById('rkv').innerHTML = '';
   document.getElementById('rbox').classList.remove('on');
   document.getElementById('sf').style.display = 'none';
+  document.getElementById('mc').value = '';
+  document.getElementById('qtyI').value = '1';
   document.getElementById('noteI').value = '';
-  stopScannerOnly();
-  document.getElementById('reader').innerHTML = '';
+  if (opts.clearLocation) document.getElementById('locI').value = '';
+  if (!opts.keepScanner) {
+    stopScannerOnly();
+    document.getElementById('reader').innerHTML = '';
+  }
   if (HID_ENABLED) {
     setTimeout(focusHidInput, 100);
   } else {
@@ -1283,11 +1305,16 @@ async function doAct(action) {
     renderHist(false);
     updateStats();
     setPill('ok');
-    resetScan();
+    resetScan({
+      clearLocation: action === 'in',
+      keepScanner: action === 'in' && scanOn
+    });
 
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
       document.getElementById('sf').style.display = 'block';
+    } else {
+      toast('✅ รับเข้าสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
     }
 
     _scheduleBgSync();  // sync จริงใน background หลัง 30 วิ
