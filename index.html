@@ -388,6 +388,21 @@ function clearHidInput() {
   if (el) el.value = '';
 }
 
+function focusScanInput(delay = 80) {
+  setTimeout(() => {
+    if (HID_ENABLED) {
+      focusHidInput();
+      return;
+    }
+    const el = document.getElementById('mc');
+    if (!el) return;
+    try {
+      el.focus();
+      el.select();
+    } catch (e) {}
+  }, delay);
+}
+
 function enableHIDMode(auto = false) {
   HID_ENABLED = true;
   const hidBtn = document.getElementById('hidToggleBtn');
@@ -398,7 +413,7 @@ function enableHIDMode(auto = false) {
   }
   if (manualBtn) manualBtn.classList.remove('on');
   clearHidInput();
-  setTimeout(focusHidInput, 80);
+  focusScanInput(80);
   if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว — รองรับแปลงคีย์บอร์ดไทยเป็นอังกฤษ', 'ok');
 }
 
@@ -1155,9 +1170,9 @@ function resetScan(opts = {}) {
     document.getElementById('reader').innerHTML = '';
   }
   if (HID_ENABLED) {
-    setTimeout(focusHidInput, 100);
+    focusScanInput(100);
   } else {
-    document.getElementById('mc').focus();
+    focusScanInput(100);
   }
 }
 
@@ -1324,6 +1339,7 @@ async function doAct(action) {
 
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
+      focusScanInput(80);
       toast('✅ จ่ายออกสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
     } else {
       toast('✅ รับเข้าสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
@@ -1337,9 +1353,7 @@ async function doAct(action) {
     document.getElementById('bIn').disabled = false;
     document.getElementById('bOut').disabled = false;
     IS_PROCESSING = false;
-    if (HID_ENABLED) {
-      setTimeout(focusHidInput, 120);
-    }
+    focusScanInput(120);
   }
 }
 
