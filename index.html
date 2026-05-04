@@ -239,8 +239,8 @@ body.admin .admin-only{display:inline-flex}
           <option value="accessory">🔧 อุปกรณ์เสริม</option>
         </select>
 
-        <label class="flbl" id="locLabel">สถานที่ / โรงพยาบาล</label>
-        <input type="text" class="finp" id="locI" placeholder="คลังสินค้า / รพ...">
+        <label class="flbl" id="locLabel">รับเข้าโดยใคร</label>
+        <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
 
         <div id="qtyRow" style="display:none">
           <label class="flbl">จำนวน (ชิ้น)</label>
@@ -1096,8 +1096,8 @@ function updateModeUI() {
   document.getElementById('mOut').classList.toggle('on', !isIn);
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
-  document.getElementById('locLabel').textContent = isIn ? 'สถานที่ / โรงพยาบาล' : 'จ่ายให้เซลล์คนไหน';
-  document.getElementById('locI').placeholder = isIn ? 'คลังสินค้า / รพ...' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
+  document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดยใคร' : 'จ่ายให้เซลล์คนไหน';
+  document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>โหมดรับเข้า — เล็งกล้องที่ QR / Barcode'
     : '<span class="dot"></span>โหมดจ่ายออก — ยิงเพื่อดึงข้อมูล แล้วกดจ่ายออกเอง';
