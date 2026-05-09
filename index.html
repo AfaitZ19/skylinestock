@@ -970,14 +970,23 @@ function lookup(d) {
 
   // ใช้ CACHE.products ที่โหลดจาก Sheet (ถ้ายังไม่มีให้ข้ามไป inferFromLot)
   const db = CACHE.products || [];
+  let wildcardLotHit = null;
 
   for (const p of db) {
     const pGtin = String(p.gtin || '').replace(/^0+/, '');
-    if (pGtin && gtinRaw === pGtin) return p;
-    if (p.sn_exact && sn === p.sn_exact) return p;
-    if (p.sn_pfx && sn.startsWith(p.sn_pfx)) return p;
-    if (p.lot_pfx && lot.startsWith(p.lot_pfx)) return p;
+    if (pGtin && gtinRaw === pGtin) return _mergeLotDetails(p, lot);
+    if (p.sn_exact && sn === p.sn_exact) return _mergeLotDetails(p, lot);
+    if (p.sn_pfx && sn.startsWith(p.sn_pfx)) return _mergeLotDetails(p, lot);
+    if (p.lot_pfx && _matchProductPattern(lot, p.lot_pfx)) {
+      if (String(p.lot_pfx).includes('*')) {
+        if (!wildcardLotHit) wildcardLotHit = p;
+      } else {
+        return _mergeLotDetails(p, lot);
+      }
+    }
   }
+
+  if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
 
   // ── APEX GTIN-based lookup (before generic inferFromLot) ─────────────────
   if (gtinRaw) {
@@ -986,6 +995,45 @@ function lookup(d) {
   }
 
   return inferFromLot(lot);
+}
+
+function _matchProductPattern(value, pattern) {
+  const v = String(value || '').trim().toUpperCase();
+  const p = String(pattern || '').trim().toUpperCase();
+  if (!v || !p) return false;
+
+  // Backward compatible: existing ProductDB values still mean "starts with".
+  if (!p.includes('*')) return v.startsWith(p);
+
+  // New shortcut for recurring products: use patterns like *NM5A*, *R30F107*, BY-C*HP.
+  const re = new RegExp('^' + p.split('*').map(_escapeRegExp).join('.*') + '$');
+  return re.test(v);
+}
+
+function _escapeRegExp(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function _mergeProduct(base, override) {
+  return {
+    name:  override?.name  || base?.name  || '',
+    brand: override?.brand || base?.brand || '',
+    type:  override?.type  || base?.type  || '',
+    model: override?.model || base?.model || '',
+    size:  override?.size  || base?.size  || '',
+    ref:   override?.ref   || base?.ref   || '',
+  };
+}
+
+function _mergeLotDetails(product, lot) {
+  const inferred = inferFromLot(lot);
+  const merged = _mergeProduct(inferred, product);
+  return {
+    ...merged,
+    // Some products share GTIN across sizes; LOT suffix is more specific when present.
+    size: inferred?.size || merged.size || '',
+    ref:  inferred?.ref  || merged.ref  || '',
+  };
 }
 
 /* ── APEX GTIN prefix map ──────────────────────────────────────────────────
@@ -1041,6 +1089,7 @@ const _REF_RULES = [
   { model:'EaseFit NM6A', size:'M', ref:'78091'   },
   { model:'EaseFit NM6',  size:'L', ref:'78084'   },
   { model:'EaseFit NM5',  size:'M', ref:'78066'   },
+  { model:'EaseFit NM5',  size:'L', ref:'78066'   },
 ];
 
 function inferFromLot(lot) {
