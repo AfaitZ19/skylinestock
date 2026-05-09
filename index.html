@@ -91,6 +91,14 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .sc2{background:#fff;border-radius:var(--ra);padding:11px 6px;box-shadow:var(--sh);text-align:center}
 .sl{font-size:10px;color:var(--mu);margin-bottom:2px}
 .sv{font-size:20px;font-weight:700;color:var(--B);line-height:1}
+.bdash{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
+.bdash-card{background:#fff;border-radius:var(--ra);box-shadow:var(--sh);overflow:hidden}
+.bdash-h{font-size:11px;font-weight:700;color:#fff;padding:7px 10px}
+.bdash-h.device{background:var(--B)}.bdash-h.mask{background:var(--G)}.bdash-h.accessory{background:var(--A)}
+.bdash-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--bd);font-size:11px}
+.bdash-main{font-weight:700;color:#222;min-width:0;word-break:break-word}
+.bdash-sub{font-size:10px;color:var(--mu);font-weight:400;margin-top:1px}
+.bdash-qty{font-size:12px;font-weight:800;color:#111;background:#f7f8fa;border-radius:7px;padding:3px 8px;min-width:34px;text-align:center}
 
 .chips{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
 .chips::-webkit-scrollbar{display:none}
@@ -263,6 +271,8 @@ body.admin .admin-only{display:inline-flex}
         <div class="sc2"><div class="sl">😷 หน้ากาก</div><div class="sv" id="sMk">—</div></div>
         <div class="sc2"><div class="sl">🔧 เสริม</div><div class="sv" id="sAc">—</div></div>
       </div>
+
+      <div class="bdash" id="stockBreakdown"></div>
 
       <div id="alertBadge" style="display:none;background:#fdf3d0;color:#a06a00;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;margin-bottom:9px;text-align:center"></div>
 
@@ -1490,6 +1500,7 @@ function updateStats() {
   document.getElementById('sDv').textContent = CACHE.device.length || 0;
   document.getElementById('sMk').textContent = sumQty(CACHE.mask, 'Qty') || 0;
   document.getElementById('sAc').textContent = sumQty(CACHE.accessory, 'Qty') || 0;
+  renderStockBreakdown();
 
   // นับสินค้าที่ต้องระวัง
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1507,6 +1518,78 @@ function updateStats() {
   const alertEl = document.getElementById('alertBadge');
   if (alertEl) alertEl.textContent = alerts > 0 ? `⚠️ ${alerts} รายการต้องระวัง` : '';
   if (alertEl) alertEl.style.display = alerts > 0 ? 'block' : 'none';
+}
+
+function renderStockBreakdown() {
+  const el = document.getElementById('stockBreakdown');
+  if (!el) return;
+
+  const deviceRows = _groupRows(CACHE.device, it => [
+    it['Model'] || '-',
+    it['Product Name'] || '-',
+    it['Brand'] || ''
+  ], () => 1).map(x => ({
+    main: x.key[0],
+    sub: [x.key[1], x.key[2]].filter(Boolean).join(' · '),
+    qty: x.qty
+  }));
+
+  const maskRows = _groupRows(CACHE.mask, it => [
+    it['Model'] || '-',
+    it['Size'] || '-',
+    it['REF'] || '',
+    it['Product Name'] || '-',
+    it['Brand'] || ''
+  ], it => Number(it['Qty'] || 0)).map(x => ({
+    main: `${x.key[0]} / ${x.key[1]}`,
+    sub: [x.key[3], x.key[4], x.key[2] ? 'REF '+x.key[2] : ''].filter(Boolean).join(' · '),
+    qty: x.qty
+  }));
+
+  const accessoryRows = _groupRows(CACHE.accessory, it => [
+    it['Product Name'] || '-',
+    it['Brand'] || ''
+  ], it => Number(it['Qty'] || 0)).map(x => ({
+    main: x.key[0],
+    sub: x.key[1],
+    qty: x.qty
+  }));
+
+  el.innerHTML = [
+    _breakdownCard('device', 'Device by Model', deviceRows),
+    _breakdownCard('mask', 'Mask by Model / Size', maskRows),
+    _breakdownCard('accessory', 'Accessory by Product', accessoryRows),
+  ].join('');
+}
+
+function _groupRows(rows, keyFn, qtyFn) {
+  const map = new Map();
+  (rows || []).forEach(it => {
+    const key = keyFn(it);
+    const id = key.join('|').toUpperCase();
+    const cur = map.get(id) || { key, qty:0 };
+    cur.qty += qtyFn(it);
+    map.set(id, cur);
+  });
+  return Array.from(map.values()).sort((a,b) =>
+    String(a.key[0]).localeCompare(String(b.key[0])) ||
+    String(a.key[1] || '').localeCompare(String(b.key[1] || ''))
+  );
+}
+
+function _breakdownCard(type, title, rows) {
+  const body = (rows || []).length
+    ? rows.map(r => `
+      <div class="bdash-row">
+        <div>
+          <div class="bdash-main">${escapeHtml(r.main)}</div>
+          <div class="bdash-sub">${escapeHtml(r.sub || '')}</div>
+        </div>
+        <div class="bdash-qty">${escapeHtml(String(r.qty || 0))}</div>
+      </div>
+    `).join('')
+    : `<div class="bdash-row"><div class="bdash-sub">No stock</div><div class="bdash-qty">0</div></div>`;
+  return `<div class="bdash-card"><div class="bdash-h ${type}">${escapeHtml(title)}</div>${body}</div>`;
 }
 
 function flt(type, el) {
