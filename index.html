@@ -543,40 +543,9 @@ function queueHidChar(ch) {
   hidBufferTimer = setTimeout(flushHidBuffer, 450);
 }
 
-function handleHidGlobalKey(e) {
-  if (!HID_ENABLED) return;
-
-  const t = e.target;
-  const tag = (t?.tagName || '').toLowerCase();
-  const isTypingField = t && t.id !== 'hidInput' && (tag === 'input' || tag === 'textarea' || tag === 'select');
-  if (isTypingField) return;
-
-  if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10 || e.key === 'Tab') {
-    e.preventDefault();
-    e.stopPropagation();
-    flushHidBuffer();
-    return;
-  }
-
-  if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
-    e.preventDefault();
-    e.stopPropagation();
-    queueHidChar('\x1D');
-    return;
-  }
-
-  if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    e.preventDefault();
-    e.stopPropagation();
-    queueHidChar(e.key);
-  }
-}
-
 function setupHidScanner() {
   const el = getHidInput();
   if (!el) return;
-
-  document.addEventListener('keydown', handleHidGlobalKey, true);
 
   el.addEventListener('keydown', (e) => {
     if (!HID_ENABLED) return;
@@ -650,19 +619,9 @@ function setupManualScanner() {
   if (!el) return;
 
   el.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10 && !(HID_ENABLED && e.key === 'Tab')) return;
+    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10) return;
     e.preventDefault();
     procM();
-  });
-
-  el.addEventListener('input', () => {
-    if (!HID_ENABLED) return;
-    clearTimeout(hidBufferTimer);
-    hidBufferTimer = setTimeout(() => {
-      if (document.activeElement !== el) return;
-      const code = el.value.trim();
-      if (code && code.length >= 4) procM();
-    }, 650);
   });
 }
 
