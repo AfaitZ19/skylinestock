@@ -1434,7 +1434,9 @@ async function doAct(action) {
     const res = await apiPost(payload);
     if (!res.ok) {
       if (res.error === 'DUPLICATE') {
-        toast('⚠️ สินค้านี้มีในสต็อกแล้ว', 'warn');
+        const d = res.duplicate || {};
+        const detail = d.row ? ` (ยัง Active ที่ row ${d.row})` : '';
+        toast('⚠️ สินค้านี้ยังมีในสต็อก' + detail, 'warn');
         setPill('ok');
         focusScanInput(120);
         return;
@@ -1504,9 +1506,8 @@ function confirmQuickOut() {
   closeModal();
   if (!item) return;
 
-  // ใช้ out_by_id สำหรับ mask/accessory เพราะทราบ _sheetRow แน่นอน → แม่นยำกว่า
-  // Device ใช้ action=out ตาม SN เพราะ sortDeviceSheet อาจเปลี่ยน row index หลังจ่ายออก
-  const useById = item._sheetRow && item._type !== 'device';
+  // ใช้ out_by_id เมื่อทราบ _sheetRow เพื่อจ่ายออกแถวที่ผู้ใช้กดจริง ๆ
+  const useById = !!item._sheetRow;
 
   const isAgg = item._type === 'mask' || item._type === 'accessory';
   const _parsedQty = parseInt(document.getElementById('modalQty').value || '1', 10);
