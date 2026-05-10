@@ -31,7 +31,10 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .inp:focus{border-color:var(--B)}
 .hint{font-size:11px;color:var(--mu);line-height:1.5;margin:-5px 0 9px}
 .btn-p{width:100%;padding:12px;background:var(--B);color:#fff;border:none;border-radius:var(--ra);font-size:14px;font-family:inherit;font-weight:700;cursor:pointer}
+.btn-p:disabled{opacity:.65;cursor:wait}
 .err{background:var(--RL);color:var(--R);padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:9px;display:none}
+.setup-status{display:none;margin:8px 0 0;text-align:center;font-size:12px;font-weight:700;color:var(--B)}
+.setup-status.on{display:block}
 
 .bar{background:var(--B);color:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .bar-l{display:flex;align-items:center;gap:7px}
@@ -183,7 +186,8 @@ body.admin .admin-only{display:inline-flex}
       <label class="lbl">รหัสผ่าน</label>
       <input class="inp" id="setupPass" type="password" placeholder="รหัสผ่าน" style="margin-bottom:0">
     </div>
-    <button class="btn-p" onclick="doSetup()">เข้าสู่ระบบ</button>
+    <button class="btn-p" id="setupBtn" onclick="doSetup()">เข้าสู่ระบบ</button>
+    <div class="setup-status" id="setupStatus"></div>
   </div>
 </div>
 
@@ -609,44 +613,65 @@ async function doSetup() {
 
   if (!url) { showSetupErr('กรุณาใส่ Apps Script URL'); return; }
   if (!user) { showSetupErr('กรุณาใส่ชื่อผู้ใช้'); return; }
-  const loginRes = await apiPost({ action:'login', user, pass }, url);
-  if (!loginRes.ok) { showSetupErr(loginRes.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
 
-  errEl.style.display = 'none';
-  setPill('busy');
-
+  setSetupLoading(true, 'กำลังตรวจรหัสผ่าน...');
   try {
+    errEl.style.display = 'none';
+
+    const loginRes = await apiPost({ action:'login', user, pass }, url);
+    if (!loginRes.ok) {
+      showSetupErr(loginRes.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      return;
+    }
+
+    setSetupLoading(true, 'กำลังเชื่อมต่อ Google Sheet...');
+    setPill('busy');
     const r = await apiFetch(buildApiUrl(url, { action:'ping' }));
     if (!r.ok) throw new Error(r.error || 'API error');
+
+    API_URL  = url;
+    CUR_USER = user;
+    AUTH_TOKEN = loginRes.token || '';
+    CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
+    localStorage.setItem('skl_api', url);
+    localStorage.setItem('skl_token', AUTH_TOKEN);
+
+    // ตั้ง class body ตาม role
+    document.body.classList.toggle('admin', CUR_ROLE === 'admin');
+
+    document.getElementById('scSetup').classList.remove('on');
+    document.getElementById('scApp').classList.add('on');
+    document.getElementById('usrBadge').textContent = user + (CUR_ROLE === 'admin' ? ' 👑' : '');
+
+    toast('✅ เชื่อมต่อ Sheet สำเร็จ', 'ok');
+    setPill('ok');
+    setSetupLoading(true, 'กำลังโหลดข้อมูลสต็อก...');
+    await loadAll();
+    _lastSyncTime = Date.now();
+    const rn = document.getElementById('roleNote');
+    if (rn) rn.textContent = CUR_ROLE === 'admin'
+      ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
+      : '🔒 Stock User — ทำได้เฉพาะรับเข้า/จ่ายออก';
+    enableHIDMode(false); // เปิด HID อัตโนมัติหลัง login
   } catch(e) {
     showSetupErr('เชื่อมต่อ API ไม่ได้: ' + e.message);
     setPill('err');
-    return;
+  } finally {
+    setSetupLoading(false);
   }
+}
 
-  API_URL  = url;
-  CUR_USER = user;
-  AUTH_TOKEN = loginRes.token || '';
-  CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
-  localStorage.setItem('skl_api', url);
-  localStorage.setItem('skl_token', AUTH_TOKEN);
-
-  // ตั้ง class body ตาม role
-  document.body.classList.toggle('admin', CUR_ROLE === 'admin');
-
-  document.getElementById('scSetup').classList.remove('on');
-  document.getElementById('scApp').classList.add('on');
-  document.getElementById('usrBadge').textContent = user + (CUR_ROLE === 'admin' ? ' 👑' : '');
-
-  toast('✅ เชื่อมต่อ Sheet สำเร็จ', 'ok');
-  setPill('ok');
-  await loadAll();
-  _lastSyncTime = Date.now();
-  const rn = document.getElementById('roleNote');
-  if (rn) rn.textContent = CUR_ROLE === 'admin'
-    ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
-    : '🔒 Stock User — ทำได้เฉพาะรับเข้า/จ่ายออก';
-  enableHIDMode(false); // เปิด HID อัตโนมัติหลัง login
+function setSetupLoading(isLoading, msg = '') {
+  const btn = document.getElementById('setupBtn');
+  const st = document.getElementById('setupStatus');
+  if (btn) {
+    btn.disabled = !!isLoading;
+    btn.textContent = isLoading ? 'กำลังโหลด...' : 'เข้าสู่ระบบ';
+  }
+  if (st) {
+    st.textContent = msg;
+    st.classList.toggle('on', !!isLoading && !!msg);
+  }
 }
 
 function signOut() {
