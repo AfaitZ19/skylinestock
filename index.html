@@ -357,6 +357,7 @@ body.admin .admin-only{display:inline-flex}
 
 <script>
 let API_URL  = localStorage.getItem('skl_api') || '';
+let AUTH_TOKEN = localStorage.getItem('skl_token') || '';
 let CUR_USER = '', CUR_ROLE = 'stock';
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[] };
@@ -625,8 +626,10 @@ async function doSetup() {
 
   API_URL  = url;
   CUR_USER = user;
+  AUTH_TOKEN = loginRes.token || '';
   CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
   localStorage.setItem('skl_api', url);
+  localStorage.setItem('skl_token', AUTH_TOKEN);
 
   // ตั้ง class body ตาม role
   document.body.classList.toggle('admin', CUR_ROLE === 'admin');
@@ -648,6 +651,7 @@ async function doSetup() {
 
 function signOut() {
   CUR_USER = '';
+  AUTH_TOKEN = '';
   LAST = null;
   HID_AUTO_RESUME = false;
   clearTimeout(_bgSyncTimer);
@@ -661,6 +665,7 @@ function signOut() {
 
 function changeApiUrl() {
   localStorage.removeItem('skl_api');
+  localStorage.removeItem('skl_token');
   signOut();
 }
 
@@ -701,9 +706,13 @@ function buildApiUrl(base, params = {}) {
 }
 
 async function apiPost(body, url) {
+  const payload = { ...body };
+  if (payload.action !== 'login' && AUTH_TOKEN && !payload.token) {
+    payload.token = AUTH_TOKEN;
+  }
   const r = await fetch(url || API_URL, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     redirect: 'follow',
     credentials: 'omit'
@@ -1005,6 +1014,11 @@ function lookup(d) {
   }
 
   return inferFromLot(lot);
+}
+
+function clearScanDedup() {
+  LAST_SCAN_TEXT = '';
+  LAST_SCAN_TIME = 0;
 }
 
 function _matchProductPattern(value, pattern) {
