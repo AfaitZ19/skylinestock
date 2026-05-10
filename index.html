@@ -393,9 +393,12 @@ function getHidInput() {
 
 function focusHidInput() {
   if (!HID_ENABLED) return;
-  const el = getHidInput();
+  const el = document.getElementById('mc') || getHidInput();
   if (!el) return;
-  try { el.focus(); } catch (e) {}
+  try {
+    el.focus();
+    if (el.select) el.select();
+  } catch (e) {}
 }
 
 function clearHidInput() {
@@ -523,21 +526,64 @@ function processScannerText(text) {
   }
 }
 
+function flushHidBuffer() {
+  const el = getHidInput();
+  const code = (HID_BUFFER + (el ? el.value : '')).trim();
+  HID_BUFFER = '';
+  clearTimeout(hidBufferTimer);
+  clearHidInput();
+  if (code && code.replace(/\x1D/g,'').length >= 4) processScannerText(code);
+  focusHidInput();
+}
+
+function queueHidChar(ch) {
+  HID_BUFFER += ch;
+  clearHidInput();
+  clearTimeout(hidBufferTimer);
+  hidBufferTimer = setTimeout(flushHidBuffer, 450);
+}
+
+function handleHidGlobalKey(e) {
+  if (!HID_ENABLED) return;
+
+  const t = e.target;
+  const tag = (t?.tagName || '').toLowerCase();
+  const isTypingField = t && t.id !== 'hidInput' && (tag === 'input' || tag === 'textarea' || tag === 'select');
+  if (isTypingField) return;
+
+  if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10 || e.key === 'Tab') {
+    e.preventDefault();
+    e.stopPropagation();
+    flushHidBuffer();
+    return;
+  }
+
+  if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
+    e.preventDefault();
+    e.stopPropagation();
+    queueHidChar('\x1D');
+    return;
+  }
+
+  if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    queueHidChar(e.key);
+  }
+}
+
 function setupHidScanner() {
   const el = getHidInput();
   if (!el) return;
 
+  document.addEventListener('keydown', handleHidGlobalKey, true);
+
   el.addEventListener('keydown', (e) => {
     if (!HID_ENABLED) return;
 
-    if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10) {
+    if (e.key === 'Enter' || e.key === '\n' || e.keyCode === 10 || e.key === 'Tab') {
       e.preventDefault();
-      const code = (HID_BUFFER + el.value).trim();
-      HID_BUFFER = '';
-      clearHidInput();
-      clearTimeout(hidBufferTimer);
-      if (code) processScannerText(code);
-      focusHidInput();
+      flushHidBuffer();
       return;
     }
 
@@ -550,7 +596,6 @@ function setupHidScanner() {
       return;
     }
 
-    if (e.key === 'Tab') e.preventDefault();
   });
 
   el.addEventListener('input', () => {
@@ -558,8 +603,8 @@ function setupHidScanner() {
 
     clearTimeout(hidBufferTimer);
 
-    if (el.value.includes('\n')) {
-      const code = (HID_BUFFER + el.value).replace(/\n/g, '').trim();
+    if (el.value.includes('\n') || el.value.includes('\t')) {
+      const code = (HID_BUFFER + el.value).replace(/[\n\t]/g, '').trim();
       HID_BUFFER = '';
       clearHidInput();
       if (code) processScannerText(code);
@@ -585,6 +630,7 @@ function setupHidScanner() {
   document.addEventListener('focusin', (e) => {
     const t = e.target;
     if (!HID_ENABLED || !t || t.id === 'hidInput') return;
+    if (t.id === 'mc') return;
     const tag = (t.tagName || '').toLowerCase();
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
@@ -604,9 +650,19 @@ function setupManualScanner() {
   if (!el) return;
 
   el.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10) return;
+    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10 && !(HID_ENABLED && e.key === 'Tab')) return;
     e.preventDefault();
     procM();
+  });
+
+  el.addEventListener('input', () => {
+    if (!HID_ENABLED) return;
+    clearTimeout(hidBufferTimer);
+    hidBufferTimer = setTimeout(() => {
+      if (document.activeElement !== el) return;
+      const code = el.value.trim();
+      if (code && code.length >= 4) procM();
+    }, 650);
   });
 }
 
