@@ -505,6 +505,11 @@ function processScannerText(text) {
   if (!scannedItem) return;
 
   if (MODE === 'in' && AUTO_SAVE_ON_SCAN_IN) {
+    if (!scannedItem.p || !scannedItem.p.type) {
+      toast('⚠️ ยังระบุสินค้าไม่ได้ — เลือกประเภท/ตรวจข้อมูลก่อนรับเข้า', 'warn');
+      focusScanInput(120);
+      return;
+    }
     // สแกนรับเข้า = บันทึกอัตโนมัติทันที
     setTimeout(() => {
       if (LAST === scannedItem && !IS_PROCESSING) doAct('in');
@@ -703,10 +708,10 @@ function showSetupErr(msg) {
 async function apiFetch(url) {
   let r;
   try {
-    r = await fetch(url, { redirect:'follow', mode:'cors' });
+    r = await fetchWithTimeout(url, { redirect:'follow', mode:'cors' });
   } catch {
     // Network/CORS error บน attempt แรก → retry โดยไม่ใช้ credentials
-    r = await fetch(url, { redirect:'follow', credentials:'omit' });
+    r = await fetchWithTimeout(url, { redirect:'follow', credentials:'omit' });
   }
     if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
@@ -735,7 +740,7 @@ async function apiPost(body, url) {
   if (payload.action !== 'login' && AUTH_TOKEN && !payload.token) {
     payload.token = AUTH_TOKEN;
   }
-  const r = await fetch(url || API_URL, {
+  const r = await fetchWithTimeout(url || API_URL, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -747,6 +752,19 @@ async function apiPost(body, url) {
   catch(e) { throw new Error('Response not JSON: ' + txt.slice(0,120)); }
 }
 
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 45000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw new Error('API timeout — Google Apps Script ตอบช้าเกินไป');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function loadAll() {
   setPill('busy');
   HIST_OFFSET = 0;
@@ -754,8 +772,7 @@ async function loadAll() {
     const [stock, hist, prods] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'stock' })),
       apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
-      CACHE.products.length ? Promise.resolve({ok:true, products:CACHE.products})
-                             : apiFetch(buildApiUrl(API_URL, { action:'products' })),
+      apiFetch(buildApiUrl(API_URL, { action:'products' })),
     ]);
 
     if (!stock.ok) throw new Error(stock.error);
@@ -1418,7 +1435,8 @@ async function doAct(action) {
     if (!res.ok) {
       if (res.error === 'DUPLICATE') {
         toast('⚠️ สินค้านี้มีในสต็อกแล้ว', 'warn');
-        IS_PROCESSING = false;
+        setPill('ok');
+        focusScanInput(120);
         return;
       }
       throw new Error(res.error || 'API error');
