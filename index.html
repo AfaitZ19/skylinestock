@@ -272,6 +272,12 @@ body.admin .admin-only{display:inline-flex}
           <option value="accessory">Accessory</option>
         </select>
 
+        <div id="snLotRow" style="display:none">
+          <label class="flbl" id="snLotLabel">เลขเครื่อง (SN)</label>
+          <input type="text" class="finp" id="snLotI" placeholder="ดูที่สติกเกอร์ด้านหลังเครื่อง" oninput="syncSnLotInput()">
+          <p class="hint" id="snLotHint" style="margin-top:-5px;margin-bottom:9px">ดูที่สติกเกอร์ด้านหลังเครื่อง</p>
+        </div>
+
         <label class="flbl" id="locLabel">รับเข้าโดย</label>
         <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
 
@@ -421,6 +427,7 @@ let CUR_USER = '', CUR_ROLE = 'stock', CUR_STAFF = localStorage.getItem('skl_sta
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[] };
 let IS_PROCESSING = false;
+let PENDING_SCAN = null;
 let LAST_SCAN_TEXT = '';
 let LAST_SCAN_TIME = 0;
 const DUP_MS = 8000;
@@ -749,6 +756,7 @@ function signOut() {
   CUR_USER = '';
   AUTH_TOKEN = '';
   LAST = null;
+  PENDING_SCAN = null;
   HID_AUTO_RESUME = false;
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = null;
@@ -1099,6 +1107,27 @@ function parseCode(raw) {
   // ?? Lookup ??????????????????????????????????????????????
   d.p = lookup(d);
 
+  if (!d.p && (d.gtin || d.sn || d.lot)) {
+    PENDING_SCAN = {
+      raw: key,
+      gtin: d.gtin || '',
+      sn: d.sn || '',
+      lot: d.lot || ''
+    };
+    LAST = null;
+    LAST_SCAN_TEXT = key;
+    LAST_SCAN_TIME = now;
+    stopScannerOnly();
+    document.getElementById('rkv').innerHTML = '';
+    document.getElementById('rbox').classList.remove('on');
+    document.getElementById('sf').style.display = 'none';
+    renderManualProducts();
+    const manualSearch = document.getElementById('manualSearch');
+    if (manualSearch) manualSearch.focus();
+    return;
+  }
+
+  PENDING_SCAN = null;
   LAST           = d;
   LAST_SCAN_TEXT = key;
   LAST_SCAN_TIME = now;
@@ -1184,6 +1213,36 @@ function _mergeLotDetails(product, lot) {
     size: inferred?.size || merged.size || '',
     ref:  inferred?.ref  || merged.ref  || '',
   };
+}
+
+function learnMappingIntoCache(payload) {
+  const m = payload?.learnMapping;
+  const p = LAST?.p;
+  if (!m || !p || !p.product_code || !(m.gtin || m.lot || m.sn)) return;
+
+  const learned = {
+    ...p,
+    gtin: String(m.gtin || '').replace(/^0+/, ''),
+    sn_exact: String(m.sn || '').replace(/\s/g, '').toUpperCase(),
+    sn_pfx: '',
+    lot_pfx: _gs1NormLot(m.lot || ''),
+    has_barcode: true
+  };
+
+  const key = [learned.gtin, learned.sn_exact, learned.sn_pfx, learned.lot_pfx].join('|').toUpperCase();
+  const exists = (CACHE.products || []).some(x => {
+    const xKey = [
+      String(x.gtin || '').replace(/^0+/, ''),
+      String(x.sn_exact || '').toUpperCase(),
+      String(x.sn_pfx || '').toUpperCase(),
+      String(x.lot_pfx || '').toUpperCase()
+    ].join('|').toUpperCase();
+    return xKey === key;
+  });
+  if (!exists) {
+    CACHE.products = (CACHE.products || []).concat([learned]);
+    populateProductFilters();
+  }
 }
 
 /* ?? APEX GTIN prefix map ??????????????????????????????????????????????????
@@ -1305,11 +1364,69 @@ function renderManualProducts() {
 function selectManualProduct(i) {
   const p = (window.__manualRows || [])[i];
   if (!p) return;
+  const pending = PENDING_SCAN;
   LAST = { raw: p.product_code || p.name, p, manual: true, sn:'', lot:'', gtin:'' };
+  if (pending && (pending.gtin || pending.lot || pending.sn)) {
+    LAST.learnGtin = pending.gtin || '';
+    LAST.learnLot = pending.lot || '';
+    LAST.learnSn = pending.sn || '';
+    LAST.learnRaw = pending.raw || '';
+    PENDING_SCAN = null;
+  }
   showResult(LAST);
   const qty = document.getElementById('qtyI');
-  if (qty) { qty.value = ''; qty.focus(); }
+  if (qty) qty.value = '';
+  const snLot = document.getElementById('snLotI');
+  if (snLot && snLot.offsetParent !== null) snLot.focus();
+  else if (qty) qty.focus();
   updateActionButtons();
+}
+
+function requiredTrackingValue(type) {
+  const v = document.getElementById('snLotI')?.value.trim() || '';
+  if (type === 'device') return { key:'sn', value:v };
+  if (type === 'mask' || type === 'accessory') return { key:'lot', value:v };
+  return { key:'', value:'' };
+}
+
+function syncSnLotInput() {
+  if (!LAST) return;
+  const type = document.getElementById('iType')?.value || LAST.p?.type || '';
+  const cur = requiredTrackingValue(type);
+  if (cur.key === 'sn') LAST.sn = cur.value;
+  if (cur.key === 'lot') LAST.lot = cur.value;
+  updateActionButtons();
+}
+
+function updateSnLotField(force = false) {
+  const row = document.getElementById('snLotRow');
+  const label = document.getElementById('snLotLabel');
+  const input = document.getElementById('snLotI');
+  const hint = document.getElementById('snLotHint');
+  if (!row || !label || !input || !hint) return;
+
+  const type = document.getElementById('iType')?.value || LAST?.p?.type || '';
+  const isDevice = type === 'device';
+  const isLotItem = type === 'mask' || type === 'accessory';
+  row.style.display = LAST && (isDevice || isLotItem) ? 'block' : 'none';
+  if (!LAST || (!isDevice && !isLotItem)) {
+    input.value = '';
+    return;
+  }
+
+  if (isDevice) {
+    label.textContent = 'เลขเครื่อง (SN)';
+    input.placeholder = 'ดูที่สติกเกอร์ด้านหลังเครื่อง';
+    hint.textContent = 'ดูที่สติกเกอร์ด้านหลังเครื่อง';
+    if (force || input.dataset.trackType !== type) input.value = LAST.sn || '';
+  } else {
+    label.textContent = 'เลขล็อต (LOT)';
+    input.placeholder = 'ดูที่ฉลากบนกล่อง/ถุง';
+    hint.textContent = 'ดูที่ฉลากบนกล่อง/ถุง';
+    if (force || input.dataset.trackType !== type) input.value = LAST.lot || '';
+  }
+  input.dataset.trackType = type;
+  syncSnLotInput();
 }
 
 function updateActionButtons() {
@@ -1317,6 +1434,7 @@ function updateActionButtons() {
   const bOut = document.getElementById('bOut');
   if (!bIn || !bOut) return;
   const isOut = MODE === 'out';
+  const type = document.getElementById('iType')?.value || LAST?.p?.type || '';
   const qtyVal = parseInt(document.getElementById('qtyI')?.value || '', 10);
   const needsQty = LAST && LAST.manual;
   const purpose = document.getElementById('purposeI')?.value || '';
@@ -1324,14 +1442,15 @@ function updateActionButtons() {
   const recipient = document.getElementById('locI')?.value.trim() || '';
   const purposeOtherEl = document.getElementById('purposeOtherI');
   if (purposeOtherEl) purposeOtherEl.style.display = purpose === 'อื่นๆ' ? 'block' : 'none';
+  const missingTracking = LAST && ['device','mask','accessory'].includes(type) && !requiredTrackingValue(type).value;
   const invalidQty = needsQty && (!qtyVal || qtyVal <= 0);
   const invalidOut = isOut && (!recipient || !purpose || (purpose === 'อื่นๆ' && !purposeOther));
-  bIn.disabled = !!invalidQty;
-  bOut.disabled = !!(invalidQty || invalidOut);
+  bIn.disabled = !!(invalidQty || missingTracking);
+  bOut.disabled = !!(invalidQty || invalidOut || missingTracking);
 }
 
 document.addEventListener('input', e => {
-  if (['qtyI','locI','purposeOtherI'].includes(e.target.id)) updateActionButtons();
+  if (['qtyI','locI','purposeOtherI','snLotI'].includes(e.target.id)) updateActionButtons();
 });
 
 function currentStockQtyForProduct(p) {
@@ -1423,6 +1542,7 @@ function updateModeUI() {
 
   // 鉆葵鉊?鉊?鉊冢? Qty 鉆鉊?鉊耜萼鉆葦鉊﹤? Stock In + 鉊腦鉊啤?鉊?鉊葭鉆?鉊﹤?鉆?鉆?device
   const curType = document.getElementById('iType')?.value || '';
+  updateSnLotField();
   const showQty = (LAST && LAST.manual) || (isIn && curType !== 'device');
   document.getElementById('qtyRow').style.display = showQty ? 'block' : 'none';
   const outFields = document.getElementById('outRequiredFields');
@@ -1454,9 +1574,9 @@ function showResult(d) {
     if (d.p.ref) rows.push(['REF', d.p.ref]);
   }
 
-  if (d.sn) rows.push(['SN', d.sn]);
-  if (d.lot) rows.push(['LOT', d.lot]);
-  if (d.gtin) rows.push(['GTIN', d.gtin]);
+  if (d.sn) rows.push(['เลขเครื่อง (SN)', d.sn]);
+  if (d.lot) rows.push(['เลขล็อต (LOT)', d.lot]);
+  if (d.gtin) rows.push(['บาร์โค้ด', d.gtin]);
   if (d.mfgDate) rows.push(['Mfg Date', d.mfgDate]);
   if (d.expiry) rows.push(['Expiry', d.expiry]);
 
@@ -1470,11 +1590,13 @@ function showResult(d) {
 
   document.getElementById('rbox').classList.add('on');
   document.getElementById('sf').style.display = 'block';
+  updateSnLotField(true);
   updateModeUI();
 }
 
 function resetScan(opts = {}) {
   LAST = null;
+  PENDING_SCAN = null;
   HID_AUTO_RESUME = false;
   clearScanDedup();
   HID_BUFFER = '';
@@ -1485,6 +1607,13 @@ function resetScan(opts = {}) {
   document.getElementById('sf').style.display = 'none';
   document.getElementById('mc').value = '';
   document.getElementById('qtyI').value = '1';
+  const snLot = document.getElementById('snLotI');
+  if (snLot) {
+    snLot.value = '';
+    snLot.dataset.trackType = '';
+  }
+  const snLotRow = document.getElementById('snLotRow');
+  if (snLotRow) snLotRow.style.display = 'none';
   document.getElementById('noteI').value = '';
   const p = document.getElementById('purposeI'); if (p) p.value = '';
   const po = document.getElementById('purposeOtherI'); if (po) { po.value = ''; po.style.display = 'none'; }
@@ -1615,10 +1744,25 @@ async function doAct(action) {
     : 1;
   const purpose = document.getElementById('purposeI')?.value || '';
   const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
-  const name = LAST.p?.name || LAST.sn || LAST.raw;
+  const tracking = requiredTrackingValue(type);
+  const sn = tracking.key === 'sn' ? tracking.value : (LAST.sn || '');
+  const lot = tracking.key === 'lot' ? tracking.value : (LAST.lot || '');
+  const name = LAST.p?.name || sn || LAST.raw;
   const brand = LAST.p?.brand || '';
   const model = LAST.p?.model || '';
 
+  if (type === 'device' && !sn) {
+    toast('กรุณากรอกเลขเครื่อง (SN) ก่อนบันทึก', 'warn');
+    IS_PROCESSING = false;
+    updateActionButtons();
+    return;
+  }
+  if ((type === 'mask' || type === 'accessory') && !lot) {
+    toast('กรุณากรอกเลขล็อต (LOT) ก่อนบันทึก', 'warn');
+    IS_PROCESSING = false;
+    updateActionButtons();
+    return;
+  }
   if (((LAST && LAST.manual) || (action === 'in' && type !== 'device')) && (!qty || qty <= 0)) {
     toast('กรุณากรอกจำนวนให้ถูกต้อง', 'warn');
     IS_PROCESSING = false;
@@ -1643,8 +1787,8 @@ async function doAct(action) {
       model,
       size: LAST.p?.size || '',
       ref: LAST.p?.ref || '',
-      sn: LAST.sn,
-      lot: LAST.lot,
+      sn,
+      lot,
       gtin: LAST.gtin,
       mfgDate: LAST.mfgDate,
       expiry: LAST.expiry,
@@ -1658,6 +1802,15 @@ async function doAct(action) {
       user: CUR_USER,
       staffName: CUR_STAFF
     };
+    if (LAST.learnGtin || LAST.learnLot || LAST.learnSn) {
+      payload.learnMapping = {
+        gtin: LAST.learnGtin || '',
+        lot: LAST.learnLot || '',
+        sn: LAST.learnSn || '',
+        raw: LAST.learnRaw || '',
+        product_code: LAST.p?.product_code || ''
+      };
+    }
 
     const res = await apiPost(payload);
     if (!res.ok) {
@@ -1670,7 +1823,7 @@ async function doAct(action) {
         return;
       }
       if (res.error === 'Item not found') {
-        toast('❌ ไม่พบในสต็อก — ลองเลือกประเภทให้ถูกต้อง หรือตรวจสอบ SN/LOT', 'err');
+        toast('❌ ไม่พบในสต็อก — ลองเลือกประเภทให้ถูกต้อง หรือตรวจสอบเลขเครื่อง/เลขล็อต', 'err');
         setPill('err');
         focusScanInput(120);
         return;
@@ -1680,6 +1833,7 @@ async function doAct(action) {
     
     const keepLoc = loc;
     _patchCache(action, payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
+    learnMappingIntoCache(payload);
     renderStock();
     renderHist(false);
     updateStats();
