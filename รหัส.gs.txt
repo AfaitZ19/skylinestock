@@ -24,7 +24,7 @@ const PRODUCTDB_HEADERS = ['GTIN','SN_Exact','SN_Prefix','LOT_Prefix','Product N
 
 const SKYLINE_PRODUCT_MASTER = [
   [
-    "",
+    "04719893350067",
     "",
     "",
     "",
@@ -36,7 +36,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "22-06-013",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
+    true
   ],
   [
     "",
@@ -84,7 +84,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04713025000271",
     "",
     "",
     "",
@@ -96,10 +96,10 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "21-10-02",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
+    true
   ],
   [
-    "",
+    "04713025000226",
     "",
     "",
     "",
@@ -111,7 +111,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "21-10-01",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
+    true
   ],
   [
     "",
@@ -129,7 +129,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04719893347074",
     "",
     "",
     "",
@@ -141,7 +141,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "9S-010620",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
+    true
   ],
   [
     "",
@@ -654,7 +654,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04713025000189",
     "",
     "",
     "",
@@ -666,10 +666,10 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "-",
     "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
+    true
   ],
   [
-    "",
+    "04716872506873",
     "",
     "",
     "",
@@ -681,7 +681,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "-",
     "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
+    true
   ],
   [
     "",
@@ -1269,10 +1269,10 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
+    "16958949927302",
     "",
     "",
-    "",
-    "",
+    "BY-C*R20A*",
     "BEYOND R-20A",
     "BEYOND",
     "device",
@@ -1281,13 +1281,13 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "R-20A",
     "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
+    true
   ],
   [
+    "16958949927319",
     "",
     "",
-    "",
-    "",
+    "BY-C*R20I*",
     "BEYOND R-20i",
     "BEYOND",
     "device",
@@ -1296,7 +1296,22 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "R-20i",
     "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
+    true
+  ],
+  [
+    "16958949927753",
+    "",
+    "",
+    "BY-C*R20C*",
+    "BEYOND R-20C",
+    "BEYOND",
+    "device",
+    "R-20C",
+    "",
+    "",
+    "R-20C",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    true
   ],
   [
     "",
@@ -1314,10 +1329,10 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
+    "16958949927425",
     "",
     "",
-    "",
-    "",
+    "BY-C*R30F107*",
     "BEYOND R-30F",
     "BEYOND",
     "device",
@@ -1326,7 +1341,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "R-30F",
     "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
+    true
   ],
   [
     "",
@@ -1794,7 +1809,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04719893347982",
     "",
     "",
     "",
@@ -1806,7 +1821,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "310M",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "",
@@ -1824,7 +1839,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04719893348194",
     "",
     "",
     "",
@@ -1836,7 +1851,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "320L",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "",
@@ -1869,7 +1884,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "04719893347319",
     "",
     "",
     "",
@@ -1881,7 +1896,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "510L",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "",
@@ -2274,7 +2289,7 @@ const SKYLINE_PRODUCT_MASTER = [
     false
   ],
   [
-    "",
+    "00606959006829",
     "",
     "",
     "",
@@ -2286,7 +2301,7 @@ const SKYLINE_PRODUCT_MASTER = [
     "",
     "PHILIPS",
     "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
+    true
   ],
   [
     "",
@@ -3160,6 +3175,64 @@ function dedupeProductRows_(rows) {
   return out;
 }
 
+function learnProductMapping_(ss, b) {
+  const m = b && b.learnMapping ? b.learnMapping : null;
+  if (!m) return false;
+
+  const productCode = String(m.product_code || m.productCode || b.productCode || '').trim();
+  const gtin = String(m.gtin || '').replace(/[^\x20-\x7E]/g, '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const sn = String(m.sn || '').replace(/[^\x20-\x7E]/g, '').replace(/\s/g, '').toUpperCase();
+  const lot = normalizeLot(String(m.lot || ''));
+  if (!productCode || (!gtin && !sn && !lot)) return false;
+
+  const sheet = buildProductDBSheet(ss);
+  const last = sheet.getLastRow();
+  const width = Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length);
+  const rows = last >= 3
+    ? sheet.getRange(3, 1, last - 2, width).getValues().map(r => normalizeProductDBRow_(r))
+    : [];
+
+  const source = rows.find(r => String(r[10] || '').trim() === productCode);
+  if (!source) {
+    Logger.log('Learn ProductDB mapping skipped: product_code not found: ' + productCode);
+    return false;
+  }
+
+  const learned = normalizeProductDBRow_([
+    gtin,
+    sn,
+    '',
+    lot,
+    source[4],
+    source[5],
+    source[6],
+    source[7],
+    source[8],
+    source[9],
+    source[10],
+    source[11],
+    true
+  ]);
+
+  const combined = dedupeProductRows_(rows.concat([learned]));
+  if (combined.length === rows.length) return false;
+
+  if (last > 2) {
+    sheet.getRange(3, 1, last - 2, width).clearContent();
+  }
+  sheet.getRange(3, 1, combined.length, PRODUCTDB_HEADERS.length).setValues(combined);
+  combined.forEach((_, i) => {
+    const r = i + 3;
+    sheet.getRange(r, 1, 1, PRODUCTDB_HEADERS.length)
+      .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+      .setFontFamily('Arial').setFontSize(10)
+      .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+  });
+  SpreadsheetApp.flush();
+  Logger.log('Learn ProductDB mapping added for ' + productCode);
+  return true;
+}
+
 function normalizeType_(type, category, name) {
   const t = String(type || '').trim().toLowerCase();
   if (['device','mask','accessory'].indexOf(t) !== -1) return t;
@@ -3187,52 +3260,33 @@ function hasBarcodePattern_(v) {
 
 function getLegacyProductDBSeed_() {
   return [
-    ['4719893347081','','','','APEX iX Auto + Humidifier','APEX Medical','device','iX Auto + Humidifier','','','','',true],
-    ['4713025000400','','','','APEX iX Auto','APEX Medical','device','iX Auto','','','','',true],
-    ['4713025000226','','','','APEX iX Auto Humidifier','APEX Medical','device','iX Auto Humidifier','','','','',true],
-    ['4713025000073','','','','APEX XT Auto','APEX Medical','device','XT Auto','','','','',true],
-    ['4719893347319','','','','WiZARD 510 Nasal Mask','Wellell','mask','WiZARD 510','L','SM06001','','',true],
-    ['4719893347982','','','','WiZARD 310 Nasal Mask','Wellell','mask','WiZARD 310','M','SM07002','','',true],
-    ['4719893348194','','','','WiZARD 320 Full Face Mask','Wellell','mask','WiZARD 320','L','SM09001','','',true],
-    ['606959006829','','','','Philips Wisp Mask Fabric','Philips Respironics','mask','Wisp','','1094051','','',true],
-    ['6958949905648','','','','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','',true],
-    ['6958949938318','','','','Beyond EaseFit NM5','Hunan Beyond','mask','EaseFit NM5','M','78066','','',true],
-    ['6958949938561','','','','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','M','78091','','',true],
-    ['6958949938493','','','','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','L','78084','','',true],
-    ['6958949938370','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','',true],
-    ['6958949937694','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','M','PT78044','','',true],
-    ['6958949937687','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','',true],
-    ['6958949932057','','','','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','',true],
-    ['6958949927302','','','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
-    ['16958949927302','','','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
-    ['6958949927319','','','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['16958949927319','','','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['6958949927425','','','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
-    ['16958949927425','','','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
-    ['6958949927371','','','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
-    ['16958949927371','','','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
+    ['04719893350067','','','','APEX XT Auto','APEX Medical','device','XT Auto','','','22-06-013','1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)',true],
+    ['04713025000073','','','','APEX XT Auto','APEX Medical','device','XT Auto','','','22-06-013','1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)',true],
+    ['04719893347074','','','','APEX iX Auto + Humidifier','APEX Medical','device','iX Auto + Humidifier','','','9S-010620','1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)',true],
+    ['04713025000271','','','','APEX iX Auto','APEX Medical','device','iX Auto','','','21-10-02','1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)',true],
+    ['04713025000226','','','','APEX iX Auto Humidifier','APEX Medical','accessory','iX Auto Humidifier','','','21-10-01','1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)',true],
+    ['16958949927319','','','BY-C*R20I*','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','R-20i','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['16958949927302','','','BY-C*R20A*','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','R-20A','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['16958949927753','','','BY-C*R20C*','Beyond R-20C CPAP','Hunan Beyond','device','R-20C','','','R-20C','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['16958949927371','','','BY-C*R25V*','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','R-25V','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['16958949927425','','','BY-C*R30F107*','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','R-30F','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['16958949927425','','','BY-C*R30F108*','Beyond R-30F ASV','Hunan Beyond','device','R-30F ASV','','','R-30F ASV','3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND',true],
+    ['06958949938318','','','BY-C*NM5L*','Beyond EaseFit NM5','Hunan Beyond','mask','EaseFit NM5','L','78066','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949937694','','','BY-C*NM5AM*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','M','PT78044','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949938370','','','BY-C*NM5AL*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949938493','','','BY-C*NM6L*','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','L','78084','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949938561','','','BY-C*NM6AM*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','M','78091','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949905648','','','BY-C*PMI*','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949932057','','','BY-C*HP1*','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46',true],
+    ['04719893347319','','','','WiZARD 510 Nasal Mask','Wellell','mask','WiZARD 510','L','SM06001','510L','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
+    ['04719893347982','','','','WiZARD 310 Nasal Mask','Wellell','mask','WiZARD 310','M','SM07002','310M','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
+    ['04719893348194','','','','WiZARD 320 Full Face Mask','Wellell','mask','WiZARD 320','L','SM08001','320L','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
+    ['04716872506873','','','','Light Grey Tubing \u00d819mm','Wellell','accessory','','','SF00001','','13. Hose / \u0e17\u0e48\u0e2d / Circuit',true],
+    ['04713025000189','','','','Heated Tubing 15mm','APEX','accessory','','','SF00023','','13. Hose / \u0e17\u0e48\u0e2d / Circuit',true],
+    ['00606959006829','','','','Philips Wisp Mask Fabric Frame','Philips Respironics','mask','Wisp','','1094051','PHILIPS','7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)',true],
     ['','26B17','','','APEX Unknown Device 26B17','APEX Medical','device','Unknown','','','','',true],
     ['','25J100','','','APEX Unknown Device 25J100','APEX Medical','device','Unknown','','','','',true],
     ['','26B39','','','APEX Unknown Device 26B39','APEX Medical','device','Unknown','','','','',true],
-    ['','','BAED3C','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
-    ['','','CADL','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['','','CEEC3C','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['','','NEEC3C','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
-    ['','','NAEC3C','','Beyond R-30F ASV','Hunan Beyond','device','R-30F ASV','','','','',true],
-    ['','','IEEC3C','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
-    ['','','','*R30F108*','Beyond R-30F ASV','Hunan Beyond','device','R-30F ASV','','','','',true],
-    ['','','','*R30F107*','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
-    ['','','','*R30F*','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
-    ['','','','*R25V*','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
-    ['','','','*R20A*','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
-    ['','','','*R20I*','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['','','','*R20*','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
-    ['','','','*NM5A*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','','','','',true],
-    ['','','','*NM6A*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','','','','',true],
-    ['','','','*NM5*','Beyond EaseFit NM5','Hunan Beyond','mask','EaseFit NM5','','','','',true],
-    ['','','','*NM6*','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','','','','',true],
-    ['','','','*PMI*','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','',true],
-    ['','','','*HP*','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','',true],
     ['','','','*SPO2*','Beyond SpO2 Kits','Hunan Beyond','accessory','SpO2 Kit','','','','',true]
   ];
 }
@@ -3575,6 +3629,11 @@ function doPost(e) {
         Logger.log('Stock In error: ' + stockErr.toString());
         return err('Stock In failed: ' + (stockErr.message || stockErr.toString()));
       }
+      try {
+        learnProductMapping_(ss, body);
+      } catch(learnErr) {
+        Logger.log('Learn ProductDB mapping failed after Stock In: ' + (learnErr.message || learnErr.toString()));
+      }
 
       return ok(Object.assign({message:'in'}, typeof stockInResult === 'object' ? stockInResult : {row: stockInResult}));
     }
@@ -3587,6 +3646,13 @@ function doPost(e) {
       } catch(stockErr) {
         Logger.log('Stock Out error: ' + stockErr.toString());
         return err('Stock Out failed: ' + (stockErr.message || stockErr.toString()));
+      }
+      if (r !== -1) {
+        try {
+          learnProductMapping_(ss, body);
+        } catch(learnErr) {
+          Logger.log('Learn ProductDB mapping failed after Stock Out: ' + (learnErr.message || learnErr.toString()));
+        }
       }
       return r === -1 ? err('Item not found') : ok({message:'out', row:r});
     }
@@ -3881,6 +3947,8 @@ function validateTransaction_(b, action) {
   const qty = parseInt(b.qty || 1, 10);
   if (!qty || qty <= 0) throw new Error('Quantity must be greater than 0');
   if (!String(b.operator || b.staffName || b.user || '').trim()) throw new Error('Missing operator');
+  if (b.type === 'device' && !String(b.sn || '').trim()) throw new Error('กรุณากรอกเลขเครื่อง (SN)');
+  if ((b.type === 'mask' || b.type === 'accessory') && !String(b.lot || '').trim()) throw new Error('กรุณากรอกเลขล็อต (LOT)');
   if (action === 'out') {
     const purpose = String(b.purpose || '').trim();
     const recipient = String(b.recipient || b.location || '').trim();
