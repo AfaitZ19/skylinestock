@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -45,12 +45,18 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .usr{font-size:11px;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px}
 .btn-xs{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;font-family:inherit}
 
-.main{flex:1;padding:13px;overflow-y:auto}
-@media(min-width:500px){.main{max-width:560px;margin:0 auto}}
+.main{flex:1;padding:13px;overflow-y:auto;width:100%;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:500px){.main{max-width:720px;margin:0 auto}}
 
-.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px}
-.tab{flex:1;padding:8px 3px;text-align:center;font-size:11px;border-radius:7px;cursor:pointer;color:var(--mu);font-weight:500;border:none;background:none;font-family:inherit}
+.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px;position:sticky;top:49px;z-index:80}
+.tab{flex:1;min-width:0;padding:9px 3px;text-align:center;font-size:11px;border-radius:7px;cursor:pointer;color:var(--mu);font-weight:700;border:none;background:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.on{background:var(--B);color:#fff}
+
+.scan-shell{display:grid;gap:11px}
+.flowbar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:11px}
+.flow-step{background:#fff;border:1px solid var(--bd);border-radius:var(--ra);padding:8px 7px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.flow-no{font-size:10px;color:var(--mu);font-weight:800}
+.flow-tx{font-size:12px;color:#222;font-weight:800;margin-top:1px}
 
 .mrow{display:flex;gap:8px;margin-bottom:11px}
 .mbtn{flex:1;padding:10px;border-radius:var(--ra);border:1.5px solid var(--bd);background:#fff;font-size:13px;font-family:inherit;cursor:pointer;font-weight:600;color:var(--mu)}
@@ -111,11 +117,11 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .ic{background:#fff;border-radius:var(--ra);padding:10px 12px;box-shadow:var(--sh);margin-bottom:8px;border-left:4px solid var(--bd)}
 .ic.device{border-left-color:var(--B)}.ic.mask{border-left-color:var(--G)}.ic.accessory{border-left-color:var(--A)}
 .ic-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;margin-bottom:2px}
-.ic-nm{font-size:15px;font-weight:700;flex:1;line-height:1.35}
+.ic-nm{font-size:15px;font-weight:700;flex:1;line-height:1.35;min-width:0;word-break:break-word}
 .bg{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .bd2{background:var(--BL);color:var(--B)}.bm{background:var(--GL);color:var(--G)}.ba{background:var(--AL);color:var(--A)}
-.ic-sub{font-size:12.5px;color:var(--mu);margin-bottom:1px}
-.ic-id{font-size:13px;color:var(--tx);font-weight:700;margin-bottom:5px}
+.ic-sub{font-size:12.5px;color:var(--mu);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic-id{font-size:13px;color:var(--tx);font-weight:700;margin-bottom:5px;word-break:break-word}
 .ic-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)}
 .ic-meta{font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;row-gap:4px}
 .ic-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
@@ -146,7 +152,7 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 
 .empty{text-align:center;padding:36px 20px;color:var(--mu)}
 .empty-ic{font-size:36px;margin-bottom:8px}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:22px;font-size:12px;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:22px;font-size:12px;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:normal;max-width:92vw;text-align:center}
 .toast.on{opacity:1}.toast.ok{background:var(--G)}.toast.err{background:var(--R)}.toast.warn{background:var(--A)}
 
 /* Modal */
@@ -182,26 +188,59 @@ body.admin .admin-only{display:inline-flex}
 .manual-row input,.modal select{border:1px solid var(--bd);border-radius:8px;padding:9px;width:110px;background:#fff}
 .manual-select-btn{background:var(--B);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
 .stocktake-list{max-height:320px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:0 10px;background:#fff;margin:8px 0}
+#v-cfg{gap:10px}
 
 /* Attention box - low stock / near expiry */
 .attn{background:#fff;border:1.5px solid #fde8b0;border-radius:var(--ra);padding:9px 11px;margin-bottom:10px;box-shadow:var(--sh)}
 .attn-hd{font-size:14px;font-weight:700;color:#a06a00;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.attn-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #f5e6c4;cursor:pointer}
+.attn-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #f5e6c4;cursor:pointer;flex-wrap:wrap}
+.attn-row>div{min-width:0;flex:1 1 180px}
 .attn-row:first-of-type{border-top:none}
 .attn-row:active{background:#fffaf0}
 .attn-main{font-size:14px;font-weight:600;color:var(--tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attn-sub{font-size:11.5px;color:var(--mu)}
-.attn-tag{font-size:10.5px;padding:3px 8px;border-radius:10px;font-weight:700;flex-shrink:0;white-space:nowrap;margin-left:8px}
+.attn-tag{font-size:10.5px;padding:3px 8px;border-radius:10px;font-weight:700;flex-shrink:0;white-space:nowrap}
 .attn-tag.exp{background:#fde8e8;color:var(--R)}
 .attn-tag.low{background:#fdf3d0;color:var(--A)}
 .attn-more{font-size:11px;color:var(--mu);text-align:center;padding-top:6px}
 
-/* Desktop layout */
-@media(min-width:860px){
-  .main{max-width:1080px}
+@media(max-width:380px){
+  .main{padding:10px}
+  .bar-title{font-size:13px}
+  .usr{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tab{font-size:10px;padding:8px 2px}
+  .flowbar{grid-template-columns:1fr}
+  .flow-step{display:flex;align-items:center;gap:7px}
+  .ic-ft,.hi{align-items:stretch}
+  .ic-ft{flex-direction:column}
+  .ic-right{justify-content:space-between}
+  .ht{margin-left:0;text-align:left}
+}
+
+@media(max-width:759px){
+  .inp,.fsel,.finp,.search-inp,.mform input,.modal input,.modal select{font-size:16px}
+  .btn-p,.scan-btn,.mform button,.bin,.bout,.bfull,.mbtn,.toolbtn,.btn-co,.manual-select-btn{min-height:42px}
+  .modal{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+}
+
+@media(min-width:760px){
+  .main{max-width:900px;padding:18px}
+  .scan-shell{grid-template-columns:minmax(330px,420px) 1fr;align-items:start}
+  .scan-primary{position:sticky;top:112px}
+  .manual-row b{font-size:14px}
+  .manual-row span{font-size:12px}
+  #v-cfg{grid-template-columns:1fr 1fr}
+  #v-cfg .scrd:first-child{grid-column:1 / -1}
+  #v-take .scrd{max-width:760px;margin-left:auto;margin-right:auto}
+}
+
+@media(min-width:1080px){
+  .main{max-width:1180px}
   .bdash{grid-template-columns:repeat(3,1fr)}
   #stList{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
   #stList .ic{margin-bottom:0}
+  #hiList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #hiList .hi{margin-bottom:0}
 }
 </style>
 </head>
@@ -244,29 +283,37 @@ body.admin .admin-only{display:inline-flex}
 
   <div class="main">
     <div class="tabs">
-      <button class="tab on" onclick="goTab('scan')" id="t-scan">สแกน</button>
+      <button class="tab on" onclick="goTab('scan')" id="t-scan">ทำรายการ</button>
       <button class="tab" onclick="goTab('stock')" id="t-stock">สต็อก</button>
       <button class="tab" onclick="goTab('hist')" id="t-hist">ประวัติ</button>
-      <button class="tab" onclick="goTab('take')" id="t-take">Stocktake</button>
+      <button class="tab" onclick="goTab('take')" id="t-take">นับสต็อก</button>
       <button class="tab" onclick="goTab('cfg')" id="t-cfg">ตั้งค่า</button>
     </div>
 
     <div id="v-scan">
-      <div class="mrow">
-        <button class="mbtn in on" id="mIn" onclick="setMode('in')">รับเข้า</button>
-        <button class="mbtn out" id="mOut" onclick="setMode('out')">จ่ายออก</button>
+      <div class="flowbar">
+        <div class="flow-step"><div class="flow-no">1</div><div class="flow-tx">เลือกงาน</div></div>
+        <div class="flow-step"><div class="flow-no">2</div><div class="flow-tx">สแกนหรือค้น</div></div>
+        <div class="flow-step"><div class="flow-no">3</div><div class="flow-tx">ยืนยัน</div></div>
       </div>
+
+      <div class="scan-shell">
+      <div class="scan-primary">
+        <div class="mrow">
+          <button class="mbtn in on" id="mIn" onclick="setMode('in')">รับเข้า</button>
+          <button class="mbtn out" id="mOut" onclick="setMode('out')">จ่ายออก</button>
+        </div>
 
       <div class="sbox">
         <div class="shint" id="scanHint"><span class="dot"></span>สแกนรับเข้า หรือกรอก QR / Barcode</div>
 
         <div class="toolrow">
-          <button class="toolbtn" id="hidToggleBtn" onclick="toggleHIDMode()">Scanner ปิด</button>
+          <button class="toolbtn" id="hidToggleBtn" onclick="toggleHIDMode()">ใช้เครื่องสแกน</button>
           <button class="toolbtn on" id="manualToggleBtn" onclick="focusManualInput()">กรอกเอง</button>
         </div>
 
         <div class="scan-btn-wrap">
-          <button class="scan-btn" onclick="startScan()">เปิดกล้อง</button>
+          <button class="scan-btn" onclick="startScan()">ใช้กล้อง</button>
           <button class="scan-btn alt" onclick="stopScannerOnly()">หยุดสแกน</button>
         </div>
 
@@ -277,7 +324,9 @@ body.admin .admin-only{display:inline-flex}
           <button onclick="procM()">ตรวจสอบ</button>
         </div>
       </div>
+      </div>
 
+      <div class="scan-secondary">
       <div class="scrd" id="manualProductPanel">
         <h3>เลือกสินค้าจากรายการ</h3>
         <div class="chips" style="margin-top:6px">
@@ -335,11 +384,11 @@ body.admin .admin-only{display:inline-flex}
           <button class="bout" id="bOut" onclick="doAct('out')">จ่ายออก</button>
         </div>
       </div>
+      </div>
+      </div>
     </div>
 
     <div id="v-stock" style="display:none">
-      <div class="attn" id="attnBox" style="display:none"></div>
-
       <div class="sg">
         <div class="sc2"><div class="sl">Device</div><div class="sv" id="sDv">0</div></div>
         <div class="sc2"><div class="sl">Mask</div><div class="sv" id="sMk">0</div></div>
@@ -347,6 +396,8 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="bdash" id="stockBreakdown"></div>
+
+      <div class="attn" id="attnBox" style="display:none"></div>
 
       <div class="search-wrap">
         <span class="search-ico">🔎</span>
@@ -373,14 +424,14 @@ body.admin .admin-only{display:inline-flex}
 
     <div id="v-take" style="display:none">
       <div class="scrd">
-        <h3>Stocktake แบบเร็ว</h3>
+        <h3>นับสต็อกแบบเร็ว</h3>
         <div class="chips" style="margin-top:6px">
-          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวด consumables</option></select>
+          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวดสินค้าใช้แล้วหมด</option></select>
           <select class="fsel" id="takeBrand" onchange="renderStocktake()"><option value="">ทุกแบรนด์</option></select>
         </div>
         <input class="finp" id="takeSearch" type="search" placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า" oninput="renderStocktake()">
         <div id="stocktakeList" class="stocktake-list"></div>
-        <button class="bfull bout2" id="stocktakeSubmit" onclick="submitStocktake()" disabled>บันทึก Stocktake</button>
+        <button class="bfull bout2" id="stocktakeSubmit" onclick="submitStocktake()" disabled>บันทึกการนับสต็อก</button>
       </div>
     </div>
 
@@ -388,15 +439,15 @@ body.admin .admin-only{display:inline-flex}
       <div class="scrd">
         <h3>สถานะการเชื่อมต่อ</h3>
         <div id="connTxt" style="font-size:12px;padding:9px;background:#f7f8fa;border-radius:8px;line-height:1.6">-</div>
-        <button class="bfull bout2" style="margin-top:8px" onclick="loadAll()">โหลดข้อมูลจาก Sheet</button>
+        <button class="bfull bout2" style="margin-top:8px" onclick="loadAll()">ซิงก์ข้อมูล</button>
       </div>
 
       <div class="scrd">
         <h3>คำแนะนำ</h3>
         <ol class="steps">
           <li>เลือกโหมดรับเข้าหรือจ่ายออกก่อนสแกน</li>
-          <li>ถ้าใช้สแกนเนอร์ Bluetooth ให้เปิดโหมด Scanner</li>
-          <li>ตั้ง scanner เป็น HID / Keyboard mode</li>
+          <li>ถ้าใช้สแกนเนอร์ Bluetooth ให้กดใช้เครื่องสแกน</li>
+          <li>ตั้งสแกนเนอร์เป็น HID / Keyboard mode</li>
           <li>ตั้ง suffix = Enter</li>
           <li>สแกนรับเข้า = บันทึกเข้าสต็อก</li>
           <li>สแกนจ่ายออก = ระบุผู้รับแล้วจ่ายออกจากสต็อก</li>
@@ -405,7 +456,7 @@ body.admin .admin-only{display:inline-flex}
 
       <div class="scrd">
         <h3>เครื่องมือผู้ดูแล</h3>
-        <button class="bfull bout2 admin-only" onclick="exportCSV()">Export CSV ประวัติ</button>
+        <button class="bfull bout2 admin-only" onclick="exportCSV()">ดาวน์โหลดประวัติ CSV</button>
         <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">เรียง Device Sheet A-Z</button>
         <button class="bfull bout2 admin-only" onclick="changeApiUrl()">เปลี่ยน API URL</button>
         <p id="roleNote" style="font-size:11px;color:var(--mu);margin-top:6px;text-align:center"></p>
@@ -518,12 +569,12 @@ function enableHIDMode(auto = false) {
   const manualBtn = document.getElementById('manualToggleBtn');
   if (hidBtn) {
     hidBtn.classList.add('on');
-    hidBtn.textContent = 'Scanner เปิด';
+    hidBtn.textContent = 'เครื่องสแกนเปิด';
   }
   if (manualBtn) manualBtn.classList.remove('on');
   clearHidInput();
   focusScanInput(80);
-  if (!auto) toast('เปิดโหมด Scanner แล้ว', 'ok');
+  if (!auto) toast('เปิดเครื่องสแกนแล้ว', 'ok');
 }
 
 function disableHIDMode(updateButtons = true) {
@@ -536,7 +587,7 @@ function disableHIDMode(updateButtons = true) {
     const manualBtn = document.getElementById('manualToggleBtn');
     if (hidBtn) {
       hidBtn.classList.remove('on');
-      hidBtn.textContent = 'Scanner ปิด';
+      hidBtn.textContent = 'ใช้เครื่องสแกน';
     }
     if (manualBtn) manualBtn.classList.add('on');
   }
@@ -555,7 +606,7 @@ function toggleHIDMode() {
   if (HID_ENABLED) {
     HID_AUTO_RESUME = false;
     disableHIDMode(true);
-    toast('ปิดโหมด Scanner แล้ว', 'ok');
+    toast('ปิดเครื่องสแกนแล้ว', 'ok');
   } else {
     HID_AUTO_RESUME = false;
     enableHIDMode(true);
@@ -567,7 +618,16 @@ function focusManualInput() {
   disableHIDMode(true);
 }
 
-const THAI_KEDMANEE_TO_EN = {};
+const THAI_KEDMANEE_TO_EN = {
+  'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0','ข':'-','ช':'=',
+  'ๆ':'q','ไ':'w','ำ':'e','พ':'r','ะ':'t','ั':'y','ี':'u','ร':'i','น':'o','ย':'p','บ':'[','ล':']','ฃ':'\\',
+  'ฟ':'a','ห':'s','ก':'d','ด':'f','เ':'g','้':'h','่':'j','า':'k','ส':'l','ว':';','ง':'\'',
+  'ผ':'z','ป':'x','แ':'c','อ':'v','ิ':'b','ื':'n','ท':'m','ม':',','ใ':'.','ฝ':'/',
+  '+':'!','๑':'@','๒':'#','๓':'$','๔':'%','ู':'^','฿':'&','๕':'*','๖':'(','๗':')','๘':'_','๙':'+',
+  '๐':'Q','"':'W','ฎ':'E','ฑ':'R','ธ':'T','ํ':'Y','๊':'U','ณ':'I','ฯ':'O','ญ':'P','ฐ':'{',',':'}','ฅ':'|',
+  'ฤ':'A','ฆ':'S','ฏ':'D','โ':'F','ฌ':'G','็':'H','๋':'J','ษ':'K','ศ':'L','ซ':':','.':'"',
+  '(':'Z',')':'X','ฉ':'C','ฮ':'V','ฺ':'B','์':'N','?':'M','ฒ':'<','ฬ':'>','ฦ':'?'
+};
 
 function normalizeScannerLayout(text) {
   const s = String(text || '');
@@ -687,7 +747,7 @@ function setupHidScanner() {
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
     disableHIDMode(false);
-    toast('ปิดโหมด Scanner ชั่วคราว เพื่อให้กรอกข้อมูลได้', 'warn');
+    toast('พักเครื่องสแกนชั่วคราว เพื่อให้กรอกข้อมูลได้', 'warn');
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -1354,7 +1414,7 @@ function productLabel(p) {
 function populateProductFilters() {
   const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
   const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
-  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวด consumables'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
+  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวดสินค้าใช้แล้วหมด'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
     const el = document.getElementById(id);
     if (!el) return;
     const cur = el.value;
@@ -1515,12 +1575,12 @@ async function submitStocktake() {
   try {
     const res = await apiPost({ action:'batch_stocktake', items, user:CUR_USER, staffName:CUR_STAFF });
     if (!res.ok) throw new Error(res.error || 'API error');
-    toast('บันทึก Stocktake ' + (res.updated || items.length) + ' รายการแล้ว', 'ok');
+    toast('บันทึกการนับสต็อก ' + (res.updated || items.length) + ' รายการแล้ว', 'ok');
     await loadAll();
     setPill('ok');
   } catch(e) {
     setPill('err');
-    toast('Stocktake ล้มเหลว: ' + e.message, 'err');
+    toast('บันทึกการนับสต็อกล้มเหลว: ' + e.message, 'err');
   }
 }
 
@@ -1566,7 +1626,7 @@ function updateModeUI() {
   document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
   document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
   document.getElementById('scanHint').innerHTML = isIn
-    ? '<span class="dot"></span>สแกนรับเข้า หรือกรอก QR / Barcode'
+    ? '<span class="dot"></span>รับเข้า: สแกนแล้วบันทึกอัตโนมัติ'
     : '<span class="dot"></span>สแกนจ่ายออก แล้วตรวจสอบก่อนกดจ่ายออก';
 
   // 鉆葵鉊?鉊?鉊冢? Qty 鉆鉊?鉊耜萼鉆葦鉊﹤? Stock In + 鉊腦鉊啤?鉊?鉊葭鉆?鉊﹤?鉆?鉆?device
@@ -2317,7 +2377,7 @@ async function loadMoreHist() {
 function goTab(tab) {
   ['scan','stock','hist','take','cfg'].forEach(k => {
     document.getElementById('t-' + k).classList.toggle('on', k === tab);
-    document.getElementById('v-' + k).style.display = (k === tab ? 'block' : 'none');
+    document.getElementById('v-' + k).style.display = (k === tab ? (k === 'cfg' ? 'grid' : 'block') : 'none');
   });
   // sync 鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉆葡鉆鉊葩鉊?鉊?鉊?Stock/History 鉆艇鉊啤?鉊﹤?鉆?鉆?sync 鉊﹤葡鉊葡鉊?鉊葩鉊?60 鉊抉葩
   if ((tab === 'stock' || tab === 'hist') && Date.now() - _lastSyncTime > 60_000) {
