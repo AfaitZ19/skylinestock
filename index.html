@@ -445,7 +445,7 @@ function getHidInput() {
 
 function focusHidInput() {
   if (!HID_ENABLED) return;
-  const el = document.getElementById('mc') || getHidInput();
+  const el = getHidInput();
   if (!el) return;
   try {
     el.focus();
@@ -1714,7 +1714,7 @@ let _qoItem = null;
 function quickOut(item) {
   _qoItem = item;
   document.getElementById('modalItemName').textContent =
-    (item['Product Name'] || '-') + (item['Brand'] ? ' 繚 ' + item['Brand'] : '');
+    (item['Product Name'] || '-') + (item['Brand'] ? ' · ' + item['Brand'] : '');
   document.getElementById('modalWho').value = '';
   document.getElementById('modalPurpose').value = '';
   document.getElementById('modalPurposeOther').value = '';
@@ -1831,7 +1831,7 @@ function renderStockBreakdown() {
     it['Brand'] || ''
   ], () => 1).map(x => ({
     main: x.key[0],
-    sub: [x.key[1], x.key[2]].filter(Boolean).join(' 繚 '),
+    sub: [x.key[1], x.key[2]].filter(Boolean).join(' · '),
     qty: x.qty
   }));
 
@@ -1843,7 +1843,7 @@ function renderStockBreakdown() {
     it['Brand'] || ''
   ], it => Number(it['Qty'] || 0)).map(x => ({
     main: `${x.key[0]} / ${x.key[1]}`,
-    sub: [x.key[3], x.key[4], x.key[2] ? 'REF '+x.key[2] : ''].filter(Boolean).join(' 繚 '),
+    sub: [x.key[3], x.key[4], x.key[2] ? 'REF '+x.key[2] : ''].filter(Boolean).join(' · '),
     qty: x.qty
   }));
 
