@@ -1,0 +1,4630 @@
+﻿/************************************************************
+ * SKYLINE STOCK SYSTEM
+ * Version: clean full backend
+ * Use with a NEW Google Sheet, then run initSheet()
+ ************************************************************/
+
+const TZ = 'Asia/Bangkok';
+const USERS = { stock:'1234', admin:'admin123' };
+const ADMIN_USERS = { admin:true };
+
+const TABS = {
+  dashboard: 'Dashboard',
+  device: 'Stock_Device',
+  mask: 'Stock_Mask',
+  accessory: 'Stock_Accessory',
+  history: 'History',
+  productdb: 'ProductDB'
+};
+
+const HDR_ROW = 2;
+const DATA_START = 3;
+
+const PRODUCTDB_HEADERS = ['GTIN','SN_Exact','SN_Prefix','LOT_Prefix','Product Name','Brand','Type','Model','Size','REF','Product Code','Category','has_barcode'];
+
+const SKYLINE_PRODUCT_MASTER = [
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT Auto",
+    "APEX",
+    "device",
+    "XT Auto",
+    "",
+    "",
+    "22-06-013",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT-Fit",
+    "APEX",
+    "device",
+    "XT-Fit",
+    "",
+    "",
+    "22-06-017",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT-Prime",
+    "APEX",
+    "device",
+    "XT-Prime",
+    "",
+    "",
+    "22-06-020",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX iCH Filter (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Apex CPAP iX Auto (WIFI)",
+    "APEX",
+    "device",
+    "iX Auto",
+    "",
+    "",
+    "21-10-02",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Apex CPAP iX Auto Humidifier (WIFI)",
+    "APEX",
+    "accessory",
+    "iX Auto Humidifier",
+    "",
+    "",
+    "21-10-01",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Apex CPAP iX Auto with Humidifier (4G DEMO)",
+    "APEX",
+    "accessory",
+    "iX Auto with Humidifier",
+    "",
+    "",
+    "9S-010620",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Apex CPAP iX Auto with Humidifier (4G)",
+    "APEX",
+    "accessory",
+    "iX Auto with Humidifier",
+    "",
+    "",
+    "9S-010620",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "iCH Auto",
+    "APEX",
+    "device",
+    "iCH Auto",
+    "",
+    "",
+    "22-06-018",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "iCH Chamber",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "35-03-005",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "iCH Prime",
+    "APEX",
+    "device",
+    "iCH Prime",
+    "",
+    "",
+    "22-06-017",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "iCH Sense",
+    "APEX",
+    "device",
+    "iCH Sense",
+    "",
+    "",
+    "22-06-021",
+    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX Filter 12 \u0e0a\u0e34\u0e49\u0e19",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX Filter iX (5 \u0e0a\u0e34\u0e49\u0e19)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 2 \u0e0a\u0e34\u0e49\u0e19)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 8 \u0e0a\u0e34\u0e49\u0e19)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-009",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Beyond Filter ResPlus (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "ResPlus",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Beyond Filter \u0e2a\u0e35\u0e14\u0e33 (1 \u0e41\u0e1e\u0e04 = 2 \u0e0a\u0e34\u0e49\u0e19)",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "ResFree",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Filter Proton",
+    "Proton",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Air inlet Fine Filters(PB Filter)",
+    "Puritan Bennett (Medtronic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "T2963366",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Filter Winmann",
+    "Weinmann",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Fine filter for SOMNOsmart2",
+    "Weinmann",
+    "accessory",
+    "",
+    "",
+    "",
+    "WM 15565",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Bacterial Filter",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "W6216",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Bacterial Filter (\u0e2a\u0e35\u0e02\u0e32\u0e27)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "W6216",
+    "10. Filters",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e19\u0e49\u0e33\u0e22\u0e32\u0e02\u0e27\u0e14\u0e40\u0e25\u0e47\u0e01 (\u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "11. \u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e19\u0e49\u0e33\u0e22\u0e32\u0e02\u0e27\u0e14\u0e43\u0e2b\u0e0d\u0e48 (\u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "11. \u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "XT Heated Humidifier",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "22-06-009",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "XT Series Water Chamber",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "35-03-006",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "iX Chamber",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "35-03-007",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Humidfier BEYOND B-30F",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "BEYOND",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Water tank BEYOND ResFree",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "BEYOND",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Water tank BEYOND ResPlus",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "BEYOND",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Heated Humifier(Vadi)",
+    "Vadi",
+    "accessory",
+    "",
+    "",
+    "",
+    "VH-2000",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Reusable Adult Chamber(Vadi)",
+    "Vadi",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-314004",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Reusable Auto-Feeding Chamber(Vadi)",
+    "Vadi",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-314002",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Reusable Humidification Chamber(Vadi)",
+    "Vadi",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-314004",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Humidifier iX Series",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "SA001577",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Humidifier bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e43\u0e1a\u0e43\u0e2b\u0e0d\u0e48 \u0e2a\u0e35\u0e1f\u0e49\u0e32)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "8TH27335",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Water Trap",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-313003",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Water Trap \u0e40\u0e14\u0e47\u0e01",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-313003",
+    "12. Humidifier / Water Chamber",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Apex Hose",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "22-06-025",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP Heated tubing, Gray color, 180 cm \u0e17\u0e48\u0e2d iX",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP tubing, Gray color, 180 cm \u0e17\u0e48\u0e2d iX",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e17\u0e48\u0e2d BEYOND \u0e2a\u0e35\u0e40\u0e17\u0e32",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "BEYOND",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e17\u0e48\u0e2d HEATED BEYOND",
+    "BEYOND",
+    "accessory",
+    "",
+    "",
+    "",
+    "BEYOND",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "ADT PVC DSTR EXHA DBL LIMB CIRC",
+    "Puritan Bennett (Medtronic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "5094000",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Adult single-Limb patient circuit with exhalation valve",
+    "Puritan Bennett (Medtronic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "5093600",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "PAED PVC DSTR EXHA DBL LIMB CIRC",
+    "Puritan Bennett (Medtronic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "5093900",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Paed single-Limb patient circuit with exhalation valve",
+    "Puritan Bennett (Medtronic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "5093500",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Hose (siam)120cm",
+    "SIAM",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "7'Kink Resistant Tubing",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "W0007",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Corrugated",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G-HN-63P-100FT",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Corrugated Tube 1.5'",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "Tube 1.5'",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Corrugated Tube 6'",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "Tube 6'",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Dis Con 15/22,22",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G74055",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Disp.Elbow Connector",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G76101/72211",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Disp.Wye Connector",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G77301",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Floton hose",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "SA000544",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Oxygen  Tubing",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Flex Tubing",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G7119/G77015",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Flex Tubing",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G77014",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Flex Tubing",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G7119/77015",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Resus.W/POP Mask#5",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "H-HS92111A",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Tube Smoothbore 15mm-130cm.",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Silicone Tube Smoothbore 22mm-45cm.",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Straight Connector",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G75211/74055",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Swivel Elbow Connector",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G76511/72209",
+    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "PCB  for  XT  Prime",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "163122",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Carrying bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e1f\u0e49\u0e32)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "8TH27335",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Carrying bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e41\u0e14\u0e07)",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "8TH27335",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Disp. Straight 22F,6M,22/11MM",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G76246",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Forehead",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "SD  module  for  CPAP",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "163021",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Swivel Elbow W/Suction Port",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "G72231",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e16\u0e38\u0e07\u0e1c\u0e49\u0e32\u0e2a\u0e1b\u0e31\u0e19\u0e1a\u0e2d\u0e19\u0e14\u0e4c Spunbond Bag \u0e2a\u0e35\u0e1f\u0e49\u0e32",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "-",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "\u0e23\u0e16\u0e40\u0e02\u0e47\u0e19\u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "CTH2009",
+    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Puritan Bennett 520",
+    "Puritan Bennett (Medtronic)",
+    "device",
+    "",
+    "",
+    "",
+    "4096600-03",
+    "2. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BiPAP/Ventilator (PB/Medtronic)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Puritan Bennett 560",
+    "Puritan Bennett (Medtronic)",
+    "device",
+    "",
+    "",
+    "",
+    "4098300-03",
+    "2. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BiPAP/Ventilator (PB/Medtronic)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND B-25T",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "B-25T",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND B-30F",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "B-30F",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND B19",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "B-19",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND F-20C",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "F-20C",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND R-20A",
+    "BEYOND",
+    "device",
+    "R-20A",
+    "",
+    "",
+    "R-20A",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND R-20i",
+    "BEYOND",
+    "device",
+    "R-20i",
+    "",
+    "",
+    "R-20i",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND R-25T",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "R-25T",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND R-30F",
+    "BEYOND",
+    "device",
+    "R-30F",
+    "",
+    "",
+    "R-30F",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BEYOND R-30S",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "R-30S",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Resguard Complete set",
+    "BEYOND",
+    "device",
+    "",
+    "",
+    "",
+    "RG-BP40",
+    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "High Flow Heated Respiratory Humidifier HF6",
+    "APEX (High Flow)",
+    "accessory",
+    "",
+    "",
+    "",
+    "HF6",
+    "4. High Flow",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "High Flow Heated Respiratory Humidifier HF7",
+    "APEX (High Flow)",
+    "accessory",
+    "",
+    "",
+    "",
+    "HF7",
+    "4. High Flow",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "High Flow Heated Respiratory Humidifier HF8",
+    "APEX (High Flow)",
+    "accessory",
+    "",
+    "",
+    "",
+    "HF8",
+    "4. High Flow",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear L",
+    "APEX",
+    "mask",
+    "",
+    "L",
+    "",
+    "9N220001",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear LW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220004",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear M",
+    "APEX",
+    "mask",
+    "",
+    "M",
+    "",
+    "9N220002",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear MW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220005",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear S",
+    "APEX",
+    "mask",
+    "",
+    "S",
+    "",
+    "9N220003",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face 220 WiZARD Mask With Headgear SW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220006",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face Fit Mask With Headgear L",
+    "APEX",
+    "mask",
+    "",
+    "L",
+    "",
+    "32-32-101",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face Fit Mask With Headgear M",
+    "APEX",
+    "mask",
+    "",
+    "M",
+    "",
+    "32-32-102",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face Mask Fit With Headgear S",
+    "APEX",
+    "mask",
+    "",
+    "S",
+    "",
+    "32-32-103",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face WiZARD Mask With Headgear LW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220004",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face WiZARD Mask With Headgear MW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220005",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face WiZARD Mask With Headgear SW",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "9N220006",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Headgear 210 & 220",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "32-32-210",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Headgear 310 & 320",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "32-32-310",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Headgear 510",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "32-32-510",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Nasal WiZARD  Fit Mask With Headgear S",
+    "APEX",
+    "mask",
+    "",
+    "S",
+    "",
+    "32-32-113",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Nasal WiZARD Fit With Headgear L",
+    "APEX",
+    "mask",
+    "",
+    "L",
+    "",
+    "32-32-111",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Nasal WiZARD Fit With Headgear M",
+    "APEX",
+    "mask",
+    "",
+    "M",
+    "",
+    "32-32-112",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Nasal WiZARD Fit With Headgear S",
+    "APEX",
+    "mask",
+    "",
+    "S",
+    "",
+    "32-32-113",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Pillow Mr",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "32-32-027",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Pillow Ms",
+    "APEX",
+    "mask",
+    "",
+    "",
+    "",
+    "32-32-026",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 210 Nasal Mask With Headgear L",
+    "APEX",
+    "mask",
+    "WiZARD 210",
+    "L",
+    "",
+    "9N210001",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 210 Nasal Mask With Headgear M",
+    "APEX",
+    "mask",
+    "WiZARD 210",
+    "M",
+    "",
+    "9N210002",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 210 Nasal Mask With Headgear S",
+    "APEX",
+    "mask",
+    "WiZARD 210",
+    "S",
+    "",
+    "9N210003",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 210 Nasal Mask With Headgear XS",
+    "APEX",
+    "mask",
+    "WiZARD 210",
+    "XS",
+    "",
+    "9N210004",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 310 Nasal Mask With Headgear L",
+    "APEX",
+    "mask",
+    "WiZARD 310",
+    "L",
+    "",
+    "310L",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 310 Nasal Mask With Headgear M",
+    "APEX",
+    "mask",
+    "WiZARD 310",
+    "M",
+    "",
+    "310M",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 310 Nasal Mask With Headgear S",
+    "APEX",
+    "mask",
+    "WiZARD 310",
+    "S",
+    "",
+    "310S",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 320 Fullface Mask With Headgear L",
+    "APEX",
+    "mask",
+    "WiZARD 320",
+    "L",
+    "",
+    "320L",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 320 Fullface Mask With Headgear M",
+    "APEX",
+    "mask",
+    "WiZARD 320",
+    "M",
+    "",
+    "320M",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 320 Fullface Mask With Headgear S",
+    "APEX",
+    "mask",
+    "WiZARD 320",
+    "S",
+    "",
+    "320S",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 510 Nasal Mask With Headgear L",
+    "APEX",
+    "mask",
+    "WiZARD 510",
+    "L",
+    "",
+    "510L",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 510 Nasal Mask With Headgear M",
+    "APEX",
+    "mask",
+    "WiZARD 510",
+    "M",
+    "",
+    "510S/M",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 520 Full Face Mask With Headgear L",
+    "APEX",
+    "mask",
+    "WiZARD 520",
+    "L",
+    "",
+    "520L",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 520 Full Face Mask With Headgear M",
+    "APEX",
+    "mask",
+    "WiZARD 520",
+    "M",
+    "",
+    "520M",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "WiZARD 520 Full Face Mask With Headgear S",
+    "APEX",
+    "mask",
+    "WiZARD 520",
+    "S",
+    "",
+    "520S",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks Ease Fit PMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit PMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks L Ease Fit FMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks L Ease Fit FMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks L Ease Fit NMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks L Ease Fit NMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks M Ease Fit FMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks M Ease Fit FMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks M Ease Fit FMII",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMII",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks M Ease Fit NMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks M Ease Fit NMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks S Ease Fit FMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks S Ease Fit FMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit FMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks S Ease Fit NMI",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "CPAP/BiPAP Masks S Ease Fit NMI-NV",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "Ease Fit NMI",
+    "",
+    "",
+    "BEYOND",
+    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BestFit Nasal Mask Large",
+    "BestFit",
+    "mask",
+    "",
+    "",
+    "",
+    "20100030",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    true
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BestFit Nasal Mask Medium",
+    "BestFit",
+    "mask",
+    "",
+    "",
+    "",
+    "20100020",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    true
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "BestFit Nasal Mask Small",
+    "BestFit",
+    "mask",
+    "",
+    "",
+    "",
+    "20100010",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    true
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "P Amara Gel Fullface mask W/RS frame",
+    "Philips",
+    "mask",
+    "",
+    "",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Pico",
+    "Philips",
+    "mask",
+    "",
+    "",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "S Amara Gel Fullface mask W/RS frame",
+    "Philips",
+    "mask",
+    "",
+    "",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "True Blue mask L",
+    "Philips",
+    "mask",
+    "",
+    "L",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "True Blue mask MW",
+    "Philips",
+    "mask",
+    "",
+    "",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Wisp",
+    "Philips",
+    "mask",
+    "",
+    "",
+    "",
+    "PHILIPS",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "AIRFIT F20 MED SYS - APAP",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "AIRFIT N20 MED SYS - APAP",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "AIRFIT N20 SML SYS - APAP",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Pixi Pediatric Mask-AMER",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Resmed Mirage Activa LT LG-WD Mask",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Resmed Mirage Quattro FFM SML-AP",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "RESMED",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Swift 2 mask",
+    "ResMed",
+    "mask",
+    "",
+    "",
+    "",
+    "1122009",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face Mask L",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "",
+    "L",
+    "",
+    "20100030",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    true
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Full Face Mask M",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "mask",
+    "",
+    "M",
+    "",
+    "20100030",
+    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    true
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FaceFace 220 SW",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-6",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 L (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-210-1",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 LW (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-4",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 LW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-4",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 M (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-2",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 MW (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22 )",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-5",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 MW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-5",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 S (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-3",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for FullFace 220 SW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
+    "APEX",
+    "accessory",
+    "",
+    "",
+    "",
+    "32-32-220-6",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 210 L",
+    "APEX",
+    "accessory",
+    "",
+    "L",
+    "",
+    "32-32-210-1",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 210 M",
+    "APEX",
+    "accessory",
+    "",
+    "M",
+    "",
+    "32-32-210-2",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 210 S",
+    "APEX",
+    "accessory",
+    "",
+    "S",
+    "",
+    "32-32-210-3",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 210 XS",
+    "APEX",
+    "accessory",
+    "",
+    "XS",
+    "",
+    "32-32-210-4",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 310 L",
+    "APEX",
+    "accessory",
+    "",
+    "L",
+    "",
+    "32-32-310L",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 310 M",
+    "APEX",
+    "accessory",
+    "",
+    "M",
+    "",
+    "32-32-310M",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 310 S",
+    "APEX",
+    "accessory",
+    "",
+    "S",
+    "",
+    "32-32-310S",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 320 L",
+    "APEX",
+    "accessory",
+    "",
+    "L",
+    "",
+    "32-32-320L",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 320 M",
+    "APEX",
+    "accessory",
+    "",
+    "M",
+    "",
+    "32-32-320M",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 320 S",
+    "APEX",
+    "accessory",
+    "",
+    "S",
+    "",
+    "32-32-320S",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 510 L",
+    "APEX",
+    "accessory",
+    "",
+    "L",
+    "",
+    "32-32-510L",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Cushion for nasal 510 S/M",
+    "APEX",
+    "accessory",
+    "",
+    "S/M",
+    "",
+    "32-32-510S/M",
+    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Chin Strap Philips \u0e14\u0e33",
+    "Philips",
+    "accessory",
+    "",
+    "",
+    "",
+    "302175",
+    "9. Chin Strap",
+    false
+  ],
+  [
+    "",
+    "",
+    "",
+    "",
+    "Chin Strap \u0e41\u0e14\u0e07",
+    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
+    "accessory",
+    "",
+    "",
+    "",
+    "302176",
+    "9. Chin Strap",
+    false
+  ]
+];
+
+
+const COL_STATUS = 5;
+
+// Device columns
+const DEV_COL_SN = 8;
+const DEV_COL_LOT = 9;
+const DEV_COL_OUT_DATE = 14;
+
+// Mask columns
+const MASK_COL_SIZE = 8;
+const MASK_COL_REF = 9;
+const MASK_COL_LOT = 10;
+const MASK_COL_GTIN = 11;
+const MASK_COL_MFG = 12;
+const MASK_COL_QTY = 13;
+const MASK_COL_NOTE = 14;
+const MASK_COL_EXPIRY = 15;
+
+// Accessory columns
+const ACC_COL_LOT = 7;
+const ACC_COL_GTIN = 8;
+const ACC_COL_MFG = 9;
+const ACC_COL_QTY = 10;
+const ACC_COL_LOCATION = 11;
+const ACC_COL_NOTE = 12;
+
+/* =========================================================
+ * INIT
+ * ========================================================= */
+function initSheet() {
+  throw new Error('Safety stop: initSheet() rebuilds the spreadsheet and can delete existing stock data. Use initSheet_CONFIRMED_RESET() only for a brand-new empty Sheet.');
+}
+
+function initSheet_CONFIRMED_RESET() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  const keeper = sheets[0];
+
+  for (let i = 1; i < sheets.length; i++) {
+    ss.deleteSheet(sheets[i]);
+  }
+
+  const wsDash = buildDashboard(ss, keeper);
+  const wsDev  = buildDeviceSheet(ss);
+  const wsMask = buildMaskSheet(ss);
+  const wsAcc  = buildAccessorySheet(ss);
+  const wsHist = buildHistorySheet(ss);
+  const wsProd = buildProductDBSheet(ss);
+
+  wsDash.setTabColor('#1a1a2e');
+  wsDev.setTabColor('#1a4fa0');
+  wsMask.setTabColor('#1a7a4a');
+  wsAcc.setTabColor('#a06a00');
+  wsHist.setTabColor('#4a3580');
+  wsProd.setTabColor('#555555');
+
+  ss.setActiveSheet(wsDash);
+  SpreadsheetApp.flush();
+}
+
+/* =========================================================
+ * BUILD SHEETS
+ * ========================================================= */
+function buildDashboard(ss, existingSheet) {
+  const ws = existingSheet;
+  ws.setName(TABS.dashboard);
+  ws.setHiddenGridlines(true);
+  ws.clearContents().clearFormats();
+
+  ws.setRowHeight(1, 50);
+  ws.getRange('A1:I1').merge()
+    .setValue('SKYLINE MEDICAL — Stock Management')
+    .setBackground('#1a1a2e')
+    .setFontFamily('Arial').setFontSize(16).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  ws.getRange('A2:I2').merge()
+    .setValue('Auto-updated via Apps Script')
+    .setFontFamily('Arial').setFontSize(10).setFontColor('#888888')
+    .setHorizontalAlignment('center');
+  ws.setRowHeight(2, 18);
+
+  [4, 5, 6, 7, 8].forEach(r => ws.setRowHeight(r, 22));
+  ws.setRowHeight(6, 36);
+
+  const cards = [
+    {
+      col:'B',
+      label:'CPAP/BPAP Devices',
+      formula:'=COUNTIF(Stock_Device!E:E,"Active")',
+      bg:'#dce8f7',
+      fg:'#1a4fa0'
+    },
+    {
+      col:'D',
+      label:'Masks',
+      formula:'=SUMIF(Stock_Mask!E:E,"Active",Stock_Mask!M:M)',
+      bg:'#d6f0e3',
+      fg:'#1a7a4a'
+    },
+    {
+      col:'F',
+      label:'Accessories',
+      formula:'=SUMIF(Stock_Accessory!E:E,"Active",Stock_Accessory!J:J)',
+      bg:'#fdf3d0',
+      fg:'#a06a00'
+    },
+    {
+      col:'H',
+      label:'Total In Stock',
+      formula:'=COUNTIF(Stock_Device!E:E,"Active")+SUMIF(Stock_Mask!E:E,"Active",Stock_Mask!M:M)+SUMIF(Stock_Accessory!E:E,"Active",Stock_Accessory!J:J)',
+      bg:'#ece5f7',
+      fg:'#4a3580'
+    }
+  ];
+
+  cards.forEach(c => {
+    ws.getRange(c.col+'4').setValue(c.label)
+      .setBackground(c.bg).setFontFamily('Arial').setFontSize(10).setFontWeight('bold').setFontColor(c.fg)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setBorder(true,true,false,true,false,false,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+    ws.getRange(c.col+'5').setBackground(c.bg)
+      .setBorder(false,true,false,true,false,false,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+    ws.getRange(c.col+'6').setFormula(c.formula)
+      .setBackground(c.bg).setFontFamily('Arial').setFontSize(24).setFontWeight('bold').setFontColor(c.fg)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setBorder(false,true,false,true,false,false,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+    ws.getRange(c.col+'7').setBackground(c.bg)
+      .setBorder(false,true,false,true,false,false,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+    ws.getRange(c.col+'8').setValue('items in stock')
+      .setBackground(c.bg).setFontFamily('Arial').setFontSize(9).setFontColor('#888888')
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setBorder(false,true,true,true,false,false,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  });
+
+  const colW = {A:2,B:28,C:2,D:28,E:2,F:28,G:2,H:28,I:2};
+  Object.keys(colW).forEach(c => {
+    ws.setColumnWidth(ws.getRange(c+'1').getColumn(), colW[c] * 7);
+  });
+
+  buildDashboardSummaryTables(ws);
+
+  return ws;
+}
+
+function buildDashboardSummaryTables(ws) {
+  const sections = [
+    {
+      title: 'Device Stock by Model',
+      titleRange: 'A11:D11',
+      headerRange: 'A12:D12',
+      formulaCell: 'A12',
+      color: '#1a4fa0',
+      formula: "=QUERY(Stock_Device!D3:G,\"select G,D,F,count(D) where E = 'Active' group by G,D,F label G 'Model', D 'Product Name', F 'Brand', count(D) 'Qty'\",0)"
+    },
+    {
+      title: 'Mask Stock by Model / Size',
+      titleRange: 'F11:K11',
+      headerRange: 'F12:K12',
+      formulaCell: 'F12',
+      color: '#1a7a4a',
+      formula: "=QUERY(Stock_Mask!D3:M,\"select G,H,I,D,F,sum(M) where E = 'Active' group by G,H,I,D,F label G 'Model', H 'Size', I 'REF', D 'Product Name', F 'Brand', sum(M) 'Qty'\",0)"
+    },
+    {
+      title: 'Accessory Stock by Product',
+      titleRange: 'A30:D30',
+      headerRange: 'A31:D31',
+      formulaCell: 'A31',
+      color: '#a06a00',
+      formula: "=QUERY(Stock_Accessory!D3:J,\"select D,F,sum(J) where E = 'Active' group by D,F label D 'Product Name', F 'Brand', sum(J) 'Qty'\",0)"
+    },
+  ];
+
+  ws.getRange('A10:K48').clearContent().clearFormat();
+
+  sections.forEach(s => {
+    ws.getRange(s.titleRange).merge()
+      .setValue(s.title)
+      .setBackground(s.color)
+      .setFontFamily('Arial').setFontSize(11).setFontWeight('bold').setFontColor('#FFFFFF')
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+    ws.getRange(s.formulaCell).setFormula(s.formula);
+    ws.getRange(s.headerRange)
+      .setBackground('#f0f2f5')
+      .setFontFamily('Arial').setFontSize(9).setFontWeight('bold').setFontColor('#333333')
+      .setHorizontalAlignment('center')
+      .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+  });
+
+  ws.getRange('A12:K48')
+    .setFontFamily('Arial')
+    .setFontSize(9)
+    .setVerticalAlignment('middle');
+  ws.getRange('D12:D48').setHorizontalAlignment('center');
+  ws.getRange('K12:K48').setHorizontalAlignment('center');
+  ws.getRange('D31:D48').setHorizontalAlignment('center');
+
+  [11, 30].forEach(r => ws.setRowHeight(r, 24));
+  ws.setColumnWidth(1, 130);  // A
+  ws.setColumnWidth(2, 210);  // B
+  ws.setColumnWidth(3, 130);  // C
+  ws.setColumnWidth(4, 60);   // D
+  ws.setColumnWidth(6, 120);  // F
+  ws.setColumnWidth(7, 55);   // G
+  ws.setColumnWidth(8, 80);   // H
+  ws.setColumnWidth(9, 210);  // I
+  ws.setColumnWidth(10, 130); // J
+  ws.setColumnWidth(11, 60);  // K
+}
+
+function rebuildDashboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ws = ss.getSheetByName(TABS.dashboard);
+  if (!ws) ws = ss.insertSheet(TABS.dashboard, 0);
+  buildDashboard(ss, ws);
+  ss.setActiveSheet(ws);
+}
+
+function buildDeviceSheet(ss) {
+  const ws = ss.insertSheet(TABS.device);
+  ws.setHiddenGridlines(true);
+  ws.setRowHeight(1, 36);
+
+  ws.getRange('A1:P1').merge().setValue('CPAP / BPAP Device Stock — Skyline Medical')
+    .setBackground('#1a4fa0').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  const headers = [
+    'No.','Date In','Time','Product Name','Status','Brand','Model',
+    'Serial Number (SN)','LOT Number','GTIN / Barcode','Mfg Date','Expiry',
+    'Location / Hospital','Date Out','Recorded By','Note'
+  ];
+  styleHeaderRow(ws, 2, headers, '#1a4fa0');
+
+  const widths = [6,14,8,30,10,16,14,24,20,18,12,12,24,14,16,20];
+  widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
+  ws.setFrozenRows(2);
+  return ws;
+}
+
+function buildMaskSheet(ss) {
+  const ws = ss.insertSheet(TABS.mask);
+  ws.setHiddenGridlines(true);
+  ws.setRowHeight(1, 36);
+
+  ws.getRange('A1:O1').merge().setValue('Mask Stock — Skyline Medical')
+    .setBackground('#1a7a4a').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  const headers = [
+    'No.','Date In','Time','Product Name','Status','Brand','Model',
+    'Size','REF','LOT Number','GTIN / Barcode','Mfg Date','Qty','Note','Expiry'
+  ];
+  styleHeaderRow(ws, 2, headers, '#1a7a4a');
+
+  const widths = [6,14,8,28,10,18,18,8,12,20,18,12,10,20,12];
+  widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
+  ws.setFrozenRows(2);
+  return ws;
+}
+
+function buildAccessorySheet(ss) {
+  const ws = ss.insertSheet(TABS.accessory);
+  ws.setHiddenGridlines(true);
+  ws.setRowHeight(1, 36);
+
+  ws.getRange('A1:L1').merge().setValue('Accessory Stock — Skyline Medical')
+    .setBackground('#a06a00').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  const headers = [
+    'No.','Date In','Time','Product Name','Status','Brand',
+    'LOT Number','GTIN / Barcode','Mfg Date','Qty','Location','Note'
+  ];
+  styleHeaderRow(ws, 2, headers, '#a06a00');
+
+  const widths = [6,14,8,32,10,18,20,18,12,10,24,20];
+  widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
+  ws.setFrozenRows(2);
+  return ws;
+}
+
+function buildHistorySheet(ss) {
+  const ws = ss.insertSheet(TABS.history);
+  ws.setHiddenGridlines(true);
+  ws.setRowHeight(1, 36);
+
+  ws.getRange('A1:K1').merge().setValue('Stock Movement History — Skyline Medical')
+    .setBackground('#4a3580').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  const headers = [
+    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action','Qty',
+    'Before Qty','After Qty','Purpose','Recipient','Recorded By','Operator','Note','Reference'
+  ];
+  styleHeaderRow(ws, 2, headers, '#4a3580');
+
+  const widths = [14,8,14,30,18,26,12,8,10,10,14,22,14,18,22,18];
+  widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
+  ws.setFrozenRows(2);
+  return ws;
+}
+
+function buildProductDBSheet(ss) {
+  let ws = ss.getSheetByName(TABS.productdb);
+  if (!ws) ws = ss.insertSheet(TABS.productdb);
+
+  ws.setHiddenGridlines(true);
+  ws.setRowHeight(1, 36);
+  ws.getRange('A1:M1').merge().setValue('Product Database - Skyline Medical')
+    .setBackground('#333333').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  styleHeaderRow(ws, 2, PRODUCTDB_HEADERS, '#333333');
+  const widths = [18,14,12,20,32,20,12,18,8,12,16,28,12];
+  widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
+  ws.setFrozenRows(2);
+
+  if (ws.getLastRow() < 3) syncProductDB();
+  return ws;
+}
+
+/* =========================================================
+ * syncProductDB ??鉆鉊葩鉆腹 GTIN / LOT_Prefix 鉆葦鉊﹤?鉆鉊?鉊?ProductDB
+ * 鉊葭鉆腹鉊菽葉鉊Ｒ號鉆?鉊丞?鉊?鉆?鉊Ｒ?鉊﹤?鉊丞?鉊?鉊冢腹鉊嫩艇鉆鉊葩鉊?
+ * 鉊抉葩鉊葭鉆?鉆? 鉆鉊葩鉊?Apps Script Editor ??鉊?萵鉊?syncProductDB()
+ * ========================================================= */
+function syncProductDB() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TABS.productdb);
+  if (!sheet) sheet = ss.insertSheet(TABS.productdb);
+
+  sheet.getRange('A1:M1').merge().setValue('Product Database - Skyline Medical')
+    .setBackground('#333333').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  styleHeaderRow(sheet, 2, PRODUCTDB_HEADERS, '#333333');
+
+  const existingRows = sheet.getLastRow() >= 3
+    ? sheet.getRange(3, 1, sheet.getLastRow() - 2, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).getValues()
+    : [];
+  const legacyRows = existingRows.filter(r => String(r[4] || '').trim()).map(r => normalizeProductDBRow_(r));
+  const seedRows = getLegacyProductDBSeed_().map(r => normalizeProductDBRow_(r));
+  const masterRows = SKYLINE_PRODUCT_MASTER.map(r => normalizeProductDBRow_(r));
+  const combined = dedupeProductRows_(seedRows.concat(masterRows).concat(legacyRows));
+
+  if (sheet.getLastRow() > 2) {
+    sheet.getRange(3, 1, sheet.getLastRow() - 2, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).clearContent();
+  }
+  if (combined.length) {
+    sheet.getRange(3, 1, combined.length, PRODUCTDB_HEADERS.length).setValues(combined);
+    combined.forEach((_, i) => {
+      const r = i + 3;
+      sheet.getRange(r, 1, 1, PRODUCTDB_HEADERS.length)
+        .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+        .setFontFamily('Arial').setFontSize(10)
+        .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+    });
+  }
+  SpreadsheetApp.flush();
+  Logger.log('ProductDB synced: ' + combined.length + ' rows (' + masterRows.length + ' master SKU)');
+}
+
+function normalizeProductDBRow_(r) {
+  const row = (r || []).slice(0, PRODUCTDB_HEADERS.length);
+  while (row.length < PRODUCTDB_HEADERS.length) row.push('');
+  row[6] = normalizeType_(row[6], row[11], row[4]);
+  row[12] = toBool_(row[12]) || hasBarcodePattern_(row[0]) || hasBarcodePattern_(row[1]) || hasBarcodePattern_(row[2]) || hasBarcodePattern_(row[3]);
+  return row;
+}
+
+function dedupeProductRows_(rows) {
+  const out = [];
+  const seen = new Set();
+  rows.forEach(r => {
+    if (!String(r[4] || '').trim()) return;
+    const scanKey = [r[0], r[1], r[2], r[3]].join('|').toUpperCase();
+    const manualKey = ['MANUAL', r[10], r[4], r[5], r[8]].join('|').toUpperCase();
+    const key = scanKey.replace(/\|/g, '') ? scanKey : manualKey;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(r);
+  });
+  return out;
+}
+
+function normalizeType_(type, category, name) {
+  const t = String(type || '').trim().toLowerCase();
+  if (['device','mask','accessory'].indexOf(t) !== -1) return t;
+  const c = String(category || '');
+  const n = String(name || '').toLowerCase();
+  const m = c.match(/^\s*(\d+)/);
+  const catNo = m ? parseInt(m[1], 10) : 0;
+  if ([5,6,7].indexOf(catNo) !== -1) return 'mask';
+  if (/filter|hose|circuit|cushion|humidifier|chamber|accessor|chin strap/i.test(c + ' ' + n)) return 'accessory';
+  if ([1,2,3,4].indexOf(catNo) !== -1) return 'device';
+  return 'accessory';
+}
+
+function toBool_(v) {
+  if (v === true) return true;
+  const s = String(v || '').trim().toUpperCase();
+  return s === 'TRUE' || s === 'YES' || s === '1';
+}
+
+function hasBarcodePattern_(v) {
+  const s = String(v || '').trim().toUpperCase();
+  if (!s || s === '-') return false;
+  return /^\d{8,14}$/.test(s) || /(BY-|R30F|R25V|R20I|R20A|NM\d|PMI|HP\d|SPO2|\*)/.test(s);
+}
+
+function getLegacyProductDBSeed_() {
+  return [
+    ['4719893347081','','','','APEX iX Auto + Humidifier','APEX Medical','device','iX Auto + Humidifier','','','','',true],
+    ['4713025000400','','','','APEX iX Auto','APEX Medical','device','iX Auto','','','','',true],
+    ['4713025000226','','','','APEX iX Auto Humidifier','APEX Medical','device','iX Auto Humidifier','','','','',true],
+    ['4713025000073','','','','APEX XT Auto','APEX Medical','device','XT Auto','','','','',true],
+    ['4719893347319','','','','WiZARD 510 Nasal Mask','Wellell','mask','WiZARD 510','L','SM06001','','',true],
+    ['4719893347982','','','','WiZARD 310 Nasal Mask','Wellell','mask','WiZARD 310','M','SM07002','','',true],
+    ['4719893348194','','','','WiZARD 320 Full Face Mask','Wellell','mask','WiZARD 320','L','SM09001','','',true],
+    ['606959006829','','','','Philips Wisp Mask Fabric','Philips Respironics','mask','Wisp','','1094051','','',true],
+    ['6958949905648','','','','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','',true],
+    ['6958949938318','','','','Beyond EaseFit NM5','Hunan Beyond','mask','EaseFit NM5','M','78066','','',true],
+    ['6958949938561','','','','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','M','78091','','',true],
+    ['6958949938493','','','','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','L','78084','','',true],
+    ['6958949938370','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','',true],
+    ['6958949937694','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','M','PT78044','','',true],
+    ['6958949937687','','','','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','',true],
+    ['6958949932057','','','','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','',true],
+    ['6958949927302','','','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
+    ['16958949927302','','','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
+    ['6958949927319','','','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['16958949927319','','','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['6958949927425','','','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
+    ['16958949927425','','','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
+    ['6958949927371','','','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
+    ['16958949927371','','','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
+    ['','26B17','','','APEX Unknown Device 26B17','APEX Medical','device','Unknown','','','','',true],
+    ['','25J100','','','APEX Unknown Device 25J100','APEX Medical','device','Unknown','','','','',true],
+    ['','26B39','','','APEX Unknown Device 26B39','APEX Medical','device','Unknown','','','','',true],
+    ['','','BAED3C','','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
+    ['','','CADL','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['','','CEEC3C','','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['','','NEEC3C','','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
+    ['','','NAEC3C','','Beyond R-30F ASV','Hunan Beyond','device','R-30F ASV','','','','',true],
+    ['','','IEEC3C','','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
+    ['','','','*R30F108*','Beyond R-30F ASV','Hunan Beyond','device','R-30F ASV','','','','',true],
+    ['','','','*R30F107*','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
+    ['','','','*R30F*','Beyond R-30F BPAP','Hunan Beyond','device','R-30F','','','','',true],
+    ['','','','*R25V*','Beyond R-25V BPAP','Hunan Beyond','device','R-25V','','','','',true],
+    ['','','','*R20A*','Beyond R-20A CPAP','Hunan Beyond','device','R-20A','','','','',true],
+    ['','','','*R20I*','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['','','','*R20*','Beyond R-20i CPAP','Hunan Beyond','device','R-20i','','','','',true],
+    ['','','','*NM5A*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','','','','',true],
+    ['','','','*NM6A*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','','','','',true],
+    ['','','','*NM5*','Beyond EaseFit NM5','Hunan Beyond','mask','EaseFit NM5','','','','',true],
+    ['','','','*NM6*','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','','','','',true],
+    ['','','','*PMI*','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','',true],
+    ['','','','*HP*','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','',true],
+    ['','','','*SPO2*','Beyond SpO2 Kits','Hunan Beyond','accessory','SpO2 Kit','','','','',true]
+  ];
+}
+
+function updateProductAndDashboard() {
+  syncProductDB();
+  backfillStockDetails();
+  rebuildDashboard();
+  SpreadsheetApp.flush();
+  Logger.log('updateProductAndDashboard completed');
+}
+
+function readProductDB(ss) {
+  const sheet = ss.getSheetByName(TABS.productdb);
+  if (!sheet) return [];
+  const last = sheet.getLastRow();
+  if (last < 3) return [];
+
+  const headers = sheet.getRange(2, 1, 1, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).getValues()[0];
+  const idx = {};
+  headers.forEach((h, i) => idx[String(h || '').trim()] = i);
+  const col = name => idx[name] == null ? PRODUCTDB_HEADERS.indexOf(name) : idx[name];
+  const data = sheet.getRange(3, 1, last - 2, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).getValues();
+  return data
+    .filter(r => r[col('Product Name')])
+    .map(r => ({
+      gtin:         String(r[col('GTIN')] || '').trim(),
+      sn_exact:     String(r[col('SN_Exact')] || '').trim().toUpperCase(),
+      sn_pfx:       String(r[col('SN_Prefix')] || '').trim().toUpperCase(),
+      lot_pfx:      String(r[col('LOT_Prefix')] || '').trim().toUpperCase(),
+      name:         String(r[col('Product Name')] || '').trim(),
+      brand:        String(r[col('Brand')] || '').trim(),
+      type:         normalizeType_(r[col('Type')], r[col('Category')], r[col('Product Name')]),
+      model:        String(r[col('Model')] || '').trim(),
+      size:         String(r[col('Size')] || '').trim(),
+      ref:          String(r[col('REF')] || '').trim(),
+      product_code: String(r[col('Product Code')] || '').trim(),
+      category:     String(r[col('Category')] || '').trim(),
+      has_barcode:  toBool_(r[col('has_barcode')])
+    }));
+}
+
+function backfillStockDetails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const products = readProductDB(ss);
+  let updated = 0;
+
+  updated += backfillDeviceSheet_(ss.getSheetByName(TABS.device), products);
+  updated += backfillMaskSheet_(ss.getSheetByName(TABS.mask), products);
+  updated += backfillAccessorySheet_(ss.getSheetByName(TABS.accessory), products);
+
+  SpreadsheetApp.flush();
+  Logger.log('backfillStockDetails updated ' + updated + ' cells');
+}
+
+function backfillDeviceSheet_(sheet, products) {
+  if (!sheet || sheet.getLastRow() < DATA_START) return 0;
+  const values = sheet.getRange(DATA_START, 1, sheet.getLastRow() - DATA_START + 1, sheet.getLastColumn()).getValues();
+  let updated = 0;
+  values.forEach((row, i) => {
+    const p = lookupProductForBackfill_(products, {
+      type:'device',
+      gtin: row[9],
+      lot: row[DEV_COL_LOT - 1],
+      sn: row[DEV_COL_SN - 1]
+    });
+    if (!p || p.type !== 'device') return;
+    const r = DATA_START + i;
+    updated += setIfChanged_(sheet, r, 4, p.name);
+    updated += setIfChanged_(sheet, r, 6, p.brand);
+    updated += setIfChanged_(sheet, r, 7, p.model);
+  });
+  return updated;
+}
+
+function backfillMaskSheet_(sheet, products) {
+  if (!sheet || sheet.getLastRow() < DATA_START) return 0;
+  const values = sheet.getRange(DATA_START, 1, sheet.getLastRow() - DATA_START + 1, sheet.getLastColumn()).getValues();
+  let updated = 0;
+  values.forEach((row, i) => {
+    const p = lookupProductForBackfill_(products, {
+      type:'mask',
+      gtin: row[MASK_COL_GTIN - 1],
+      lot: row[MASK_COL_LOT - 1],
+      sn: ''
+    });
+    if (!p || p.type !== 'mask') return;
+    const r = DATA_START + i;
+    updated += setIfChanged_(sheet, r, 4, p.name);
+    updated += setIfChanged_(sheet, r, 6, p.brand);
+    updated += setIfChanged_(sheet, r, 7, p.model);
+    updated += setIfChanged_(sheet, r, MASK_COL_SIZE, p.size);
+    updated += setIfChanged_(sheet, r, MASK_COL_REF, p.ref);
+  });
+  return updated;
+}
+
+function backfillAccessorySheet_(sheet, products) {
+  if (!sheet || sheet.getLastRow() < DATA_START) return 0;
+  const values = sheet.getRange(DATA_START, 1, sheet.getLastRow() - DATA_START + 1, sheet.getLastColumn()).getValues();
+  let updated = 0;
+  values.forEach((row, i) => {
+    const p = lookupProductForBackfill_(products, {
+      type:'accessory',
+      gtin: row[ACC_COL_GTIN - 1],
+      lot: row[ACC_COL_LOT - 1],
+      sn: ''
+    });
+    if (!p || p.type !== 'accessory') return;
+    const r = DATA_START + i;
+    updated += setIfChanged_(sheet, r, 4, p.name);
+    updated += setIfChanged_(sheet, r, 6, p.brand);
+  });
+  return updated;
+}
+
+function setIfChanged_(sheet, row, col, value) {
+  value = String(value || '').trim();
+  if (!value) return 0;
+  const cur = String(sheet.getRange(row, col).getValue() || '').trim();
+  if (cur === value) return 0;
+  sheet.getRange(row, col).setValue(value);
+  return 1;
+}
+
+function lookupProductForBackfill_(products, d) {
+  const gtin = String(d.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const lot = normalizeLot(d.lot);
+  const sn = String(d.sn || '').replace(/\s/g, '').toUpperCase();
+  let wildcardLotHit = null;
+
+  for (const p of products || []) {
+    if (p.type && d.type && p.type !== d.type) continue;
+    const pGtin = String(p.gtin || '').replace(/^0+/, '').toUpperCase();
+    if (pGtin && gtin && pGtin === gtin) return mergeLotDetails_(p, lot);
+    if (p.sn_exact && sn && p.sn_exact === sn) return mergeLotDetails_(p, lot);
+    if (p.sn_pfx && sn && sn.startsWith(p.sn_pfx)) return mergeLotDetails_(p, lot);
+    if (p.lot_pfx && lot && matchProductPattern_(lot, p.lot_pfx)) {
+      if (String(p.lot_pfx).indexOf('*') !== -1) {
+        if (!wildcardLotHit) wildcardLotHit = p;
+      } else {
+        return mergeLotDetails_(p, lot);
+      }
+    }
+  }
+
+  if (wildcardLotHit) return mergeLotDetails_(wildcardLotHit, lot);
+  return inferProductFromLot_(lot);
+}
+
+function matchProductPattern_(value, pattern) {
+  const v = String(value || '').trim().toUpperCase();
+  const p = String(pattern || '').trim().toUpperCase();
+  if (!v || !p) return false;
+  if (p.indexOf('*') === -1) return v.indexOf(p) === 0;
+  const re = new RegExp('^' + p.split('*').map(escapeRegExp_).join('.*') + '$');
+  return re.test(v);
+}
+
+function escapeRegExp_(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function mergeLotDetails_(product, lot) {
+  const inferred = inferProductFromLot_(lot) || {};
+  const merged = {
+    name: product.name || inferred.name || '',
+    brand: product.brand || inferred.brand || '',
+    type: product.type || inferred.type || '',
+    model: product.model || inferred.model || '',
+    size: product.size || inferred.size || '',
+    ref: product.ref || inferred.ref || '',
+  };
+  if (inferred.size) merged.size = inferred.size;
+  if (inferred.ref) merged.ref = inferred.ref;
+  return merged;
+}
+
+function inferProductFromLot_(lot) {
+  lot = normalizeLot(lot);
+  if (!lot) return null;
+  const rules = [
+    { test: l => l.indexOf('NM6A') !== -1, type:'mask', model:'EaseFit NM6A', name:'Beyond EaseFit NM6A', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('NM6') !== -1,  type:'mask', model:'EaseFit NM6',  name:'Beyond EaseFit NM6',  brand:'Hunan Beyond' },
+    { test: l => l.indexOf('NM5A') !== -1, type:'mask', model:'EaseFit NM5A', name:'Beyond EaseFit NM5A', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('NM5') !== -1,  type:'mask', model:'EaseFit NM5',  name:'Beyond EaseFit NM5',  brand:'Hunan Beyond' },
+    { test: l => l.indexOf('PMI') !== -1,  type:'mask', model:'EaseFit PMI',  name:'Beyond EaseFit PMI',  brand:'Hunan Beyond' },
+    { test: l => /HP\d*$/.test(l) || l.indexOf('HP1') !== -1, type:'accessory', model:'HP1', name:'Breathing Tube HP1', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('SPO2') !== -1, type:'accessory', model:'SpO2 Kit', name:'Beyond SpO2 Kits', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('R30F108') !== -1, type:'device', model:'R-30F ASV', name:'Beyond R-30F ASV', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('R30F107') !== -1 || l.indexOf('R30F') !== -1, type:'device', model:'R-30F', name:'Beyond R-30F BPAP', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('R25V') !== -1, type:'device', model:'R-25V', name:'Beyond R-25V BPAP', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('R20A') !== -1, type:'device', model:'R-20A', name:'Beyond R-20A CPAP', brand:'Hunan Beyond' },
+    { test: l => l.indexOf('R20') !== -1, type:'device', model:'R-20i', name:'Beyond R-20i CPAP', brand:'Hunan Beyond' },
+  ];
+  const matched = rules.find(r => r.test(lot));
+  if (!matched) return null;
+  const sizeRules = [
+    { test: l => l.indexOf('NM5AL') !== -1 || l.indexOf('NM6AL') !== -1 || l.indexOf('NM6L') !== -1 || l.indexOf('NM5L') !== -1 || (/L$/.test(l) && !/LOT$/.test(l)), size:'L' },
+    { test: l => l.indexOf('NM5AM') !== -1 || l.indexOf('NM6AM') !== -1 || l.indexOf('NM6M') !== -1 || l.indexOf('NM5M') !== -1 || /M$/.test(l), size:'M' },
+    { test: l => l.indexOf('NM5AS') !== -1 || l.indexOf('NM6AS') !== -1 || l.indexOf('NM6S') !== -1 || l.indexOf('NM5S') !== -1 || /S$/.test(l), size:'S' },
+  ];
+  const sizeRule = sizeRules.find(r => r.test(lot));
+  const size = sizeRule ? sizeRule.size : '';
+  const refRules = [
+    { model:'EaseFit NM5A', size:'L', ref:'78072' },
+    { model:'EaseFit NM5A', size:'M', ref:'PT78044' },
+    { model:'EaseFit NM6A', size:'M', ref:'78091' },
+    { model:'EaseFit NM6',  size:'L', ref:'78084' },
+    { model:'EaseFit NM5',  size:'M', ref:'78066' },
+    { model:'EaseFit NM5',  size:'L', ref:'78066' },
+  ];
+  const refRule = refRules.find(r => r.model === matched.model && r.size === size);
+  return Object.assign({}, matched, { size:size, ref: refRule ? refRule.ref : '' });
+}
+
+function styleHeaderRow(ws, row, headers, bgColor) {
+  ws.setRowHeight(row, 28);
+  const rng = ws.getRange(row, 1, 1, headers.length);
+  rng.setValues([headers])
+    .setBackground(bgColor)
+    .setFontFamily('Arial')
+    .setFontSize(10)
+    .setFontWeight('bold')
+    .setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setWrap(true)
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+}
+
+/* =========================================================
+ * API
+ * ========================================================= */
+function doGet(e) {
+  const p = (e && e.parameter) ? e.parameter : {};
+  const action = p.action || '';
+
+  if (action === 'login') {
+  const user = p.user || '';
+  const pass = p.pass || '';
+  const staffName = String(p.staffName || '').trim();
+  if (USERS[user] && USERS[user] === pass && staffName) {
+    return ok({ message:'ok', user:user, role:getUserRole(user), staffName:staffName, token:makeAuthToken(user, staffName) });
+  }
+  return err('ชื่อผู้ใช้ รหัสผ่าน หรือชื่อพนักงานไม่ถูกต้อง');
+  }
+  if (action === 'ping') {
+    return ok({message:'Skyline API ready', ts:new Date().toISOString()});
+  }
+
+  if (action === 'stock') {
+    try {
+      const auth = requireAuth(p);
+      if (!auth.ok) return err(auth.error);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return ok({
+        device: readStock(ss, 'device'),
+        mask: readStock(ss, 'mask'),
+        accessory: readStock(ss, 'accessory')
+      });
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
+  if (action === 'history') {
+    try {
+      const auth = requireAuth(p);
+      if (!auth.ok) return err(auth.error);
+      const n      = parseInt(p.n || '100', 10);
+      const offset = parseInt(p.offset || '0', 10);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return ok({history: readHistory(ss, n, offset)});
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
+  if (action === 'products') {
+    try {
+      const auth = requireAuth(p);
+      if (!auth.ok) return err(auth.error);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return ok({products: readProductDB(ss)});
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
+  try {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('Skyline Stock')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch(ex) {
+    return ok({message:'Skyline API ready - HTML not found', ts:new Date().toISOString()});
+  }
+}
+
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const ss   = SpreadsheetApp.getActiveSpreadsheet();
+    const now  = new Date();
+    const date = Utilities.formatDate(now, TZ, 'dd/MM/yyyy');
+    const time = Utilities.formatDate(now, TZ, 'HH:mm');
+
+    // ?? Login via POST (鉊?葦鉊晤葵鉊?鉊耜?鉆腹鉆?鉊艇鉆?鉊?URL) ????????????????
+    if (body.action === 'login') {
+      const user = String(body.user || '');
+      const pass = String(body.pass || '');
+      const staffName = String(body.staffName || '').trim();
+      if (USERS[user] && USERS[user] === pass && staffName) {
+        return ok({ message:'ok', user:user, role:getUserRole(user), staffName:staffName, token:makeAuthToken(user, staffName) });
+      }
+      return err('ชื่อผู้ใช้ รหัสผ่าน หรือชื่อพนักงานไม่ถูกต้อง');
+    }
+
+    // ?? Validate type ??????????????????????????????????????????
+    const VALID_TYPES = ['device', 'mask', 'accessory'];
+    if (['in', 'out', 'check', 'out_by_id'].includes(body.action)) {
+      if (!VALID_TYPES.includes(body.type)) {
+        return err('ประเภทสินค้าไม่ถูกต้อง: ' + String(body.type || ''));
+      }
+    }
+
+    const auth = requireAuth(body);
+    if (!auth.ok) return err(auth.error);
+    applyAuthContext_(body, auth);
+
+    if (body.action === 'in') {
+      try { validateTransaction_(body, 'in'); } catch(vErr) { return err(vErr.message); }
+      const duplicate = findDuplicate(ss, body.type, body.sn, body.lot, body.name, body.size || '');
+      if (duplicate) return err('DUPLICATE', { duplicate: duplicate });
+
+      let stockInResult;
+      try {
+        stockInResult = doStockIn(ss, body, date, time);
+      } catch(stockErr) {
+        Logger.log('Stock In error: ' + stockErr.toString());
+        return err('Stock In failed: ' + (stockErr.message || stockErr.toString()));
+      }
+
+      return ok(Object.assign({message:'in'}, typeof stockInResult === 'object' ? stockInResult : {row: stockInResult}));
+    }
+
+    if (body.action === 'out') {
+      try { validateTransaction_(body, 'out'); } catch(vErr) { return err(vErr.message); }
+      let r;
+      try {
+        r = doStockOut(ss, body, date, time);
+      } catch(stockErr) {
+        Logger.log('Stock Out error: ' + stockErr.toString());
+        return err('Stock Out failed: ' + (stockErr.message || stockErr.toString()));
+      }
+      return r === -1 ? err('Item not found') : ok({message:'out', row:r});
+    }
+
+    if (body.action === 'check') {
+      const exists = checkDuplicate(ss, body.type, body.sn, body.lot, body.name, body.size || '');
+      return ok({ exists });
+    }
+
+    if (body.action === 'out_by_id') {
+      try { validateTransaction_(body, 'out'); } catch(vErr) { return err(vErr.message); }
+      try {
+        doStockOutByRow(ss, body, date, time);
+      } catch(ex) {
+        Logger.log('out_by_id error: ' + ex.toString());
+        return err('out_by_id failed: ' + (ex.message || ex.toString()));
+      }
+      return ok({message:'out_by_id'});
+    }
+
+    if (body.action === 'batch_stocktake') {
+      try {
+        const result = doBatchStocktake(ss, body.items || [], date, time, body);
+        return ok({message:'batch_stocktake', updated:result.updated});
+      } catch(ex) {
+        Logger.log('batch_stocktake error: ' + ex.toString());
+        return err('Batch stocktake failed: ' + (ex.message || ex.toString()));
+      }
+    }
+
+    if (body.action === 'sort') {
+      const admin = requireAuth(body, 'admin');
+      if (!admin.ok) return err(admin.error);
+      try {
+        const sheet = ss.getSheetByName(TABS.device);
+        if (!sheet) return err('ไม่พบ Device Sheet');
+        sortDeviceSheet(sheet);
+        return ok({message:'sorted'});
+      } catch(ex) {
+        Logger.log('sort error: ' + ex.toString());
+        return err('sort failed: ' + (ex.message || ex.toString()));
+      }
+    }
+
+    return err('Unknown action');
+  } catch(ex) {
+    Logger.log('doPost fatal error: ' + ex.toString());
+    return err('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง');
+  }
+}
+
+/* =========================================================
+ * READ
+ * ========================================================= */
+function readStock(ss, type) {
+  const sheet = ss.getSheetByName(TABS[type]);
+  if (!sheet) return [];
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return [];
+
+  const headers = sheet.getRange(HDR_ROW,1,1,sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getRange(DATA_START,1,last-DATA_START+1,sheet.getLastColumn()).getValues();
+
+  return data.map((row, i) => {
+    const o = {_sheetRow: i + DATA_START};
+    headers.forEach((h, j) => {
+      if (h) o[h] = row[j];
+    });
+    return o;
+  }).filter(r => r['Product Name'] && r['Status'] === 'Active');
+}
+
+function readHistory(ss, n, offset) {
+  const sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) return [];
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return [];
+
+  const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const totalRows = last - DATA_START + 1;
+
+  // offset 鉊萵鉊?鉊耜?鉆?鉊抉艇鉆葡鉊芹虜鉊?(鉊腦鉊啤葷鉊晤?鉊毯?鉊徇腹鉆葵鉊詮?)
+  const off = parseInt(offset || 0, 10);
+  if (off >= totalRows) return [];  // 鉆腹鉆腹鉊菽?鉆葉鉊﹤號鉊丞?鉊葩鉆腹鉆艇鉆葷
+  const startFromBottom = Math.max(DATA_START, last - off - n + 1);
+  const endRow = Math.max(DATA_START, last - off);
+  const count = endRow - startFromBottom + 1;
+  if (count <= 0) return [];
+
+  const data = sheet.getRange(startFromBottom, 1, count, sheet.getLastColumn()).getValues();
+
+  return data.reverse().map(row => {
+    const o = {};
+    headers.forEach((h, j) => { if (h) o[h] = row[j]; });
+    return o;
+  }).filter(r => r['Product Name']);
+}
+
+/* =========================================================
+ * HELPERS
+ * ========================================================= */
+function normalizeText(v) {
+  return String(v || '').trim();
+}
+
+function getUserRole(user) {
+  return ADMIN_USERS[user] ? 'admin' : 'stock';
+}
+
+function getAuthSecret() {
+  const props = PropertiesService.getScriptProperties();
+  let secret = props.getProperty('SKL_AUTH_SECRET');
+  if (!secret) {
+    secret = Utilities.getUuid() + ':' + Utilities.getUuid();
+    props.setProperty('SKL_AUTH_SECRET', secret);
+  }
+  return secret;
+}
+
+function makeAuthToken(user, staffName) {
+  const secret = getAuthSecret();
+  const subject = String(user) + '|' + String(staffName || '').trim();
+  const sig = Utilities.computeHmacSha256Signature(subject, secret);
+  return Utilities.base64EncodeWebSafe(sig);
+}
+
+function requireAuth(payload, requiredRole) {
+  const user = String(payload.user || '');
+  const staffName = String(payload.staffName || payload.operator || '').trim();
+  const token = String(payload.token || '');
+  if (!USERS[user] || !staffName || !token || token !== makeAuthToken(user, staffName)) {
+    return { ok:false, error:'Unauthorized or missing staff name' };
+  }
+  if (requiredRole === 'admin' && getUserRole(user) !== 'admin') {
+    return { ok:false, error:'Admin permission required' };
+  }
+  return { ok:true, user:user, role:getUserRole(user), staffName:staffName };
+}
+
+function normalizeLot(lot) {
+  lot = String(lot || '').trim().toUpperCase();
+  if (!lot) return '';
+
+  const idxBy = lot.indexOf('BY-');
+  if (idxBy !== -1) return lot.substring(idxBy);
+
+  // 鉊萵鉊?鉊Ｒ萼鉊萵鉊抉?鉊丞? GS1 鉊?鉊耜?鉊徇?鉆葡鉊冢葉鉊?鉆艇鉊啤?鉊晤? C.\d+ patterns (sync 鉊萵鉊?frontend)
+  return lot.replace(/^\d{10,}/, '').replace(/C\.\d+(?:\.\d+)+/g, '').trim();
+}
+
+function findExistingAggregateRow(sheet, type, b) {
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return -1;
+
+  const numCols = sheet.getLastColumn();
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, numCols).getValues();
+
+  const lotCol  = type === 'mask' ? MASK_COL_LOT  : ACC_COL_LOT;
+  const sizeCol = MASK_COL_SIZE;
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (normalizeText(row[COL_STATUS - 1]) !== 'Active') continue;
+
+    const productName = normalizeText(row[3]);   // col 4
+    const brand       = normalizeText(row[5]);   // col 6
+    const lot         = normalizeText(row[lotCol - 1]);
+    const size        = type === 'mask' ? normalizeText(row[sizeCol - 1]) : '';
+
+    const sameName  = productName === normalizeText(b.name);
+    const sameBrand = brand       === normalizeText(b.brand);
+    const sameLot   = normalizeLot(lot) === normalizeLot(b.lot);
+    const sameSize  = (type !== 'mask') || (size === normalizeText(b.size));
+
+    if (sameName && sameBrand && sameLot && sameSize) {
+      return i + DATA_START;  // 鉊虞鉊?row number 鉊腦鉊毯?鉆? sheet
+    }
+  }
+
+  return -1;
+}
+
+function rowMatchesPayload(row, type, b) {
+  if (normalizeText(row[COL_STATUS - 1]) !== 'Active') return false;
+
+  const rowName = normalizeText(row[3]).toUpperCase();
+  const rowBrand = normalizeText(row[5]).toUpperCase();
+  if (b.name && rowName !== normalizeText(b.name).toUpperCase()) return false;
+  if (b.brand && rowBrand !== normalizeText(b.brand).toUpperCase()) return false;
+
+  if (type === 'device') {
+    const rowSn = normalizeText(row[DEV_COL_SN - 1]).toUpperCase();
+    const rowLot = normalizeLot(row[DEV_COL_LOT - 1]);
+    const rowGtin = normalizeText(row[9]).replace(/\s/g, '').replace(/^0+/, '').toUpperCase(); // col 10
+    const sn = normalizeText(b.sn).toUpperCase();
+    const lot = normalizeLot(b.lot);
+    const gtin = normalizeText(b.gtin).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+    if (sn) return rowSn === sn;
+    if (lot) return rowLot === lot;
+    if (gtin) return rowGtin === gtin;
+    return false;
+  }
+
+  const lotCol = type === 'mask' ? MASK_COL_LOT : ACC_COL_LOT;
+  const gtinCol = type === 'mask' ? MASK_COL_GTIN : ACC_COL_GTIN;
+  const rowLot = normalizeLot(row[lotCol - 1]);
+  const rowGtin = normalizeText(row[gtinCol - 1]).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const lot = normalizeLot(b.lot);
+  const gtin = normalizeText(b.gtin).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  if (lot && rowLot !== lot) return false;
+  if (!lot && gtin && rowGtin !== gtin) return false;
+  if (!lot && !gtin) return false;
+
+  if (type === 'mask' && b.size) {
+    const rowSize = normalizeText(row[MASK_COL_SIZE - 1]).toUpperCase();
+    if (rowSize !== normalizeText(b.size).toUpperCase()) return false;
+  }
+  return true;
+}
+
+function styleDataRow(sheet, r, type) {
+  const last = sheet.getLastColumn();
+  sheet.getRange(r,1,1,last)
+    .setFontFamily('Arial')
+    .setFontSize(10)
+    .setFontWeight('normal')
+    .setVerticalAlignment('middle')
+    .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+
+  const clrs = {
+    device:['#dce8f7','#1a4fa0'],
+    mask:['#d6f0e3','#1a7a4a'],
+    accessory:['#fdf3d0','#a06a00']
+  };
+
+  const c = clrs[type] || clrs.device;
+  sheet.getRange(r, COL_STATUS)
+    .setBackground(c[0])
+    .setFontColor(c[1])
+    .setFontWeight('bold');
+}
+
+function markOut(sheet, r, type, date) {
+  sheet.getRange(r, COL_STATUS).setValue('Out');
+
+  if (type === 'device') {
+    sheet.getRange(r, DEV_COL_OUT_DATE).setValue(date);
+  }
+
+  sheet.getRange(r,1,1,sheet.getLastColumn()).setBackground('#fde8e8');
+  sheet.getRange(r, COL_STATUS).setFontColor('#b92e2e').setFontWeight('bold');
+}
+
+function appendHistory(ss, b, date, time, action) {
+  const sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) return;
+
+  const tl = {device:'Device', mask:'Mask', accessory:'Accessory'};
+  const snLot = b.sn ? 'SN: ' + b.sn : (b.lot ? 'LOT: ' + b.lot : (b.productCode ? 'CODE: ' + b.productCode : ''));
+  const qty = Math.max(1, parseInt(b.qty || 1, 10));
+
+  sheet.appendRow([
+    date, time, tl[b.type] || b.type, b.name || '', b.brand || '', snLot, action, qty,
+    Number.isFinite(Number(b.beforeQty)) ? Number(b.beforeQty) : '',
+    Number.isFinite(Number(b.afterQty)) ? Number(b.afterQty) : '',
+    b.purpose || '', b.recipient || b.location || '', b.user || '', b.operator || b.staffName || b.user || '',
+    b.note || '', b.ref || ''
+  ]);
+
+  const r = sheet.getLastRow();
+  sheet.getRange(r,1,1,16)
+    .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+    .setFontFamily('Arial')
+    .setFontSize(10)
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+
+  const ac = sheet.getRange(r,7);
+  if (action === 'Stock In') {
+    ac.setBackground('#d6f0e3').setFontColor('#1a7a4a').setFontWeight('bold');
+  } else if (action.indexOf('Stocktake') !== -1) {
+    ac.setBackground('#e8eefc').setFontColor('#2753a7').setFontWeight('bold');
+  } else {
+    ac.setBackground('#fde8e8').setFontColor('#b92e2e').setFontWeight('bold');
+  }
+}
+
+function validateTransaction_(b, action) {
+  if (!b) throw new Error('Missing payload');
+  if (!b.type || ['device','mask','accessory'].indexOf(String(b.type)) === -1) throw new Error('Invalid product type');
+  if (!String(b.name || '').trim()) throw new Error('Missing product name');
+  const qty = parseInt(b.qty || 1, 10);
+  if (!qty || qty <= 0) throw new Error('Quantity must be greater than 0');
+  if (!String(b.operator || b.staffName || b.user || '').trim()) throw new Error('Missing operator');
+  if (action === 'out') {
+    const purpose = String(b.purpose || '').trim();
+    const recipient = String(b.recipient || b.location || '').trim();
+    if (!purpose) throw new Error('Missing stock-out purpose');
+    if (purpose === '\u0e2d\u0e37\u0e48\u0e19\u0e46' && !String(b.purposeOther || '').trim()) throw new Error('Please specify other purpose');
+    if (!recipient) throw new Error('Missing recipient');
+    b.purpose = purpose === '\u0e2d\u0e37\u0e48\u0e19\u0e46' ? '\u0e2d\u0e37\u0e48\u0e19\u0e46: ' + String(b.purposeOther || '').trim() : purpose;
+    b.recipient = recipient;
+  }
+}
+
+function applyAuthContext_(body, auth) {
+  body.user = auth.user;
+  body.operator = String(body.staffName || body.operator || auth.staffName || auth.user || '').trim();
+  return body;
+}
+
+/* =========================================================
+ * STOCK IN
+ * ========================================================= */
+function doStockIn(ss, b, date, time) {
+  const sheet = ss.getSheetByName(TABS[b.type]);
+  if (!sheet) throw new Error('Sheet not found: ' + b.type);
+
+  b.lot = normalizeLot(b.lot);
+
+  // DEVICE = 鉊?葡鉊Ｒ?鉊腦鉊獅?鉊冢?
+  if (b.type === 'device') {
+    const seq = sheet.getLastRow() - HDR_ROW + 1;
+    const row = [
+      seq,
+      date,
+      time,
+      b.name || '',
+      'Active',
+      b.brand || '',
+      b.model || '',
+      b.sn || '',
+      b.lot || '',
+      b.gtin || '',
+      b.mfgDate || '',
+      b.expiry || '',
+      b.location || '',
+      '',
+      b.user || '',
+      b.note || ''
+    ];
+
+    sheet.appendRow(row);
+    const newRow = sheet.getLastRow();
+    styleDataRow(sheet, newRow, b.type);
+    appendHistory(ss, b, date, time, 'Stock In');
+    return newRow;
+  }
+
+  // MASK / ACCESSORY = 鉊?葷鉊﹤艇鉆葉鉊?鉊葭鉊Ｒ葷鉊萵鉊?
+  const addQty = Math.max(1, parseInt(b.qty || 1, 10));
+  const existingRow = findExistingAggregateRow(sheet, b.type, b);
+
+  if (existingRow !== -1) {
+    const qtyCol = (b.type === 'mask') ? MASK_COL_QTY : ACC_COL_QTY;
+    const oldQty = parseInt(sheet.getRange(existingRow, qtyCol).getValue() || 0, 10);
+    const newQty = oldQty + addQty;
+    sheet.getRange(existingRow, qtyCol).setValue(newQty);
+
+    if (b.note) {
+      const noteCol = (b.type === 'mask') ? MASK_COL_NOTE : ACC_COL_NOTE;
+      const oldNote = normalizeText(sheet.getRange(existingRow, noteCol).getValue());
+      sheet.getRange(existingRow, noteCol).setValue(oldNote ? oldNote + ' | ' + b.note : b.note);
+    }
+
+    if (normalizeText(sheet.getRange(existingRow, COL_STATUS).getValue()) !== 'Active') {
+      sheet.getRange(existingRow, COL_STATUS).setValue('Active');
+    }
+
+    sheet.getRange(existingRow,1,1,sheet.getLastColumn()).setBackground('#FFFFFF');
+    styleDataRow(sheet, existingRow, b.type);
+    if (_needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
+    b.beforeQty = oldQty;
+    b.afterQty = newQty;
+    appendHistory(ss, b, date, time, 'Stock In');
+    return {row: existingRow, merged: true, newQty: newQty};
+  }
+
+  const seq = sheet.getLastRow() - HDR_ROW + 1;
+  let row = [];
+
+  if (b.type === 'mask') {
+    row = [
+      seq,
+      date,
+      time,
+      b.name || '',
+      'Active',
+      b.brand || '',
+      b.model || '',
+      b.size || '',
+      b.ref || '',
+      b.lot || '',
+      b.gtin || '',
+      b.mfgDate || '',
+      addQty,
+      b.note || '',
+      b.expiry || ''
+    ];
+  } else if (b.type === 'accessory') {
+    row = [
+      seq,
+      date,
+      time,
+      b.name || '',
+      'Active',
+      b.brand || '',
+      b.lot || '',
+      b.gtin || '',
+      b.mfgDate || '',
+      addQty,
+      b.location || '',
+      b.note || ''
+    ];
+  }
+
+  sheet.appendRow(row);
+  const newRow = sheet.getLastRow();
+  styleDataRow(sheet, newRow, b.type);
+  if (_needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
+  appendHistory(ss, b, date, time, 'Stock In');
+  return newRow;
+}
+
+/* =========================================================
+ * STOCK OUT
+ * ========================================================= */
+function doStockOut(ss, b, date, time) {
+  const sheet = ss.getSheetByName(TABS[b.type]);
+  if (!sheet) throw new Error('Sheet not found: ' + b.type);
+
+  b.lot = normalizeLot(b.lot);
+
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return -1;
+
+  const numCols = sheet.getLastColumn();
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, numCols).getValues();
+
+  // DEVICE = 鉊冢葉鉊?鉊耜腹 SN 鉆鉊?鉊葦鉊丞萵鉊?(scan 鉊葡鉊艇鉆葡鉊?鉊嗣?鉊?鉊?鉆鉊葉鉊丞?鉊耜葵鉊詮?鉊?鉊冢?)
+  if (b.type === 'device') {
+    const keyVal = b.sn || b.lot || '';
+    const gtin = normalizeText(b.gtin).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+    for (let i = data.length - 1; i >= 0; i--) {
+      const row = data[i];
+      if (normalizeText(row[COL_STATUS - 1]) !== 'Active') continue;
+
+      const rowSn  = normalizeText(row[DEV_COL_SN - 1]);
+      const rowLot = normalizeText(row[DEV_COL_LOT - 1]);
+      const rowGtin = normalizeText(row[9]).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+      const r = i + DATA_START;
+
+      const snMatch = b.sn && rowSn.toUpperCase() === normalizeText(b.sn).toUpperCase();
+      const lotMatch = !b.sn && b.lot && normalizeLot(rowLot) === normalizeLot(keyVal);
+      const gtinMatch = !b.sn && !b.lot && gtin && rowGtin === gtin;
+      if (snMatch || lotMatch || gtinMatch) {
+        markOut(sheet, r, b.type, date);
+
+        if (b.location || b.note) {
+          const oldNote = normalizeText(row[15]);  // col 16 = Note
+          const extra = (b.location ? ('OUT TO: ' + b.location) : '') + (b.note ? (' | ' + b.note) : '');
+          sheet.getRange(r, 16).setValue(oldNote ? oldNote + ' | ' + extra : extra);
+        }
+
+        appendHistory(ss, b, date, time, 'Stock Out');
+        return r;
+      }
+    }
+    return -1;
+  }
+
+  // MASK / ACCESSORY = 鉊丞? Qty 鉆? Active row + 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉊?萼鉊虜鉊號鉆腦鉊晤?
+  const lotCol  = b.type === 'mask' ? MASK_COL_LOT  : ACC_COL_LOT;
+  const qtyCol  = b.type === 'mask' ? MASK_COL_QTY  : ACC_COL_QTY;
+  const outQty  = Math.max(1, parseInt(b.qty || 1, 10));
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (normalizeText(row[COL_STATUS - 1]) !== 'Active') continue;
+
+    const rowLot  = normalizeText(row[lotCol - 1]);
+    const rowName = normalizeText(row[3]);  // col 4 = Product Name
+    const rowSize = b.type === 'mask' ? normalizeText(row[MASK_COL_SIZE - 1]) : '';
+
+    // 鉊腦鉊抉? LOT (鉊萵鉊?鉊晤?)
+    if (normalizeLot(rowLot) !== normalizeLot(b.lot)) continue;
+    // 鉊腦鉊抉? Product Name (鉊?鉊耜腹鉊?
+    if (b.name && rowName.toUpperCase() !== normalizeText(b.name).toUpperCase()) continue;
+    // 鉊腦鉊抉? Size 鉊芹董鉊徇腦鉊晤? mask (鉊?鉊耜腹鉊? 鉆鉊虞鉆葉鉆腹鉆?鉆葡鉊Ｒ?鉊毯? size
+    if (b.type === 'mask' && b.size && rowSize.toUpperCase() !== normalizeText(b.size).toUpperCase()) continue;
+
+    const r = i + DATA_START;
+    const qty = parseInt(row[qtyCol - 1] || 0, 10);
+    if (qty <= 0) continue;
+    const actualOutQty = Math.min(outQty, qty);
+
+    // 鉊丞? Qty 鉊葡鉊﹤?鉊喪?鉊抉?鉊腦鉊毯?鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊?鉊耜?鉊徇艇鉊獅葉 0 鉆葦鉆?mark Out)
+    if (qty > actualOutQty) {
+      sheet.getRange(r, qtyCol).setValue(qty - actualOutQty);
+    } else {
+      markOut(sheet, r, b.type, date);
+    }
+
+    // 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆鉊芹腹鉊?鉆鉊虞鉆葉 track 鉊抉?鉊耜?鉆葡鉊Ｒ?鉊徇?鉆?鉊?
+    appendOutRow(sheet, b.type, row, date, time, b.location || '', b.note || '', actualOutQty);
+    b.qty = actualOutQty;
+    b.beforeQty = qty;
+    b.afterQty = Math.max(0, qty - actualOutQty);
+    if (qty <= actualOutQty && _needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
+
+    appendHistory(ss, b, date, time, 'Stock Out');
+    return r;
+  }
+
+  return -1;
+}
+
+/* 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆? Mask / Accessory sheet */
+function appendOutRow(sheet, type, srcRow, date, time, location, note, qty) {
+  qty = Math.max(1, parseInt(qty || 1, 10));
+  const seq = sheet.getLastRow() - HDR_ROW + 1;
+  let outRow = [];
+
+  if (type === 'mask') {
+    outRow = [
+      seq,
+      date,
+      time,
+      srcRow[3],              // Product Name
+      'Out',
+      srcRow[5],              // Brand
+      srcRow[6],              // Model
+      srcRow[MASK_COL_SIZE - 1],   // Size
+      srcRow[MASK_COL_REF  - 1],   // REF
+      srcRow[MASK_COL_LOT  - 1],   // LOT
+      srcRow[MASK_COL_GTIN - 1],   // GTIN
+      srcRow[MASK_COL_MFG    - 1],   // Mfg Date
+      qty,                           // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
+      (location ? 'OUT TO: ' + location : '') + (note ? (location ? ' | ' : '') + note : ''),
+      srcRow[MASK_COL_EXPIRY - 1] || ''  // Expiry
+    ];
+  } else if (type === 'accessory') {
+    outRow = [
+      seq,
+      date,
+      time,
+      srcRow[3],              // Product Name
+      'Out',
+      srcRow[5],              // Brand
+      srcRow[ACC_COL_LOT  - 1],    // LOT
+      srcRow[ACC_COL_GTIN - 1],    // GTIN
+      srcRow[ACC_COL_MFG  - 1],    // Mfg Date
+      qty,                    // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
+      location,               // Location = 鉊虞鉆葉鉊號鉆腦鉊晤?
+      note
+    ];
+  }
+
+  if (!outRow.length) return;
+
+  sheet.appendRow(outRow);
+  const newRow = sheet.getLastRow();
+
+  // 鉊芹?鉊艇鉆?鉊葷 Out (鉊芹葭鉆?鉊葉鉆葉鉊?
+  sheet.getRange(newRow, 1, 1, sheet.getLastColumn())
+    .setBackground('#fde8e8')
+    .setFontFamily('Arial')
+    .setFontSize(10)
+    .setVerticalAlignment('middle')
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+
+  sheet.getRange(newRow, COL_STATUS)
+    .setFontColor('#b92e2e')
+    .setFontWeight('bold');
+}
+
+/* 鉆鉊?葭鉊Ｒ? Device sheet: Active 鉊?鉊冢? ??SN A? */
+function sortDeviceSheet(sheet) {
+  const last = sheet.getLastRow();
+  if (last < DATA_START + 1) return;  // 鉊?鉊冢?鉊﹤葭鉊冢腺鉆葡鉊?鉆葉鉊?2 鉆?鉊抉?鉆葉鉊﹤號鉊?
+  const range = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn());
+  range.sort([
+    { column: COL_STATUS,  ascending: true },   // "Active" < "Out" ??Active 鉊葆鉆?鉊?鉊冢?
+    { column: DEV_COL_SN,  ascending: true }    // SN A? 鉊葡鉊Ｒ?鉊?鉊丞虜鉆腹
+  ]);
+}
+
+/* 鉆鉊?葭鉊Ｒ? Mask / Accessory sheet: Active (In) 鉊?鉊冢? ??Out 鉆艇鉆艇鉊腹鉊耜?鉆葡鉊艇鉆葡鉊?*/
+function sortMaskAccSheet(sheet) {
+  const last = sheet.getLastRow();
+  if (last < DATA_START + 1) return;
+  const range = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn());
+  range.sort([
+    { column: COL_STATUS, ascending: true },  // "Active" < "Out" ??Active 鉊葆鉆?鉊?鉊冢?
+    { column: 2,          ascending: true }   // 鉆鉊?葭鉊Ｒ?鉊葡鉊?Date In 鉊葡鉊Ｒ?鉊?鉊?鉊丞萼鉊艇鉊詮?鉊?
+  ]);
+}
+
+function _needsSort(sheet, statusCol, dateCol) {
+  const last = sheet.getLastRow();
+  if (last < DATA_START + 1) return false;
+  const statuses = sheet.getRange(DATA_START, statusCol, last - DATA_START + 1, 1).getValues();
+  let seenOut = false;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = normalizeText(statuses[i][0]);
+    if (status === 'Out') seenOut = true;
+    if (status === 'Active' && seenOut) return true;
+  }
+  return false;
+}
+
+function doStockOutByRow(ss, b, date, time) {
+  const sheet = ss.getSheetByName(TABS[b.type]);
+  if (!sheet) throw new Error('Sheet not found: ' + b.type);
+
+  const r = parseInt(b.sheetRow, 10);
+  if (!r || r < DATA_START || r > sheet.getLastRow()) {
+    throw new Error('Invalid row');
+  }
+  const numCols = sheet.getLastColumn();
+  const srcRow = sheet.getRange(r, 1, 1, numCols).getValues()[0];
+
+  if (!rowMatchesPayload(srcRow, b.type, b)) {
+    throw new Error('Row does not match scanned item');
+  }
+
+  const outQty = Math.max(1, parseInt(b.qty || 1, 10));
+
+  if (b.type === 'device') {
+    markOut(sheet, r, b.type, date);
+    if (b.location || b.note) {
+      const oldNote = normalizeText(srcRow[15]);
+      const extra = (b.location ? 'OUT TO: ' + b.location : '') + (b.note ? ' | ' + b.note : '');
+      sheet.getRange(r, 16).setValue(oldNote ? oldNote + ' | ' + extra : extra);
+    }
+    // sort 鉊徇艇鉊晤? appendHistory 鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?row index 鉆鉊艇鉊菽?鉊Ｒ?
+  } else {
+    // Mask / Accessory: 鉊丞? Qty 鉊葡鉊﹤?鉊喪?鉊抉?鉊腦鉊毯? + 鉊芹腦鉆葡鉊?Out row
+    const qtyCol = b.type === 'mask' ? MASK_COL_QTY : ACC_COL_QTY;
+    const qty = parseInt(srcRow[qtyCol - 1] || 0, 10);
+    if (qty <= 0) throw new Error('No stock left');
+    const actualOutQty = Math.min(outQty, qty);
+
+    if (qty > actualOutQty) {
+      sheet.getRange(r, qtyCol).setValue(qty - actualOutQty);
+    } else {
+      markOut(sheet, r, b.type, date);
+    }
+    appendOutRow(sheet, b.type, srcRow, date, time, b.recipient || b.location || '', b.note || '', actualOutQty);
+    b.qty = actualOutQty;
+    b.beforeQty = qty;
+    b.afterQty = Math.max(0, qty - actualOutQty);
+    if (qty <= actualOutQty && _needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
+  }
+
+  appendHistory(ss, b, date, time, 'Stock Out');
+}
+
+function doBatchStocktake(ss, items, date, time, ctx) {
+  if (!Array.isArray(items) || !items.length) throw new Error('No stocktake items');
+  if (!String(ctx.operator || ctx.staffName || '').trim()) throw new Error('Missing operator');
+  const products = readProductDB(ss);
+  const byCode = new Map(products.map(p => [String(p.product_code || '').trim().toUpperCase(), p]));
+  let updated = 0;
+
+  items.forEach(item => {
+    const code = String(item.productCode || item.product_code || '').trim().toUpperCase();
+    const qty = parseInt(item.qty, 10);
+    if (!code || !Number.isFinite(qty) || qty < 0) throw new Error('Invalid stocktake item: ' + code);
+    const product = byCode.get(code);
+    if (!product) throw new Error('Product code not found: ' + code);
+    if (product.type === 'device') return;
+
+    const sheet = ss.getSheetByName(TABS[product.type]);
+    if (!sheet) throw new Error('Sheet not found: ' + product.type);
+    const result = setAggregateQty_(sheet, product, qty, date, ctx);
+    appendHistory(ss, {
+      type: product.type, name: product.name, brand: product.brand, model: product.model, size: product.size,
+      ref: product.ref, productCode: product.product_code, qty: qty, beforeQty: result.beforeQty, afterQty: result.afterQty,
+      purpose: 'ปรับยอดจาก stocktake', recipient: '', user: ctx.user, operator: ctx.operator, note: 'batch stocktake'
+    }, date, time, 'Stocktake');
+    updated++;
+  });
+  return {updated:updated};
+}
+
+function setAggregateQty_(sheet, product, qty, date, ctx) {
+  const type = product.type;
+  const rowPayload = {
+    type:type, name:product.name, brand:product.brand, model:product.model, size:product.size, ref:product.ref,
+    lot:'', gtin:product.gtin || '', qty:qty, location:'Stocktake', note:'stocktake by ' + (ctx.operator || ctx.user || '')
+  };
+  const row = findExistingAggregateRow(sheet, type, rowPayload);
+  const qtyCol = type === 'mask' ? MASK_COL_QTY : ACC_COL_QTY;
+  if (row !== -1) {
+    const beforeQty = parseInt(sheet.getRange(row, qtyCol).getValue() || 0, 10);
+    sheet.getRange(row, qtyCol).setValue(qty);
+    sheet.getRange(row, COL_STATUS).setValue(qty > 0 ? 'Active' : 'Out');
+    styleDataRow(sheet, row, type);
+    return {row:row, beforeQty:beforeQty, afterQty:qty};
+  }
+  if (qty <= 0) return {row:-1, beforeQty:0, afterQty:0};
+  const seq = sheet.getLastRow() - HDR_ROW + 1;
+  const newRow = type === 'mask'
+    ? [seq,date,'',product.name,'Active',product.brand,product.model,product.size,product.ref,'',product.gtin || '','',qty,'stocktake create','']
+    : [seq,date,'',product.name,'Active',product.brand,'',product.gtin || '','',qty,'Stocktake','stocktake create'];
+  sheet.appendRow(newRow);
+  const r = sheet.getLastRow();
+  styleDataRow(sheet, r, type);
+  return {row:r, beforeQty:0, afterQty:qty};
+}
+
+/* =========================================================
+ * JSON RESPONSE
+ * ========================================================= */
+function ok(data) {
+  return ContentService.createTextOutput(
+    JSON.stringify(Object.assign({ok:true}, data))
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function err(msg, extra) {
+  return ContentService.createTextOutput(
+    JSON.stringify(Object.assign({ok:false, error:msg}, extra || {}))
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* =========================================================
+ * ALERT SYSTEM ??鉆?鉆?鉆鉊虞鉊冢?鉊葡鉊葉鉊菽?鉊﹤艇鉊冢萵鉊?鉊腹鉊晤?鉊?
+ *
+ * 鉊抉葩鉊葭鉆鉊葩鉊?鉊?鉊葡鉊?(鉊董鉊腦鉊晤?鉊?鉊葭鉊Ｒ葷):
+ *   1. 鉆葵鉆葉鉊菽?鉊﹤艇鉊號鉆腦鉊晤?鉊葭鉆?ALERT_EMAIL 鉊?鉊耜?鉊丞?鉊耜?
+ *   2. 鉆鉊葩鉊?Apps Script Editor ??鉊?萵鉊?setupAlertTrigger()
+ *   3. 鉊冢?鉊詮?鉊耜? Permission 鉊葭鉆?鉊?(Gmail + Sheets)
+ *   4. 鉊?萼鉊?鉊萼鉊芹?鉊葉鉊菽?鉊﹤艇鉊虜鉊葷鉊晤? 08:00 鉊? 鉊冢萵鉊?鉊腹鉊晤?鉊?
+ *   5. 鉊?鉊芹葉鉊?鉊?鉊萵鉊?鉊菽?鉊腺鉊?萵鉊?sendTestAlert()
+ * ========================================================= */
+const ALERT_EMAIL    = 'supitcha.raks@gmail.com';  // 鉊冢葭鉆鉊﹤艇鉊號鉆腦鉊晤?鉆?鉆?鉆鉊虞鉊冢? (鉊萵鉆?鉊徇艇鉊耜腺鉊冢葭鉆鉊﹤艇鉊?鉊抉腺 comma)
+const ALERT_LOW_QTY  = 3;  // 鉆?鉆?鉆鉊虞鉊冢?鉆鉊﹤虞鉆葉 qty ??鉊?鉊耜?鉊菽?
+const ALERT_EXP_DAYS = 90; // 鉆?鉆?鉆鉊虞鉊冢?鉊丞?鉊抉?鉊徇?鉆葡鉊葭鉆葷鉊晤?鉊?鉊冢?鉊徇腹鉊葉鉊耜腺鉊?
+
+/**
+ * 鉊?萵鉊?鉊?萵鉆?鉆鉊葭鉊Ｒ葷鉊葡鉊?Apps Script Editor 鉆鉊虞鉆葉鉊芹腦鉆葡鉊?Trigger
+ * 鉊徇艇鉊晤?鉊葡鉊?鉊晤?鉊?checkAndAlert() 鉊萼鉊董鉊葡鉊葉鉊晤?鉆?鉊﹤萵鉊葩鉊虜鉊葷鉊晤? 08:00
+ */
+function setupAlertTrigger() {
+  // 鉊丞? trigger 鉆鉊?鉊耜?鉊菽?鉊虞鉆葉 checkAndAlert 鉊?鉊冢? (鉊?鉊冢?鉊萵鉊?鉆董)
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'checkAndAlert')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger('checkAndAlert')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .inTimezone(TZ)
+    .create();
+
+  Logger.log('Trigger created: checkAndAlert daily at 08:00');
+}
+
+/** 鉊?鉊芹葉鉊葵鉆?鉊冢葭鉆鉊﹤艇鉊萵鉊?鉊?(鉊?萵鉊?鉊耜? Editor) */
+function sendTestAlert() {
+  const email = ALERT_EMAIL.trim();
+  if (!email) { Logger.log('Missing ALERT_EMAIL'); return; }
+
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const { lowItems, expItems } = _collectAlertItems(ss, today);
+
+  // 鉊?鉊耜腺鉊晤?鉆腹鉆腹鉊菽?鉆葉鉊﹤號鉊丞?鉊?葩鉊?鉆葦鉆?鉊芹?鉊萵鉊抉葉鉊Ｒ?鉊耜?鉆鉊虞鉆葉鉊號鉊徇?鉆葡鉊葡鉊冢葭鉆鉊﹤艇
+  const testLow = lowItems.length ? lowItems : [
+    { type:'Mask',      name:'Beyond EaseFit NM5A', size:'M', qty:2 },
+    { type:'Accessory', name:'Breathing Tube HP1',  size:'',  qty:1 },
+  ];
+  const testExp = expItems.length ? expItems : [
+    { name:'Beyond R-20i CPAP', sn:'CADL001', daysLeft:15, expDate:'31/07/2026' },
+  ];
+
+  const subject = `[TEST] Skyline Stock Alert - ${testLow.length} low stock, ${testExp.length} near expiry`;
+  MailApp.sendEmail({ to: email, subject, htmlBody: _buildAlertHtml(testLow, testExp, today) });
+  Logger.log('Test alert sent to ' + email);
+}
+
+/** 鉊萵鉊?鉆?鉊晤?鉊徇艇鉊晤? ??鉊號鉊?鉊?葭鉊Ｒ?鉆?鉊?Trigger 鉊虜鉊葷鉊晤? */
+function checkAndAlert() {
+  const email = ALERT_EMAIL.trim();
+  if (!email) { Logger.log('Missing ALERT_EMAIL'); return; }
+
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const { lowItems, expItems } = _collectAlertItems(ss, today);
+
+  if (!lowItems.length && !expItems.length) {
+    Logger.log('No alert items found');
+    return;
+  }
+
+  // 鉊?鉊冢?鉊萵鉊葵鉆?鉊?鉊???鉊芹?鉊?鉊徇腹鉆?鉊?鉊耜萼鉆鉊﹤虞鉆葉鉊芹?鉊耜?鉊葡鉊??鉆?鉊艇鉊菽?鉊Ｒ?
+  const props      = PropertiesService.getScriptProperties();
+  const currentKey = JSON.stringify({
+    low: lowItems.map(x => x.name + '|' + x.size),
+    exp: expItems.map(x => x.sn  + '|' + x.expDate),
+  });
+  if (currentKey === (props.getProperty('lastAlertKey') || '')) {
+    Logger.log('Alerts already sent today; skipping duplicate send');
+    return;
+  }
+  props.setProperty('lastAlertKey', currentKey);
+
+  const subject = `Skyline Stock Alert - ${lowItems.length} low stock, ${expItems.length} near expiry`;
+  MailApp.sendEmail({ to: email, subject, htmlBody: _buildAlertHtml(lowItems, expItems, today) });
+  Logger.log('Stock alert sent to ' + email);
+}
+
+/** 鉊?葷鉊腦鉊抉腹鉊?葡鉊Ｒ?鉊耜腦鉊葭鉆?鉆葉鉊?鉊?鉊?鉊虞鉊冢? */
+function _collectAlertItems(ss, today) {
+  const lowItems = [];
+  const expItems = [];
+  const warnMs   = ALERT_EXP_DAYS * 86400000;
+
+  // ?? Mask: 鉊腦鉊抉? low stock ??????????????????????????????
+  const maskSheet = ss.getSheetByName(TABS.mask);
+  if (maskSheet && maskSheet.getLastRow() >= DATA_START) {
+    const data = maskSheet.getRange(
+      DATA_START, 1,
+      maskSheet.getLastRow() - DATA_START + 1,
+      maskSheet.getLastColumn()
+    ).getValues();
+    data.forEach(row => {
+      if (String(row[COL_STATUS - 1] || '').trim() !== 'Active') return;
+      const qty = Number(row[MASK_COL_QTY - 1] || 0);
+      if (qty <= ALERT_LOW_QTY) {
+        lowItems.push({
+          type: 'Mask',
+          name: String(row[3] || ''),
+          size: String(row[MASK_COL_SIZE - 1] || ''),
+          qty,
+        });
+      }
+    });
+  }
+
+  // ?? Mask: 鉊腦鉊抉? near expiry (col 15 = Expiry) ??????????
+  // 鉊?葉鉊腦鉊晤?鉊萵鉆? sheet 鉆鉊?鉊?(鉆腹鉆腹鉊?col 15) 鉆艇鉊?sheet 鉆葦鉊﹤?
+  if (maskSheet && maskSheet.getLastRow() >= DATA_START) {
+    const numColsMask = maskSheet.getLastColumn();
+    if (numColsMask >= MASK_COL_EXPIRY) {
+      const maskData = maskSheet.getRange(
+        DATA_START, 1,
+        maskSheet.getLastRow() - DATA_START + 1,
+        numColsMask
+      ).getValues();
+      maskData.forEach(row => {
+        if (String(row[COL_STATUS - 1] || '').trim() !== 'Active') return;
+        const expRaw = row[MASK_COL_EXPIRY - 1];
+        if (!expRaw) return;
+        const expDate = (expRaw instanceof Date) ? expRaw : new Date(expRaw);
+        if (isNaN(expDate.getTime())) return;
+        expDate.setHours(0,0,0,0);
+        const daysLeft = Math.ceil((expDate - today) / 86400000);
+        if (daysLeft <= ALERT_EXP_DAYS) {
+          expItems.push({
+            type:    'Mask',
+            name:    String(row[3] || ''),
+            sn:      String(row[MASK_COL_LOT - 1] || ''),  // 鉆?鉆?LOT 鉆?鉊?SN
+            daysLeft,
+            expDate: Utilities.formatDate(expDate, TZ, 'dd/MM/yyyy'),
+          });
+        }
+      });
+    }
+  }
+
+  // ?? Accessory: 鉊腦鉊抉? low stock ?????????????????????????
+  const accSheet = ss.getSheetByName(TABS.accessory);
+  if (accSheet && accSheet.getLastRow() >= DATA_START) {
+    const data = accSheet.getRange(
+      DATA_START, 1,
+      accSheet.getLastRow() - DATA_START + 1,
+      accSheet.getLastColumn()
+    ).getValues();
+    data.forEach(row => {
+      if (String(row[COL_STATUS - 1] || '').trim() !== 'Active') return;
+      const qty = Number(row[ACC_COL_QTY - 1] || 0);
+      if (qty <= ALERT_LOW_QTY) {
+        lowItems.push({
+          type: 'Accessory',
+          name: String(row[3] || ''),
+          size: '',
+          qty,
+        });
+      }
+    });
+  }
+
+  // ?? Device: 鉊腦鉊抉? near expiry ??????????????????????????
+  const devSheet = ss.getSheetByName(TABS.device);
+  if (devSheet && devSheet.getLastRow() >= DATA_START) {
+    const data = devSheet.getRange(
+      DATA_START, 1,
+      devSheet.getLastRow() - DATA_START + 1,
+      devSheet.getLastColumn()
+    ).getValues();
+    data.forEach(row => {
+      if (String(row[COL_STATUS - 1] || '').trim() !== 'Active') return;
+      const expRaw = row[11]; // col 12 = Expiry
+      if (!expRaw) return;
+      const expDate = new Date(expRaw);
+      if (isNaN(expDate.getTime())) return;
+      expDate.setHours(0,0,0,0);
+      const daysLeft = Math.ceil((expDate - today) / 86400000);
+      if (daysLeft <= ALERT_EXP_DAYS) {
+        expItems.push({
+          type:    'Device',
+          name:    String(row[3] || ''),
+          sn:      String(row[DEV_COL_SN - 1] || ''),
+          daysLeft,
+          expDate: Utilities.formatDate(expDate, TZ, 'dd/MM/yyyy'),
+        });
+      }
+    });
+  }
+
+  return { lowItems, expItems };
+}
+
+/** 鉊芹腦鉆葡鉊?HTML body 鉊葉鉊葉鉊菽?鉊﹤艇鉆?鉆?鉆鉊虞鉊冢? */
+function _buildAlertHtml(lowItems, expItems, today) {
+  const dateStr = Utilities.formatDate(today, TZ, 'dd/MM/yyyy');
+
+  const lowRows = lowItems.map(it => {
+    const color = it.qty === 0 ? '#b92e2e' : '#a06a00';
+    const label = it.qty === 0 ? '0 (หมดสต็อก)' : String(it.qty);
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${it.type}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${it.name}${it.size ? ' (' + it.size + ')' : ''}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;color:${color};font-weight:700">${label}</td>
+    </tr>`;
+  }).join('');
+
+  const expRows = expItems.map(it => {
+    const color = it.daysLeft <= 0 ? '#b92e2e' : it.daysLeft <= 30 ? '#b92e2e' : '#a06a00';
+    const label = it.daysLeft <= 0 ? 'Expired' : ('Days left: ' + it.daysLeft);
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${it.name}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-family:monospace">${it.sn || '-'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${it.expDate}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;color:${color};font-weight:700">${label}</td>
+    </tr>`;
+  }).join('');
+
+  const lowSection = lowItems.length ? `
+    <h3 style="margin:24px 0 8px;color:#a06a00;font-size:14px">Low stock: ${lowItems.length} items (threshold: ${ALERT_LOW_QTY})</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff">
+      <thead><tr style="background:#fdf3d0;text-align:left">
+        <th style="padding:8px 12px">Type</th>
+        <th style="padding:8px 12px">Product</th>
+        <th style="padding:8px 12px">Qty</th>
+      </tr></thead>
+      <tbody>${lowRows}</tbody>
+    </table>` : '';
+
+  const expSection = expItems.length ? `
+    <h3 style="margin:24px 0 8px;color:#b92e2e;font-size:14px">Near expiry: ${expItems.length} items (within ${ALERT_EXP_DAYS} days)</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff">
+      <thead><tr style="background:#fde8e8;text-align:left">
+        <th style="padding:8px 12px">Product</th>
+        <th style="padding:8px 12px">Serial Number</th>
+        <th style="padding:8px 12px">Expiry</th>
+        <th style="padding:8px 12px">Status</th>
+      </tr></thead>
+      <tbody>${expRows}</tbody>
+    </table>` : '';
+
+  return `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:20px;background:#f0f2f5;font-family:Arial,sans-serif">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="background:#1a1a2e;color:#fff;padding:18px 22px;border-radius:10px 10px 0 0">
+      <div style="font-size:18px;font-weight:700">Skyline Medical Stock Alert</div>
+      <div style="font-size:12px;opacity:.65;margin-top:4px">Stock alert summary - ${dateStr}</div>
+    </div>
+    <div style="background:#fff;padding:20px 22px;border:1px solid #ddd;border-top:none;border-radius:0 0 10px 10px">
+      ${lowSection}
+      ${expSection}
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#999;line-height:1.7">
+        This alert was generated automatically by Skyline Stock.<br>
+        Low-stock threshold: ${ALERT_LOW_QTY} items &nbsp;|&nbsp; Expiry warning: ${ALERT_EXP_DAYS} days<br>
+        To change recipients, update ALERT_EMAIL in Apps Script.
+      </div>
+    </div>
+  </div>
+</body></html>`;
+}
+
+/* =========================================================
+ * DUPLICATE CHECK
+ * ========================================================= */
+function checkDuplicate(ss, type, sn, lot, name, size) {
+  return !!findDuplicate(ss, type, sn, lot, name, size);
+}
+
+function findDuplicate(ss, type, sn, lot, name, size) {
+  const sheet = ss.getSheetByName(TABS[type]);
+  if (!sheet) return null;
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return null;
+
+  const numCols = sheet.getLastColumn();
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, numCols).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const status = normalizeText(row[COL_STATUS - 1]);
+    if (status !== 'Active') continue;
+
+    if (type === 'device') {
+      if (sn) {
+        // 鉊腦鉊抉?鉊?鉊喪?鉆葷鉊?SN (鉊腦鉊葭鉊?鉊葩)
+        const rowSn = normalizeText(row[DEV_COL_SN - 1]);
+        if (rowSn.toUpperCase() === normalizeText(sn).toUpperCase()) {
+          return {
+            row: i + DATA_START,
+            status: status,
+            sn: rowSn,
+            lot: normalizeText(row[DEV_COL_LOT - 1]),
+            name: normalizeText(row[3])
+          };
+        }
+      }
+      // 鉊?鉊?barcode 鉆腹鉆腹鉊?SN 鉊冢腺鉆葡鉊萵鉊?鉆董鉊?鉊抉腺 LOT/GTIN 鉆鉊腦鉊耜萼鉆腹鉆?鉊?鉊?葦鉊晤葵鉊?葡鉊Ｒ?鉊腦鉊獅?鉊冢?
+      // 鉆艇鉊啤?鉊啤?鉊喪?鉊徇?鉆鉊腦鉊獅?鉊冢?鉊葭鉆?鉊腺 Out 鉆艇鉆葷鉊?萵鉊?鉊丞萵鉊?鉊?鉊耜?鉊﹤?鉆?鉆?鉊﹤虞鉆葉鉊Ｒ萵鉊腹鉊菽?鉊腦鉊獅?鉊冢? LOT 鉆鉊葭鉊Ｒ葷鉊萵鉊?Active 鉊冢腺鉊嫩?
+    }
+
+    // mask/accessory: 鉆腹鉆?鉊?葷鉊?鉆董鉊葭鉆?鉊菽? ??same LOT 鉊葷鉊?aggregate qty 鉆? doStockIn()
+    // 鉊萵鉊?鉊晤?鉊?duplicate check 鉆?鉆?鉊?鉊耜萼 device 鉆鉊?鉊耜?鉊晤?鉊?
+  }
+  return null;
+}
