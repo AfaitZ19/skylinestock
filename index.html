@@ -36,7 +36,7 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .setup-status{display:none;margin:8px 0 0;text-align:center;font-size:12px;font-weight:700;color:var(--B)}
 .setup-status.on{display:block}
 
-.bar{background:var(--B);color:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.bar{background:var(--B);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 14px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .bar-l{display:flex;align-items:center;gap:7px}
 .bar-title{font-size:15px;font-weight:700}
 .pill{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.15);white-space:nowrap}
@@ -45,10 +45,10 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .usr{font-size:11px;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px}
 .btn-xs{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;font-family:inherit}
 
-.main{flex:1;padding:13px;overflow-y:auto;width:100%;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.main{flex:1;padding:13px;overflow-y:auto;width:100%;padding-bottom:calc(18px + env(safe-area-inset-bottom));scroll-padding-top:calc(52px + env(safe-area-inset-top))}
 @media(min-width:500px){.main{max-width:720px;margin:0 auto}}
 
-.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px;position:sticky;top:49px;z-index:80}
+.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px;position:sticky;top:0;z-index:80}
 .tab{flex:1;min-width:0;padding:9px 3px;text-align:center;font-size:11px;border-radius:7px;cursor:pointer;color:var(--mu);font-weight:700;border:none;background:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.on{background:var(--B);color:#fff}
 
