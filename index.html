@@ -648,7 +648,7 @@ function setupHidScanner() {
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
     disableHIDMode(false);
-    toast('鉊葩鉊?鉊徇腹鉊?鉊腦鉊獅?鉊冢?鉊Ｒ葩鉊葉鉊晤?鉆?鉊﹤萵鉊葩 鉆鉊虞鉆葉鉆葦鉆?鉊毯腹鉊?鉊?鉊冢?鉊?', 'warn');
+    toast('ปิดโหมด Scanner ชั่วคราว เพื่อให้กรอกข้อมูลได้', 'warn');
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -1983,7 +1983,7 @@ function renderStock() {
         </dl>
         <div class="ic-ft">
           <div class="ic-meta">#${idx + 1}</div>
-          <button class="btn-co" data-idx="${idx}">? 鉊?鉊耜腺鉊冢葉鉊?/button>
+          <button class="btn-co" data-idx="${idx}">จ่ายออก</button>
         </div>
       </div>
     `;
@@ -2014,7 +2014,7 @@ function renderHist(append, items) {
   if (!append) renderPurposeSummary(items);
 
   if (!items.length && !append) {
-    list.innerHTML = `<div class="empty"><div class="empty-ic">??</div><div>鉊Ｒ萵鉊?鉊﹤?鉊﹤葭鉊腦鉊啤葷鉊晤?鉊?/div></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>ยังไม่มีประวัติรายการ</div></div>`;
     document.getElementById('hiMore').style.display = 'none';
     return;
   }
@@ -2024,10 +2024,10 @@ function renderHist(append, items) {
     const isIn = action === 'Stock In';
     return `
       <div class="hi">
-        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '漎?' : '漎?'}</div>
+        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? 'เข้า' : 'ออก'}</div>
         <div>
           <div class="hn">${escapeHtml(it['Product Name'] || '-')}</div>
-          <div class="hm">${escapeHtml(it['Action'] || '-')} ??${escapeHtml(it['Location / Recipient'] || '-')} ??${escapeHtml(it['Recorded By'] || '-')}</div>
+          <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(it['Location / Recipient'] || '-')} · ${escapeHtml(it['Recorded By'] || '-')}</div>
         </div>
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
       </div>
@@ -2067,7 +2067,7 @@ async function loadMoreHist() {
 
     if (more.length < HIST_PAGE) document.getElementById('hiMore').style.display = 'none';
   } catch(e) {
-    toast('鉆葦鉊丞?鉆腹鉆?鉊?: ' + e.message, 'err');
+    toast('โหลดประวัติเพิ่มเติมไม่สำเร็จ: ' + e.message, 'err');
     HIST_OFFSET -= HIST_PAGE;
   }
 }
@@ -2086,7 +2086,7 @@ function goTab(tab) {
 function setPill(mode) {
   const el = document.getElementById('pill');
   el.className = 'pill ' + mode;
-  el.textContent = mode === 'ok' ? '??Connected' : mode === 'busy' ? '??Working' : mode === 'err' ? '??Error' : '??Sheet';
+  el.textContent = mode === 'ok' ? 'Connected' : mode === 'busy' ? 'Working' : mode === 'err' ? 'Error' : 'Sheet';
 }
 
 function toast(msg, type='ok') {
@@ -2107,30 +2107,30 @@ function escapeHtml(str) {
 }
 
 async function sortDeviceSheetNow() {
-  if (!API_URL) { toast('鉊Ｒ萵鉊?鉊﹤?鉆?鉆?鉊虞鉆葉鉊﹤?鉆葉 API', 'warn'); return; }
-  toast('??鉊董鉊丞萵鉊?鉊晤?鉆鉊?葭鉊Ｒ?...', 'ok');
+  if (!API_URL) { toast('ยังไม่ได้ตั้งค่า API URL', 'warn'); return; }
+  toast('กำลังเรียง Device Sheet...', 'ok');
   setPill('busy');
   try {
     const res = await apiPost({ action: 'sort', user: CUR_USER });
     if (!res.ok) throw new Error(res.error || 'API error');
-    toast('??鉊萵鉊?鉊?葭鉊Ｒ? Device Sheet A-Z 鉆艇鉆葷', 'ok');
+    toast('เรียง Device Sheet A-Z สำเร็จ', 'ok');
     setPill('ok');
     await loadAll();  // 鉊?葭鉆葦鉊丞? cache 鉆葦鉆?鉊??鉊萵鉊?Sheet
   } catch(e) {
     setPill('err');
-    toast('??' + e.message, 'err');
+    toast('เรียง Device Sheet ไม่สำเร็จ: ' + e.message, 'err');
   }
 }
 
 async function exportCSV() {
-  if (!API_URL) { toast('鉊Ｒ萵鉊?鉊﹤?鉆?鉆?鉊虞鉆葉鉊﹤?鉆葉 API', 'warn'); return; }
-  toast('??鉊董鉊丞萵鉊?export...', 'ok');
+  if (!API_URL) { toast('ยังไม่ได้ตั้งค่า API URL', 'warn'); return; }
+  toast('กำลัง export ประวัติ...', 'ok');
   try {
     // 鉊葆鉊?鉊?萼鉊抉萵鉊葩鉊萵鉆?鉊徇腹鉊?(鉊芹號鉊葵鉊詮? 9999 鉊?葡鉊Ｒ?鉊耜腦) 鉆腹鉆?鉊?鉆?鉆?cache 鉊徇?鉆葡鉊萵鉊?鉊詮?鉊晤?
     const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:9999, offset:0 }));
     if (!res.ok) throw new Error(res.error);
     const items = res.history || [];
-    if (!items.length) { toast('鉊Ｒ萵鉊?鉊﹤?鉊﹤葭鉊腦鉊啤葷鉊晤?鉊毯?鉊徇? export', 'warn'); return; }
+    if (!items.length) { toast('ไม่มีประวัติให้ export', 'warn'); return; }
 
     const headers = Object.keys(items[0]);
     const csv = [
@@ -2149,9 +2149,9 @@ async function exportCSV() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast(`??Export ${items.length} 鉊?葡鉊Ｒ?鉊耜腦鉆艇鉆葷`, 'ok');
+    toast(`Export ${items.length} รายการสำเร็จ`, 'ok');
   } catch(e) {
-    toast('Export 鉆腹鉆?鉊?: ' + e.message, 'err');
+    toast('Export ไม่สำเร็จ: ' + e.message, 'err');
   }
 }
 </script>
