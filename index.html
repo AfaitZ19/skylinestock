@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -108,17 +108,19 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .chip{padding:5px 11px;border-radius:20px;border:1px solid var(--bd);background:#fff;font-size:11px;white-space:nowrap;cursor:pointer;font-family:inherit;color:var(--mu)}
 .chip.on{background:var(--B);color:#fff;border-color:var(--B)}
 
-.ic{background:#fff;border-radius:var(--ra);padding:11px 12px;box-shadow:var(--sh);margin-bottom:8px;border-left:4px solid var(--bd)}
+.ic{background:#fff;border-radius:var(--ra);padding:10px 12px;box-shadow:var(--sh);margin-bottom:8px;border-left:4px solid var(--bd)}
 .ic.device{border-left-color:var(--B)}.ic.mask{border-left-color:var(--G)}.ic.accessory{border-left-color:var(--A)}
-.ic-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:5px}
-.ic-nm{font-size:13px;font-weight:700;flex:1;padding-right:7px}
-.bg{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
+.ic-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;margin-bottom:2px}
+.ic-nm{font-size:13px;font-weight:700;flex:1;line-height:1.3}
+.bg{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .bd2{background:var(--BL);color:var(--B)}.bm{background:var(--GL);color:var(--G)}.ba{background:var(--AL);color:var(--A)}
-.ic-kv{display:grid;grid-template-columns:auto 1fr;gap:2px 7px;font-size:11px}
-.ic-kv dt{color:var(--mu)}.ic-kv dd{font-weight:500;word-break:break-all}
-.ic-ft{display:flex;align-items:center;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid var(--bd)}
-.ic-meta{font-size:10px;color:var(--mu)}
-.btn-co{background:var(--RL);color:var(--R);border:1px solid #f0a0a0;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.ic-sub{font-size:11px;color:var(--mu);margin-bottom:1px}
+.ic-id{font-size:11px;color:var(--tx);font-weight:600;margin-bottom:5px}
+.ic-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)}
+.ic-meta{font-size:10px;color:var(--mu);display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0;row-gap:3px}
+.ic-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.ic-qty{font-size:12px;font-weight:800;color:#111;background:#f7f8fa;border-radius:7px;padding:3px 8px;min-width:30px;text-align:center}
+.btn-co{background:var(--RL);color:var(--R);border:1px solid #f0a0a0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 
 .hi{background:#fff;border-radius:8px;padding:9px 11px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .hd{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
@@ -160,8 +162,8 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
 
 /* Expiry / Low-stock badges */
-.badge-exp{background:#fde8e8;color:var(--R);font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle}
-.badge-low{background:#fdf3d0;color:var(--A);font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px;vertical-align:middle}
+.badge-exp{background:#fde8e8;color:var(--R);font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle;white-space:nowrap}
+.badge-low{background:#fdf3d0;color:var(--A);font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle;white-space:nowrap}
 
 /* Role: admin-only elements hidden for stock */
 .admin-only{display:none}
@@ -174,6 +176,27 @@ body.admin .admin-only{display:inline-flex}
 .manual-row input,.modal select{border:1px solid var(--bd);border-radius:8px;padding:9px;width:110px;background:#fff}
 .manual-select-btn{background:var(--B);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
 .stocktake-list{max-height:320px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:0 10px;background:#fff;margin:8px 0}
+
+/* Attention box - low stock / near expiry */
+.attn{background:#fff;border:1.5px solid #fde8b0;border-radius:var(--ra);padding:9px 11px;margin-bottom:10px;box-shadow:var(--sh)}
+.attn-hd{font-size:12px;font-weight:700;color:#a06a00;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.attn-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #f5e6c4;cursor:pointer}
+.attn-row:first-of-type{border-top:none}
+.attn-row:active{background:#fffaf0}
+.attn-main{font-size:12px;font-weight:600;color:var(--tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attn-sub{font-size:10px;color:var(--mu)}
+.attn-tag{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;flex-shrink:0;white-space:nowrap;margin-left:8px}
+.attn-tag.exp{background:#fde8e8;color:var(--R)}
+.attn-tag.low{background:#fdf3d0;color:var(--A)}
+.attn-more{font-size:11px;color:var(--mu);text-align:center;padding-top:6px}
+
+/* Desktop layout */
+@media(min-width:860px){
+  .main{max-width:1080px}
+  .bdash{grid-template-columns:repeat(3,1fr)}
+  #stList{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+  #stList .ic{margin-bottom:0}
+}
 </style>
 </head>
 <body>
@@ -309,6 +332,8 @@ body.admin .admin-only{display:inline-flex}
     </div>
 
     <div id="v-stock" style="display:none">
+      <div class="attn" id="attnBox" style="display:none"></div>
+
       <div class="sg">
         <div class="sc2"><div class="sl">Device</div><div class="sv" id="sDv">0</div></div>
         <div class="sc2"><div class="sl">Mask</div><div class="sv" id="sMk">0</div></div>
@@ -316,8 +341,6 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="bdash" id="stockBreakdown"></div>
-
-      <div id="alertBadge" style="display:none;background:#fdf3d0;color:#a06a00;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;margin-bottom:9px;text-align:center"></div>
 
       <div class="search-wrap">
         <span class="search-ico">🔎</span>
@@ -1959,23 +1982,6 @@ function updateStats() {
   document.getElementById('sMk').textContent = sumQty(CACHE.mask, 'Qty') || 0;
   document.getElementById('sAc').textContent = sumQty(CACHE.accessory, 'Qty') || 0;
   renderStockBreakdown();
-
-  // 鉊萵鉊葵鉊毯?鉊?鉊耜?鉊菽?鉊?鉊冢?鉊?萼鉊抉萵鉊?
-  const today = new Date(); today.setHours(0,0,0,0);
-  const WARN_DAYS = 90, LOW_QTY = 3;
-  let alerts = 0;
-  [...CACHE.mask, ...CACHE.accessory].forEach(it => {
-    if (Number(it['Qty'] || 0) <= LOW_QTY) alerts++;
-    const expRaw = it['Expiry'] || it['Expiry Date'] || '';
-    if (expRaw) {
-      const parts = String(expRaw).split('/');
-      let d = parts.length === 3 ? new Date(+parts[2], +parts[1]-1, +parts[0]) : new Date(expRaw);
-      if (!isNaN(d) && Math.ceil((d - today)/86400000) <= WARN_DAYS) alerts++;
-    }
-  });
-  const alertEl = document.getElementById('alertBadge');
-  if (alertEl) alertEl.textContent = alerts > 0 ? `⚠️ ${alerts} รายการต้องตรวจสอบ` : '';
-  if (alertEl) alertEl.style.display = alerts > 0 ? 'block' : 'none';
 }
 
 function renderStockBreakdown() {
@@ -2057,13 +2063,92 @@ function flt(type, el) {
   renderStock();
 }
 
+const WARN_DAYS = 90;
+const LOW_QTY   = 3;
+
+function _expDaysOf(it) {
+  const expRaw = it['Expiry'] || it['Expiry Date'] || '';
+  if (!expRaw) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const parts = String(expRaw).split('/');
+  let expDate = parts.length === 3 ? new Date(+parts[2], +parts[1]-1, +parts[0]) : new Date(expRaw);
+  if (isNaN(expDate)) return null;
+  return Math.ceil((expDate - today) / 86400000);
+}
+
+function renderAttention(items) {
+  const box = document.getElementById('attnBox');
+  if (!box) return;
+
+  const flagged = items.map((it) => {
+    const expDays = _expDaysOf(it);
+    const qty = Number(it['Qty'] || 0);
+    const low = it._type !== 'device' && qty <= LOW_QTY;
+    const exp = expDays !== null && expDays <= WARN_DAYS;
+    return { it, qty, expDays, low, exp };
+  }).filter(x => x.low || x.exp);
+
+  if (!flagged.length) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  flagged.sort((a, b) => {
+    const pa = a.expDays !== null ? a.expDays : Infinity;
+    const pb = b.expDays !== null ? b.expDays : Infinity;
+    return pa - pb;
+  });
+
+  const top = flagged.slice(0, 6);
+  const more = flagged.length - top.length;
+
+  box.innerHTML = `
+    <div class="attn-hd">⚠️ ต้องตรวจสอบ (${flagged.length} รายการ)</div>
+    ${top.map(x => {
+      const name = x.it['Product Name'] || '-';
+      const sub = x.it._type === 'device'
+        ? ('SN ' + (x.it['Serial Number (SN)'] || '-'))
+        : ('LOT ' + (x.it['LOT Number'] || '-'));
+      let tag = '';
+      if (x.expDays !== null && x.expDays <= WARN_DAYS) {
+        tag = x.expDays <= 0
+          ? `<span class="attn-tag exp">หมดอายุแล้ว</span>`
+          : `<span class="attn-tag exp">⚠️ ${x.expDays} วัน</span>`;
+      } else if (x.low) {
+        tag = `<span class="attn-tag low">สต็อกต่ำ (${x.qty})</span>`;
+      }
+      return `
+        <div class="attn-row" data-q="${escapeHtml(name)}">
+          <div>
+            <div class="attn-main">${escapeHtml(name)}</div>
+            <div class="attn-sub">${escapeHtml(sub)}</div>
+          </div>
+          ${tag}
+        </div>
+      `;
+    }).join('')}
+    ${more > 0 ? `<div class="attn-more">…และอีก ${more} รายการ</div>` : ''}
+  `;
+  box.style.display = 'block';
+
+  box.querySelectorAll('.attn-row').forEach(row => {
+    row.onclick = () => {
+      const q = row.getAttribute('data-q') || '';
+      const input = document.getElementById('stockSearch');
+      if (input) { input.value = q; }
+      renderStock();
+      box.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+  });
+}
+
 function renderStock() {
   const list = document.getElementById('stList');
   const q = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
 
-  const items = [
+  const allItems = [
     ...CACHE.device.map(x => ({...x, _type:'device'})).sort((a,b) => {
-      // Active 鉊?鉊冢? ??SN A? (鉆鉊徇腹鉊獅葉鉊?sortDeviceSheet 鉆鉊葩鉊?鉆?鉆?鉊喪?鉊?JS 鉆?鉊?
       const sa = a['Status'] === 'Active' ? 0 : 1;
       const sb = b['Status'] === 'Active' ? 0 : 1;
       if (sa !== sb) return sa - sb;
@@ -2071,7 +2156,11 @@ function renderStock() {
     }),
     ...CACHE.mask.map(x => ({...x, _type:'mask'})),
     ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
-  ].filter(x => {
+  ];
+
+  renderAttention(allItems);
+
+  const items = allItems.filter(x => {
     if (sflt !== 'all' && x._type !== sflt) return false;
     if (!q) return true;
     const hay = [
@@ -2087,60 +2176,46 @@ function renderStock() {
     return;
   }
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const WARN_DAYS = 90;
-  const LOW_QTY   = 3;
-
   list.innerHTML = items.map((it, idx) => {
     const badgeCls = it._type === 'device' ? 'bd2' : it._type === 'mask' ? 'bm' : 'ba';
-    const lot   = it['LOT Number'] || '-';
-    const gtin  = it['GTIN / Barcode'] || '-';
-    const sn    = it['Serial Number (SN)'] || '-';
     const qty   = Number(it['Qty'] || 0);
     const loc   = it['Location'] || it['Location / Hospital'] || '-';
     const expRaw = it['Expiry'] || it['Expiry Date'] || '';
+    const expDays = _expDaysOf(it);
 
-    // 鉊董鉊葷鉊?expiry alert
+    const sub = [it['Brand'], it['Model'], it['Size']].filter(Boolean).join(' · ') || '-';
+    const idLine = it._type === 'device'
+      ? ('SN ' + (it['Serial Number (SN)'] || '-'))
+      : ('LOT ' + (it['LOT Number'] || '-'));
+
     let expBadge = '';
-    if (expRaw) {
-      const parts = String(expRaw).split('/');
-      let expDate;
-      if (parts.length === 3) {
-        // 鉊?號鉊?鉊? dd/MM/yyyy
-        expDate = new Date(+parts[2], +parts[1]-1, +parts[0]);
-      } else {
-        expDate = new Date(expRaw);
-      }
-      if (!isNaN(expDate)) {
-        const daysLeft = Math.ceil((expDate - today) / 86400000);
-        if (daysLeft <= 0) expBadge = `<span class="badge-exp">หมดอายุแล้ว</span>`;
-        else if (daysLeft <= WARN_DAYS) expBadge = `<span class="badge-exp">⚠️ ${daysLeft} วัน</span>`;
-      }
+    if (expDays !== null && expDays <= WARN_DAYS) {
+      expBadge = expDays <= 0
+        ? `<span class="badge-exp">หมดอายุแล้ว</span>`
+        : `<span class="badge-exp">⚠️ ${expDays} วัน</span>`;
     }
 
-    // Low stock alert
-    const lowBadge = (it._type !== 'device' && Number(it['Qty'] || 0) <= LOW_QTY)
-      ? `<span class="badge-low">สต็อกต่ำ (${qty})</span>` : '';
+    const lowBadge = (it._type !== 'device' && qty <= LOW_QTY)
+      ? `<span class="badge-low">สต็อกต่ำ</span>` : '';
 
     return `
       <div class="ic ${it._type}">
         <div class="ic-top">
-          <div class="ic-nm">${escapeHtml(it['Product Name'] || '-')}${expBadge}${lowBadge}</div>
+          <div class="ic-nm">${escapeHtml(it['Product Name'] || '-')}</div>
           <div class="bg ${badgeCls}">${escapeHtml(it._type)}</div>
         </div>
-        <dl class="ic-kv">
-          <dt>Brand</dt><dd>${escapeHtml(it['Brand'] || '-')}</dd>
-          <dt>Model</dt><dd>${escapeHtml(it['Model'] || '-')}</dd>
-          <dt>SN</dt><dd>${escapeHtml(sn)}</dd>
-          <dt>LOT</dt><dd>${escapeHtml(lot)}</dd>
-          <dt>GTIN</dt><dd>${escapeHtml(gtin)}</dd>
-          <dt>Qty</dt><dd>${escapeHtml(String(qty))}</dd>
-          <dt>Location</dt><dd>${escapeHtml(loc)}</dd>
-          ${expRaw ? `<dt>Expiry</dt><dd>${escapeHtml(String(expRaw))}</dd>` : ''}
-        </dl>
+        <div class="ic-sub">${escapeHtml(sub)}</div>
+        <div class="ic-id">${escapeHtml(idLine)}</div>
         <div class="ic-ft">
-          <div class="ic-meta">#${idx + 1}</div>
-          <button class="btn-co" data-idx="${idx}">จ่ายออก</button>
+          <div class="ic-meta">
+            <span>📍 ${escapeHtml(loc)}</span>
+            ${expRaw ? `<span>หมดอายุ ${escapeHtml(String(expRaw))}</span>` : ''}
+            ${expBadge}${lowBadge}
+          </div>
+          <div class="ic-right">
+            ${it._type !== 'device' ? `<div class="ic-qty">${escapeHtml(String(qty))}</div>` : ''}
+            <button class="btn-co" data-idx="${idx}">จ่ายออก</button>
+          </div>
         </div>
       </div>
     `;
