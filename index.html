@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -166,6 +166,11 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 /* Role: admin-only elements hidden for stock */
 .admin-only{display:none}
 body.admin .admin-only{display:inline-flex}
+.manual-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.manual-row b{font-size:13px;color:var(--ink)}
+.manual-row span{font-size:11px;color:var(--mu)}
+.manual-row input,.modal select{border:1px solid var(--line);border-radius:8px;padding:9px;width:110px;background:#fff}
+.stocktake-list{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;margin:8px 0}
 </style>
 </head>
 <body>
@@ -179,14 +184,16 @@ body.admin .admin-only{display:inline-flex}
     <div class="err" id="setupErr"></div>
     <label class="lbl">Apps Script Web App URL</label>
     <input class="inp" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" type="url">
-    <p class="hint">ได้จาก Google Apps Script → Deploy → Web App → Copy URL</p>
-    <label class="lbl">ชื่อผู้ใช้ (แสดงในประวัติ)</label>
+    <p class="hint">วาง URL จาก Google Apps Script → Deploy → Web App → Copy URL</p>
+    <label class="lbl">ชื่อผู้ใช้ (เช่น stock หรือ admin)</label>
     <input class="inp" id="setupUser" placeholder="เช่น stock หรือ admin">
+    <label class="lbl">ชื่อพนักงานผู้ทำรายการ</label>
+    <input class="inp" id="setupStaff" placeholder="เช่น Benz, Mint, Stock ทีม">
     <div style="margin-bottom:9px">
       <label class="lbl">รหัสผ่าน</label>
       <input class="inp" id="setupPass" type="password" placeholder="รหัสผ่าน" style="margin-bottom:0">
     </div>
-    <button class="btn-p" id="setupBtn" onclick="doSetup()">เข้าสู่ระบบ</button>
+    <button class="btn-p" id="setupBtn" onclick="doSetup()">เชื่อมต่อระบบ</button>
     <div class="setup-status" id="setupStatus"></div>
   </div>
 </div>
@@ -195,63 +202,74 @@ body.admin .admin-only{display:inline-flex}
   <div class="bar">
     <div class="bar-l">
       <span class="bar-title">📦 Skyline Stock</span>
-      <span class="pill" id="pill">● Sheet</span>
+      <span class="pill" id="pill">Sheet</span>
     </div>
     <div class="bar-r">
-      <span class="usr" id="usrBadge">—</span>
+      <span class="usr" id="usrBadge">-</span>
       <button class="btn-xs" onclick="signOut()">ออก</button>
     </div>
   </div>
 
   <div class="main">
     <div class="tabs">
-      <button class="tab on" onclick="goTab('scan')" id="t-scan">🔍 สแกน</button>
-      <button class="tab" onclick="goTab('stock')" id="t-stock">📦 สต็อก</button>
-      <button class="tab" onclick="goTab('hist')" id="t-hist">📋 ประวัติ</button>
-      <button class="tab" onclick="goTab('cfg')" id="t-cfg">⚙️</button>
+      <button class="tab on" onclick="goTab('scan')" id="t-scan">สแกน</button>
+      <button class="tab" onclick="goTab('stock')" id="t-stock">สต็อก</button>
+      <button class="tab" onclick="goTab('hist')" id="t-hist">ประวัติ</button>
+      <button class="tab" onclick="goTab('take')" id="t-take">Stocktake</button>
+      <button class="tab" onclick="goTab('cfg')" id="t-cfg">ตั้งค่า</button>
     </div>
 
     <div id="v-scan">
       <div class="mrow">
-        <button class="mbtn in on" id="mIn" onclick="setMode('in')">⬇️ รับเข้า</button>
-        <button class="mbtn out" id="mOut" onclick="setMode('out')">⬆️ จ่ายออก</button>
+        <button class="mbtn in on" id="mIn" onclick="setMode('in')">รับเข้า</button>
+        <button class="mbtn out" id="mOut" onclick="setMode('out')">จ่ายออก</button>
       </div>
 
       <div class="sbox">
-        <div class="shint" id="scanHint"><span class="dot"></span>โหมดรับเข้า — เล็งกล้องที่ QR / Barcode</div>
+        <div class="shint" id="scanHint"><span class="dot"></span>สแกนรับเข้า หรือกรอก QR / Barcode</div>
 
         <div class="toolrow">
-          <button class="toolbtn" id="hidToggleBtn" onclick="toggleHIDMode()">⌨️ โหมดเครื่องยิง: ปิด</button>
-          <button class="toolbtn on" id="manualToggleBtn" onclick="focusManualInput()">✍️ พิมพ์เอง</button>
+          <button class="toolbtn" id="hidToggleBtn" onclick="toggleHIDMode()">Scanner ปิด</button>
+          <button class="toolbtn on" id="manualToggleBtn" onclick="focusManualInput()">กรอกเอง</button>
         </div>
 
         <div class="scan-btn-wrap">
-          <button class="scan-btn" onclick="startScan()">📷 เปิดกล้อง</button>
-          <button class="scan-btn alt" onclick="stopScannerOnly()">⛔ หยุดกล้อง</button>
+          <button class="scan-btn" onclick="startScan()">เปิดกล้อง</button>
+          <button class="scan-btn alt" onclick="stopScannerOnly()">หยุดสแกน</button>
         </div>
 
         <div id="reader"></div>
 
         <div class="mform" id="mf">
           <input type="text" id="mc" placeholder="Barcode / SN / LOT">
-          <button onclick="procM()">ยืนยัน</button>
+          <button onclick="procM()">ตรวจสอบ</button>
         </div>
       </div>
 
+      <div class="scrd" id="manualProductPanel">
+        <h3>เลือกสินค้าจากรายการ</h3>
+        <div class="chips" style="margin-top:6px">
+          <select class="fsel" id="manualCategory" onchange="renderManualProducts()"><option value="">ทุกหมวดหมู่</option></select>
+          <select class="fsel" id="manualBrand" onchange="renderManualProducts()"><option value="">ทุกแบรนด์</option></select>
+        </div>
+        <input class="finp" id="manualSearch" type="search" placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า" oninput="renderManualProducts()">
+        <div id="manualProductList" class="stocktake-list"></div>
+      </div>
+
       <div class="rbox" id="rbox">
-        <div class="rhd">✅ ข้อมูลสินค้า</div>
+        <div class="rhd">ข้อมูลสินค้า</div>
         <dl class="kv" id="rkv"></dl>
       </div>
 
       <div id="sf" style="display:none">
         <label class="flbl">ประเภท</label>
         <select class="fsel" id="iType" onchange="onTypeChange()">
-          <option value="device">🖥️ เครื่อง CPAP/BPAP</option>
-          <option value="mask">😷 หน้ากาก</option>
-          <option value="accessory">🔧 อุปกรณ์เสริม</option>
+          <option value="device">Device CPAP/BPAP</option>
+          <option value="mask">Mask</option>
+          <option value="accessory">Accessory</option>
         </select>
 
-        <label class="flbl" id="locLabel">รับเข้าโดยใคร</label>
+        <label class="flbl" id="locLabel">รับเข้าโดย</label>
         <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
 
         <div id="qtyRow" style="display:none">
@@ -259,21 +277,33 @@ body.admin .admin-only{display:inline-flex}
           <input type="number" class="finp" id="qtyI" placeholder="1" min="1" max="9999" value="1" style="margin-bottom:9px">
         </div>
 
+        <div id="outRequiredFields" style="display:none">
+          <label class="flbl">วัตถุประสงค์การเบิก</label>
+          <select class="fsel" id="purposeI" onchange="updateActionButtons()">
+            <option value="">เลือกวัตถุประสงค์</option>
+            <option value="ขาย">ขาย</option>
+            <option value="ของแถม">ของแถม</option>
+            <option value="เดโม">เดโม</option>
+            <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
+          </select>
+          <input type="text" class="finp" id="purposeOtherI" placeholder="ระบุวัตถุประสงค์อื่นๆ" oninput="updateActionButtons()" style="display:none">
+        </div>
+
         <label class="flbl">หมายเหตุ</label>
         <input type="text" class="finp" id="noteI" placeholder="(ถ้ามี)">
 
         <div class="arow">
-          <button class="bin" id="bIn" onclick="doAct('in')">✅ รับเข้า</button>
-          <button class="bout" id="bOut" onclick="doAct('out')">🔺 จ่ายออก</button>
+          <button class="bin" id="bIn" onclick="doAct('in')">รับเข้า</button>
+          <button class="bout" id="bOut" onclick="doAct('out')">จ่ายออก</button>
         </div>
       </div>
     </div>
 
     <div id="v-stock" style="display:none">
       <div class="sg">
-        <div class="sc2"><div class="sl">🖥️ เครื่อง</div><div class="sv" id="sDv">—</div></div>
-        <div class="sc2"><div class="sl">😷 หน้ากาก</div><div class="sv" id="sMk">—</div></div>
-        <div class="sc2"><div class="sl">🔧 เสริม</div><div class="sv" id="sAc">—</div></div>
+        <div class="sc2"><div class="sl">Device</div><div class="sv" id="sDv">0</div></div>
+        <div class="sc2"><div class="sl">Mask</div><div class="sv" id="sMk">0</div></div>
+        <div class="sc2"><div class="sl">Accessory</div><div class="sv" id="sAc">0</div></div>
       </div>
 
       <div class="bdash" id="stockBreakdown"></div>
@@ -281,51 +311,65 @@ body.admin .admin-only{display:inline-flex}
       <div id="alertBadge" style="display:none;background:#fdf3d0;color:#a06a00;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;margin-bottom:9px;text-align:center"></div>
 
       <div class="search-wrap">
-        <span class="search-ico">🔍</span>
+        <span class="search-ico">🔎</span>
         <input class="search-inp" id="stockSearch" type="search" placeholder="ค้นหาชื่อ, Brand, SN, LOT..." oninput="renderStock()">
       </div>
 
       <div class="chips">
         <button class="chip on" onclick="flt('all',this)">ทั้งหมด</button>
-        <button class="chip" onclick="flt('device',this)">เครื่อง</button>
-        <button class="chip" onclick="flt('mask',this)">หน้ากาก</button>
-        <button class="chip" onclick="flt('accessory',this)">อุปกรณ์เสริม</button>
+        <button class="chip" onclick="flt('device',this)">Device</button>
+        <button class="chip" onclick="flt('mask',this)">Mask</button>
+        <button class="chip" onclick="flt('accessory',this)">Accessory</button>
       </div>
 
       <div id="stList"></div>
     </div>
 
     <div id="v-hist" style="display:none">
+      <div class="scrd" id="purposeSummary"></div>
       <div id="hiList"></div>
       <div id="hiMore" style="display:none;text-align:center;padding:10px 0">
-        <button class="bfull bout2" style="max-width:200px;display:inline-block" onclick="loadMoreHist()">📄 โหลดเพิ่ม</button>
+        <button class="bfull bout2" style="max-width:200px;display:inline-block" onclick="loadMoreHist()">โหลดเพิ่มเติม</button>
+      </div>
+    </div>
+
+    <div id="v-take" style="display:none">
+      <div class="scrd">
+        <h3>Stocktake แบบเร็ว</h3>
+        <div class="chips" style="margin-top:6px">
+          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวด consumables</option></select>
+          <select class="fsel" id="takeBrand" onchange="renderStocktake()"><option value="">ทุกแบรนด์</option></select>
+        </div>
+        <input class="finp" id="takeSearch" type="search" placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า" oninput="renderStocktake()">
+        <div id="stocktakeList" class="stocktake-list"></div>
+        <button class="bfull bout2" id="stocktakeSubmit" onclick="submitStocktake()" disabled>บันทึก Stocktake</button>
       </div>
     </div>
 
     <div id="v-cfg" style="display:none">
       <div class="scrd">
-        <h3>📊 สถานะการเชื่อมต่อ</h3>
-        <div id="connTxt" style="font-size:12px;padding:9px;background:#f7f8fa;border-radius:8px;line-height:1.6">—</div>
-        <button class="bfull bout2" style="margin-top:8px" onclick="loadAll()">🔄 รีเฟรชจาก Sheet</button>
+        <h3>สถานะการเชื่อมต่อ</h3>
+        <div id="connTxt" style="font-size:12px;padding:9px;background:#f7f8fa;border-radius:8px;line-height:1.6">-</div>
+        <button class="bfull bout2" style="margin-top:8px" onclick="loadAll()">โหลดข้อมูลจาก Sheet</button>
       </div>
 
       <div class="scrd">
-        <h3>📖 วิธีใช้</h3>
+        <h3>คำแนะนำ</h3>
         <ol class="steps">
-          <li>ถ้าจะพิมพ์เองหรือใช้คีย์บอร์ดมือถือ ไม่ต้องเปิดโหมดเครื่องยิง</li>
-          <li>ถ้าจะใช้เครื่องยิง Bluetooth ให้กด "โหมดเครื่องยิง" ก่อน</li>
+          <li>เลือกโหมดรับเข้าหรือจ่ายออกก่อนสแกน</li>
+          <li>ถ้าใช้สแกนเนอร์ Bluetooth ให้เปิดโหมด Scanner</li>
           <li>ตั้ง scanner เป็น HID / Keyboard mode</li>
           <li>ตั้ง suffix = Enter</li>
-          <li>โหมดรับเข้า = ยิงแล้วเข้าเลย</li>
-          <li>โหมดจ่ายออก = ใส่ชื่อเซลล์ก่อน แล้วค่อยยิง</li>
+          <li>สแกนรับเข้า = บันทึกเข้าสต็อก</li>
+          <li>สแกนจ่ายออก = ระบุผู้รับแล้วจ่ายออกจากสต็อก</li>
         </ol>
       </div>
 
       <div class="scrd">
-        <h3>🗑️ จัดการข้อมูล</h3>
-        <button class="bfull bout2 admin-only" onclick="exportCSV()">📥 Export CSV ประวัติ</button>
-        <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">🔤 จัดเรียง Device Sheet A-Z</button>
-        <button class="bfull bout2 admin-only" onclick="changeApiUrl()">🔗 เปลี่ยน API URL</button>
+        <h3>เครื่องมือผู้ดูแล</h3>
+        <button class="bfull bout2 admin-only" onclick="exportCSV()">Export CSV ประวัติ</button>
+        <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">เรียง Device Sheet A-Z</button>
+        <button class="bfull bout2 admin-only" onclick="changeApiUrl()">เปลี่ยน API URL</button>
         <p id="roleNote" style="font-size:11px;color:var(--mu);margin-top:6px;text-align:center"></p>
       </div>
     </div>
@@ -346,13 +390,21 @@ body.admin .admin-only{display:inline-flex}
 <div class="modal-bg" id="quickOutModal">
   <div class="modal">
 
-    <div class="modal-hd">🔺 จ่ายออก</div>
-    <div class="modal-sub" id="modalItemName">—</div>
-    <input type="text" id="modalWho" placeholder="จ่ายให้เซลล์คนไหน? เช่น Mint, Ploy">
+    <div class="modal-hd">จ่ายออก</div>
+    <div class="modal-sub" id="modalItemName">-</div>
+    <input type="text" id="modalWho" placeholder="ผู้เบิก/ผู้รับของ เช่น Mint, Ploy">
+    <select id="modalPurpose" onchange="document.getElementById('modalPurposeOther').style.display=this.value==='อื่นๆ'?'block':'none'">
+      <option value="">เลือกวัตถุประสงค์</option>
+      <option value="ขาย">ขาย</option>
+      <option value="ของแถม">ของแถม</option>
+      <option value="เดโม">เดโม</option>
+      <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
+    </select>
+    <input type="text" id="modalPurposeOther" placeholder="ระบุวัตถุประสงค์อื่นๆ" style="display:none">
     <input type="number" id="modalQty" placeholder="จำนวน (ชิ้น)" min="1" max="9999" value="1" style="display:none">
     <div class="modal-row">
       <button class="mbtn-cancel" onclick="closeModal()">ยกเลิก</button>
-      <button class="mbtn-confirm" onclick="confirmQuickOut()">✅ ยืนยัน</button>
+      <button class="mbtn-confirm" onclick="confirmQuickOut()">ยืนยัน</button>
     </div>
   </div>
 </div>
@@ -362,7 +414,7 @@ body.admin .admin-only{display:inline-flex}
 <script>
 let API_URL  = localStorage.getItem('skl_api') || '';
 let AUTH_TOKEN = localStorage.getItem('skl_token') || '';
-let CUR_USER = '', CUR_ROLE = 'stock';
+let CUR_USER = '', CUR_ROLE = 'stock', CUR_STAFF = localStorage.getItem('skl_staff') || '';
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[] };
 let IS_PROCESSING = false;
@@ -427,12 +479,12 @@ function enableHIDMode(auto = false) {
   const manualBtn = document.getElementById('manualToggleBtn');
   if (hidBtn) {
     hidBtn.classList.add('on');
-    hidBtn.textContent = '⌨️ โหมดเครื่องยิง: เปิด';
+    hidBtn.textContent = 'Scanner เปิด';
   }
   if (manualBtn) manualBtn.classList.remove('on');
   clearHidInput();
   focusScanInput(80);
-  if (!auto) toast('เปิดโหมดเครื่องยิงแล้ว — รองรับแปลงคีย์บอร์ดไทยเป็นอังกฤษ', 'ok');
+  if (!auto) toast('เปิดโหมด Scanner แล้ว', 'ok');
 }
 
 function disableHIDMode(updateButtons = true) {
@@ -445,7 +497,7 @@ function disableHIDMode(updateButtons = true) {
     const manualBtn = document.getElementById('manualToggleBtn');
     if (hidBtn) {
       hidBtn.classList.remove('on');
-      hidBtn.textContent = '⌨️ โหมดเครื่องยิง: ปิด';
+      hidBtn.textContent = 'Scanner ปิด';
     }
     if (manualBtn) manualBtn.classList.add('on');
   }
@@ -464,7 +516,7 @@ function toggleHIDMode() {
   if (HID_ENABLED) {
     HID_AUTO_RESUME = false;
     disableHIDMode(true);
-    toast('ปิดโหมดเครื่องยิงแล้ว', 'ok');
+    toast('ปิดโหมด Scanner แล้ว', 'ok');
   } else {
     HID_AUTO_RESUME = false;
     enableHIDMode(true);
@@ -476,44 +528,36 @@ function focusManualInput() {
   disableHIDMode(true);
 }
 
-const THAI_KEDMANEE_TO_EN = {
-  'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0','ข':'-','ช':'=',
-  'ๆ':'q','ไ':'w','ำ':'e','พ':'r','ะ':'t','ั':'y','ี':'u','ร':'i','น':'o','ย':'p','บ':'[','ล':']','ฃ':'\\',
-  'ฟ':'a','ห':'s','ก':'d','ด':'f','เ':'g','้':'h','่':'j','า':'k','ส':'l','ว':';','ง':"'",
-  'ผ':'z','ป':'x','แ':'c','อ':'v','ิ':'b','ื':'n','ท':'m','ม':',','ใ':'.','ฝ':'/',
-  '๐':'Q','ฎ':'E','ฑ':'R','ธ':'T','ํ':'Y','๊':'U','ณ':'I','ฯ':'O','ญ':'P','ฐ':'{','ฅ':'|',
-  'ฤ':'A','ฆ':'S','ฏ':'D','โ':'F','ฌ':'G','็':'H','๋':'J','ษ':'K','ศ':'L','ซ':':',
-  'ฉ':'C','ฮ':'V','ฺ':'B','์':'N','ฒ':'<','ฬ':'>','ฦ':'?'
-};
+const THAI_KEDMANEE_TO_EN = {};
 
 function normalizeScannerLayout(text) {
   const s = String(text || '');
-  if (!/[ก-๛]/.test(s)) return s;
+  if (!/[ก-๙]/.test(s)) return s;
   return s.replace(/[^\x1D]/g, ch => THAI_KEDMANEE_TO_EN[ch] || ch);
 }
 
 
 function processScannerText(text) {
-  // trim แค่ whitespace ด้านนอก แต่คง GS (0x1D) ไว้ทั้งหมด
+  // trim 鉆?鉆?whitespace 鉊?鉊耜?鉊葉鉊?鉆?鉆?鉊?GS (0x1D) 鉆葷鉆?鉊晤?鉊葦鉊﹤?
   let code = normalizeScannerLayout(text).replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // แปลง layout แล้วค่อยอ่านค่า เพื่อกัน Windows ค้างอยู่คีย์บอร์ดไทย
+  // 鉆?鉊丞? layout 鉆艇鉆葷鉊?鉊冢腺鉊冢?鉊耜?鉊?鉊?鉆鉊虞鉆葉鉊萵鉊?Windows 鉊?鉊耜?鉊冢腺鉊嫩?鉊葭鉊Ｒ?鉊葉鉊??鉊?鉊腺
 
   parseCode(code);
 
-  // Capture LAST ทันทีหลัง parseCode เพื่อป้องกัน race condition
-  // กรณีสแกนหลายชิ้นเร็วๆ กัน doAct จะทำงานกับสินค้าชิ้นนี้เสมอ
+  // Capture LAST 鉊萵鉊?鉊菽葦鉊丞萵鉊?parseCode 鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?race condition
+  // 鉊腦鉊葭鉊芹?鉊?鉊徇艇鉊耜腺鉊葩鉆?鉆鉊??鉊抉? 鉊萵鉊?doAct 鉊萼鉊董鉊葡鉊?鉊晤?鉊芹葩鉊?鉆葡鉊葩鉆?鉊葭鉆?鉊芹腹鉊?
   const scannedItem = LAST;
   if (!scannedItem) return;
 
   if (MODE === 'in' && AUTO_SAVE_ON_SCAN_IN) {
     if (!scannedItem.p || !scannedItem.p.type) {
-      toast('⚠️ ยังระบุสินค้าไม่ได้ — เลือกประเภท/ตรวจข้อมูลก่อนรับเข้า', 'warn');
+      toast('ยังระบุสินค้าไม่ได้ — เลือกประเภทหรือตรวจข้อมูลก่อนรับเข้า', 'warn');
       focusScanInput(120);
       return;
     }
-    // สแกนรับเข้า = บันทึกอัตโนมัติทันที
+    // 鉊芹?鉊?鉊?萵鉊?鉊?鉊?= 鉊萵鉊?鉊嗣?鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉊晤?鉊葭
     setTimeout(() => {
       if (LAST === scannedItem && !IS_PROCESSING) doAct('in');
     }, 120);
@@ -521,8 +565,8 @@ function processScannerText(text) {
   }
 
   if (MODE === 'out') {
-    // จ่ายออกต้องให้ผู้ใช้กดยืนยันเองเสมอ (ไม่ auto-out)
-    toast('สแกนสำเร็จ — ตรวจสอบข้อมูลแล้วกด 🔺 จ่ายออก', 'warn');
+    // 鉊?鉊耜腺鉊冢葉鉊?鉆葉鉊?鉊徇?鉊號鉆?鉊?鉊?鉊Ｒ虞鉊腺鉊晤?鉆鉊冢?鉆鉊芹腹鉊?(鉆腹鉆?auto-out)
+    toast('สแกนแล้ว — ตรวจสอบข้อมูลแล้วกดจ่ายออก', 'warn');
   }
 }
 
@@ -556,8 +600,8 @@ function setupHidScanner() {
       return;
     }
 
-    // บาง browser รายงาน keyCode เพี้ยนได้ จึงไม่ใช้ keyCode===29 แล้ว
-    // รับ GS เฉพาะกรณีที่ระบุได้ชัดเจนเท่านั้น
+    // 鉊葡鉊?browser 鉊?葡鉊Ｒ?鉊耜? keyCode 鉆鉊葭鉆腺鉊?鉊? 鉊葆鉊?鉊﹤?鉆?鉆?keyCode===29 鉆艇鉆葷
+    // 鉊?萵鉊?GS 鉆鉊?鉊耜萼鉊腦鉊葭鉊葭鉆腦鉊啤?鉊詮?鉊?鉊萵鉊?鉊?鉆鉊?鉊耜?鉊晤?鉊?
     if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
       e.preventDefault();
       HID_BUFFER += el.value + '\x1D';
@@ -604,7 +648,7 @@ function setupHidScanner() {
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
     disableHIDMode(false);
-    toast('ปิดโหมดเครื่องยิงอัตโนมัติ เพื่อให้พิมพ์ต่อได้', 'warn');
+    toast('鉊葩鉊?鉊徇腹鉊?鉊腦鉊獅?鉊冢?鉊Ｒ葩鉊葉鉊晤?鉆?鉊﹤萵鉊葩 鉆鉊虞鉆葉鉆葦鉆?鉊毯腹鉊?鉊?鉊冢?鉊?', 'warn');
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -619,7 +663,7 @@ function setupManualScanner() {
   if (!el) return;
 
   el.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10) return;
+    if (e.key !== 'Enter' && e.key !== '\n' && e.keyCode !== 10 && e.key !== 'Tab') return;
     e.preventDefault();
     procM();
   });
@@ -629,16 +673,18 @@ async function doSetup() {
   const url  = document.getElementById('apiUrl').value.trim();
   const user = document.getElementById('setupUser').value.trim();
   const pass = document.getElementById('setupPass').value;
+  const staff = document.getElementById('setupStaff').value.trim();
   const errEl = document.getElementById('setupErr');
 
-  if (!url) { showSetupErr('กรุณาใส่ Apps Script URL'); return; }
-  if (!user) { showSetupErr('กรุณาใส่ชื่อผู้ใช้'); return; }
+  if (!url) { showSetupErr('กรุณากรอก Apps Script URL'); return; }
+  if (!user) { showSetupErr('กรุณากรอกชื่อผู้ใช้'); return; }
+  if (!staff) { showSetupErr('กรุณากรอกชื่อพนักงานผู้ทำรายการ'); return; }
 
-  setSetupLoading(true, 'กำลังตรวจรหัสผ่าน...');
+  setSetupLoading(true, 'กำลังเข้าสู่ระบบ...');
   try {
     errEl.style.display = 'none';
 
-    const loginRes = await apiPost({ action:'login', user, pass }, url);
+    const loginRes = await apiPost({ action:'login', user, pass, staffName: staff }, url);
     if (!loginRes.ok) {
       showSetupErr(loginRes.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       return;
@@ -651,30 +697,32 @@ async function doSetup() {
 
     API_URL  = url;
     CUR_USER = user;
+    CUR_STAFF = loginRes.staffName || staff;
     AUTH_TOKEN = loginRes.token || '';
     CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
     localStorage.setItem('skl_api', url);
     localStorage.setItem('skl_token', AUTH_TOKEN);
+    localStorage.setItem('skl_staff', CUR_STAFF);
 
-    // ตั้ง class body ตาม role
+    // 鉊萵鉆? class body 鉊葡鉊?role
     document.body.classList.toggle('admin', CUR_ROLE === 'admin');
 
     document.getElementById('scSetup').classList.remove('on');
     document.getElementById('scApp').classList.add('on');
-    document.getElementById('usrBadge').textContent = user + (CUR_ROLE === 'admin' ? ' 👑' : '');
+    document.getElementById('usrBadge').textContent = CUR_STAFF + ' (' + user + ')' + (CUR_ROLE === 'admin' ? ' admin' : '');
 
-    toast('✅ เชื่อมต่อ Sheet สำเร็จ', 'ok');
+    toast('เชื่อมต่อ Sheet สำเร็จ', 'ok');
     setPill('ok');
-    setSetupLoading(true, 'กำลังโหลดข้อมูลสต็อก...');
+    setSetupLoading(true, 'กำลังโหลดข้อมูล...');
     await loadAll();
     _lastSyncTime = Date.now();
     const rn = document.getElementById('roleNote');
     if (rn) rn.textContent = CUR_ROLE === 'admin'
-      ? '👑 Admin — เข้าถึงได้ทุกฟังก์ชัน'
-      : '🔒 Stock User — ทำได้เฉพาะรับเข้า/จ่ายออก';
-    enableHIDMode(false); // เปิด HID อัตโนมัติหลัง login
+      ? 'Admin - ใช้งานเครื่องมือผู้ดูแลได้'
+      : 'Stock User - รับเข้าและจ่ายออกได้';
+    enableHIDMode(false); // 鉆鉊葩鉊?HID 鉊冢萵鉊?鉊腹鉊晤?鉊毯葦鉊丞萵鉊?login
   } catch(e) {
-    showSetupErr('เชื่อมต่อ API ไม่ได้: ' + e.message);
+    showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + e.message);
     setPill('err');
   } finally {
     setSetupLoading(false);
@@ -686,7 +734,7 @@ function setSetupLoading(isLoading, msg = '') {
   const st = document.getElementById('setupStatus');
   if (btn) {
     btn.disabled = !!isLoading;
-    btn.textContent = isLoading ? 'กำลังโหลด...' : 'เข้าสู่ระบบ';
+    btn.textContent = isLoading ? 'กำลังโหลด...' : 'เชื่อมต่อระบบ';
   }
   if (st) {
     st.textContent = msg;
@@ -711,6 +759,7 @@ function signOut() {
 function changeApiUrl() {
   localStorage.removeItem('skl_api');
   localStorage.removeItem('skl_token');
+  localStorage.removeItem('skl_staff');
   signOut();
 }
 
@@ -725,7 +774,7 @@ async function apiFetch(url) {
   try {
     r = await fetchWithTimeout(url, { redirect:'follow', mode:'cors' });
   } catch {
-    // Network/CORS error บน attempt แรก → retry โดยไม่ใช้ credentials
+    // Network/CORS error 鉊? attempt 鉆腦鉊???retry 鉆?鉊Ｒ?鉊﹤?鉆?鉆?credentials
     r = await fetchWithTimeout(url, { redirect:'follow', credentials:'omit' });
   }
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -735,11 +784,13 @@ async function apiFetch(url) {
 function buildApiUrl(base, params = {}) {
   try {
     const u = new URL(base);
+    params = withAuthParams(params);
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
     });
     return u.toString();
   } catch {
+    params = withAuthParams(params);
     const qs = new URLSearchParams(
       Object.entries(params)
         .filter(([, v]) => v !== undefined && v !== null)
@@ -750,10 +801,22 @@ function buildApiUrl(base, params = {}) {
   }
 }
 
+function withAuthParams(params = {}) {
+  const out = { ...params };
+  if (out.action && out.action !== 'login' && out.action !== 'ping' && AUTH_TOKEN) {
+    if (!out.user) out.user = CUR_USER;
+    if (!out.token) out.token = AUTH_TOKEN;
+    if (!out.staffName) out.staffName = CUR_STAFF;
+  }
+  return out;
+}
+
 async function apiPost(body, url) {
   const payload = { ...body };
   if (payload.action !== 'login' && AUTH_TOKEN && !payload.token) {
     payload.token = AUTH_TOKEN;
+    payload.user = payload.user || CUR_USER;
+    payload.staffName = payload.staffName || CUR_STAFF;
   }
   const r = await fetchWithTimeout(url || API_URL, {
     method: 'POST',
@@ -797,6 +860,9 @@ async function loadAll() {
     CACHE.accessory = stock.accessory || [];
     CACHE.history   = (hist && hist.history) ? hist.history : [];
     if (prods && prods.ok && prods.products) CACHE.products = prods.products;
+    populateProductFilters();
+    renderManualProducts();
+    renderStocktake();
 
     renderStock();
     renderHist(false);
@@ -804,11 +870,11 @@ async function loadAll() {
 
     setPill('ok');
     document.getElementById('connTxt').innerHTML =
-      `✅ เชื่อมต่อสำเร็จ<br>เครื่อง ${CACHE.device.length} | หน้ากาก ${sumQty(CACHE.mask, 'Qty')} | เสริม ${sumQty(CACHE.accessory, 'Qty')}<br>อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`;
+      `เชื่อมต่อสำเร็จ<br>Device ${CACHE.device.length} | Mask ${sumQty(CACHE.mask, 'Qty')} | Accessory ${sumQty(CACHE.accessory, 'Qty')}<br>อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')}`;
   } catch(e) {
     setPill('err');
-    document.getElementById('connTxt').textContent = '❌ ' + e.message;
-    toast('โหลดข้อมูลไม่ได้: ' + e.message, 'err');
+    document.getElementById('connTxt').textContent = 'Error: ' + e.message;
+    toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'err');
   }
 }
 
@@ -816,58 +882,58 @@ function sumQty(arr, key) {
   return (arr || []).reduce((sum, x) => sum + Number(x[key] || 0), 0);
 }
 
-/* ══════════════════════════════════════════════════════════
- *  GS1 PARSER  —  รองรับ 3 format:
+/* ??????????????????????????????????????????????????????????
+ *  GS1 PARSER  ?? 鉊?葉鉊腦鉊晤? 3 format:
  *
- *  Format 1 · Parenthesized  (กล้อง / บาร์โค้ดคุณภาพดี)
- *             (01)06958…(21)CADL001(10)BY-C2506(11)260101
+ *  Format 1 繚 Parenthesized  (鉊艇鉆葉鉊?/ 鉊葡鉊??鉆?鉆?鉊虜鉊?鉊耜?鉊葭)
+ *             (01)06958??21)CADL001(10)BY-C2506(11)260101
  *
- *  Format 2 · GS-separated   (เครื่องสแกน HID ที่ตั้งค่า suffix=GS)
- *             01069589…\x1D21CADL001\x1D10BY-C2506\x1D11260101
+ *  Format 2 繚 GS-separated   (鉆鉊腦鉊獅?鉊冢?鉊芹?鉊? HID 鉊葭鉆?鉊晤?鉊?鉆葡 suffix=GS)
+ *             01069589?吒x1D21CADL001\x1D10BY-C2506\x1D11260101
  *
- *  Format 3 · Plain concat    (เครื่องสแกนทั่วไป ไม่มี GS)
+ *  Format 3 繚 Plain concat    (鉆鉊腦鉊獅?鉊冢?鉊芹?鉊?鉊萵鉆葷鉆? 鉆腹鉆腹鉊?GS)
  *             010695894992731921CADL00110BY-C250611260101
- *             → ใช้ positional parse + heuristic boundary detection
+ *             ??鉆?鉆?positional parse + heuristic boundary detection
  *
- *  GS = ASCII 29 (0x1D) = Group Separator ตาม GS1-128 standard
- * ══════════════════════════════════════════════════════════*/
+ *  GS = ASCII 29 (0x1D) = Group Separator 鉊葡鉊?GS1-128 standard
+ * ??????????????????????????????????????????????????????????*/
 
-// AI value lengths ที่กำหนดความยาวตายตัว (GS1 General Specification)
+// AI value lengths 鉊葭鉆?鉊喪葦鉊?鉊葷鉊耜腹鉊Ｒ葡鉊抉?鉊耜腺鉊萵鉊?(GS1 General Specification)
 const _GS1F = {
   '00':18,'01':14,'02':14,
   '11':6,'12':6,'13':6,'15':6,'16':6,'17':6,'18':6,'19':6,
   '20':2
 };
-// Variable-length AIs ที่เราสนใจ
+// Variable-length AIs 鉊葭鉆?鉊?葡鉊芹?鉆?
 const _GS1V = new Set(['10','21','22','30','37',
   '240','241','250','251','400','401','410','411','412','413','414','415','416',
   '420','421','422','7001','8002','8003','8004','8005','8006','8007','8008',
   '8010','8011','8012','8013','8020',
-  // GS1 company-specific (91-99) — ต้อง consume ทิ้งเพื่อไม่ให้ content ใน AI 91 (เช่น C.03.05.01...)
-  // ถูกอ่านผิดว่าเป็น AI 01 (GTIN) ซ้ำอีกรอบ
+  // GS1 company-specific (91-99) ??鉊?鉊冢? consume 鉊葩鉆?鉆鉊虞鉆葉鉆腹鉆?鉊徇? content 鉆? AI 91 (鉆鉊?鉊?C.03.05.01...)
+  // 鉊號鉊葉鉆葡鉊?鉊毯?鉊抉?鉊耜?鉊?鉊?AI 01 (GTIN) 鉊?鉊喪葉鉊菽?鉊?葉鉊?
   '91','92','93','94','95','96','97','98','99']);
 
-/* ── ฟังก์ชันหลัก ──────────────────────────────────────── */
+/* ?? 鉊萵鉊?鉆?鉊晤?鉊徇艇鉊晤? ???????????????????????????????????????? */
 function gs1Decode(raw) {
   if (!raw) return _emptyGS1();
 
-  // คงค่า GS ไว้ก่อน strip ตัวอื่น
+  // 鉊?鉊?鉊?GS 鉆葷鉆?鉆葉鉊?strip 鉊萵鉊抉葉鉊獅?鉊?
   let s = String(raw)
-    .replace(/[^\x1D\x20-\x7E]/g, '')  // ลบ non-printable ยกเว้น GS
+    .replace(/[^\x1D\x20-\x7E]/g, '')  // 鉊丞? non-printable 鉊Ｒ?鉆鉊抉?鉊?GS
     .replace(/\s/g, '')
     .toUpperCase();
 
   const fields = {};
 
   if (/\(\d{2,4}\)/.test(s)) {
-    /* ── Format 1: Parenthesized ─────────────────────────*/
+    /* ?? Format 1: Parenthesized ?????????????????????????*/
     const re = /\((\d{2,4})\)([^(\x1D]*)/g;
     let m;
     while ((m = re.exec(s)) !== null) {
       fields[m[1]] = m[2].replace(/\x1D/g, '').trim();
     }
   } else {
-    /* ── Format 2 & 3: Positional (with/without GS) ─────*/
+    /* ?? Format 2 & 3: Positional (with/without GS) ?????*/
     _gs1Scan(s, fields);
   }
 
@@ -885,14 +951,14 @@ function _emptyGS1() {
   return { gtin:'', sn:'', lot:'', mfgDate:'', expiry:'', ref:'' };
 }
 
-/* ── Positional scanner: เดินไปตลอด string ──────────────── */
+/* ?? Positional scanner: 鉆鉊葩鉊?鉊?鉊丞葉鉊?string ???????????????? */
 function _gs1Scan(s, out) {
   const GS = '\x1D';
   let i = 0;
   while (i < s.length) {
-    if (s.charCodeAt(i) === 29) { i++; continue; }   // ข้าม GS
+    if (s.charCodeAt(i) === 29) { i++; continue; }   // 鉊?鉊耜腹 GS
 
-    // ลอง match AI: 4 → 3 → 2 หลัก
+    // 鉊丞葉鉊?match AI: 4 ??3 ??2 鉊徇艇鉊晤?
     let ai = null, fl = null;
     for (const n of [4, 3, 2]) {
       const c = s.substr(i, n);
@@ -903,18 +969,18 @@ function _gs1Scan(s, out) {
     i += ai.length;
 
     if (fl > 0) {
-      // ── Fixed length ─────────────────────────────────
+      // ?? Fixed length ?????????????????????????????????
       out[ai] = s.substr(i, fl);
       i += fl;
     } else {
-      // ── Variable length ───────────────────────────────
+      // ?? Variable length ???????????????????????????????
       const gsPos = s.indexOf(GS, i);
       if (gsPos !== -1) {
-        // มี GS → ใช้เป็น delimiter ได้เลย (Format 2)
+        // 鉊﹤葭 GS ??鉆?鉆?鉊?鉊?delimiter 鉆?鉆?鉊丞腺 (Format 2)
         out[ai] = s.substr(i, gsPos - i);
-        i = gsPos;   // GS จะถูกข้ามในรอบถัดไป
+        i = gsPos;   // GS 鉊萼鉊號鉊?鉆葡鉊﹤?鉊腦鉊冢?鉊萵鉊?鉊?
       } else {
-        // ไม่มี GS → ใช้ heuristic หา boundary (Format 3)
+        // 鉆腹鉆腹鉊?GS ??鉆?鉆?heuristic 鉊徇葡 boundary (Format 3)
         const end = _gs1VarEnd(s, i);
         out[ai] = s.substr(i, end - i);
         i = end;
@@ -923,28 +989,28 @@ function _gs1Scan(s, out) {
   }
 }
 
-/* ── หาจุดสิ้นสุดของ variable field เมื่อไม่มี GS ───────────
- *  จำกัดให้มองหาเฉพาะ AI ที่สมเหตุสมผลหลัง variable field:
- *  10 (LOT)  → ตามด้วยตัวอักษรก่อน (e.g. BY-, C-) ไม่ใช่ตัวเลข
- *  11 (MFG)  → ตามด้วย \d{6} เท่านั้น
- *  17 (EXP)  → ตามด้วย \d{6} เท่านั้น
- *  21 (SN)   → ตามด้วยตัวอักษรก่อน ไม่ใช่ตัวเลข
- *  ไม่รวม 00/01 เพราะอาจปรากฏเป็นส่วนหนึ่งของข้อมูล field ได้
- *  NOTE: AI 10/21 ต้องขึ้นต้นด้วยตัวอักษร เพื่อป้องกัน "10" ที่อยู่ใน
- *        lot value เช่น "R20I1099" ถูกตีความผิดว่าเป็น AI boundary
- * ──────────────────────────────────────────────────────────*/
+/* ?? 鉊徇葡鉊虜鉊葵鉊毯?鉊葵鉊詮?鉊葉鉊?variable field 鉆鉊﹤虞鉆葉鉆腹鉆腹鉊?GS ???????????
+ *  鉊董鉊萵鉊?鉊徇?鉊﹤葉鉊葦鉊耜?鉊?鉊耜萼 AI 鉊葭鉆葵鉊﹤?鉊徇?鉊詮葵鉊﹤?鉊丞葦鉊丞萵鉊?variable field:
+ *  10 (LOT)  ??鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊??鉆葉鉊?(e.g. BY-, C-) 鉆腹鉆?鉊?鉊萵鉊抉?鉊丞?
+ *  11 (MFG)  ??鉊葡鉊﹤?鉆葷鉊?\d{6} 鉆鉊?鉊耜?鉊晤?鉊?
+ *  17 (EXP)  ??鉊葡鉊﹤?鉆葷鉊?\d{6} 鉆鉊?鉊耜?鉊晤?鉊?
+ *  21 (SN)   ??鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊??鉆葉鉊?鉆腹鉆?鉊?鉊萵鉊抉?鉊丞?
+ *  鉆腹鉆腦鉊抉腹 00/01 鉆鉊腦鉊耜萼鉊冢葡鉊?鉊?葡鉊?鉆鉊?鉊葵鉆葷鉊葦鉊葆鉆?鉊葉鉊?鉆葉鉊﹤號鉊?field 鉆?鉆?
+ *  NOTE: AI 10/21 鉊?鉊冢?鉊葆鉆?鉊?鉊?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊?鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?"10" 鉊葭鉆葉鉊Ｒ號鉆?鉊?
+ *        lot value 鉆鉊?鉊?"R20I1099" 鉊號鉊?鉊菽?鉊抉葡鉊﹤?鉊毯?鉊抉?鉊耜?鉊?鉊?AI boundary
+ * ??????????????????????????????????????????????????????????*/
 function _gs1VarEnd(s, from) {
   const MIN_VAL = 2;
   const NEXT = [
-    // ── AI 10 (LOT) / AI 21 (SN): ค่าต้องขึ้นต้นด้วยตัวอักษรเท่านั้น ──────────────
-    // เหตุผล: lot ของ Beyond เช่น "BY-C2603R20I109" มีลำดับ "10" ฝังอยู่
-    // ถ้า ok รับตัวเลขได้ด้วย → parser จะตัด lot ผิดตรง "10" ใน "R20I109"
+    // ?? AI 10 (LOT) / AI 21 (SN): 鉊?鉊耜?鉆葉鉊?鉊嗣?鉊?鉆?鉊?鉊抉腺鉊萵鉊抉葉鉊晤?鉊拈腦鉆鉊?鉊耜?鉊晤?鉊???????????????
+    // 鉆鉊徇?鉊詮?鉊? lot 鉊葉鉊?Beyond 鉆鉊?鉊?"BY-C2603R20I109" 鉊﹤葭鉊丞董鉊萵鉊?"10" 鉊萵鉊葉鉊Ｒ號鉆?
+    // 鉊?鉊?ok 鉊?萵鉊?鉊晤葷鉆鉊丞?鉆?鉆?鉆葷鉊???parser 鉊萼鉊萵鉊?lot 鉊葩鉊?鉊?? "10" 鉆? "R20I109"
     { ai:'10', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
     { ai:'11', ok: a => /^\d{6}/.test(a) },
     { ai:'17', ok: a => /^\d{6}/.test(a) },
     { ai:'21', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
-    // ── AI 91/92 (GS1 company-specific) — ใช้เป็น boundary ท้าย label ───────────
-    // AI 91/92 ต้องตามด้วยตัวอักษร (ป้องกัน "91" ใน SN เช่น "CEEC3C00419" ถูกอ่านผิด)
+    // ?? AI 91/92 (GS1 company-specific) ??鉆?鉆?鉊?鉊?boundary 鉊?鉊耜腺 label ???????????
+    // AI 91/92 鉊?鉊冢?鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊?(鉊?鉊冢?鉊萵鉊?"91" 鉆? SN 鉆鉊?鉊?"CEEC3C00419" 鉊號鉊葉鉆葡鉊?鉊毯?)
     { ai:'91', ok: a => /^[A-Z]/.test(a) },
     { ai:'92', ok: a => /^[A-Z]/.test(a) },
   ];
@@ -957,14 +1023,14 @@ function _gs1VarEnd(s, from) {
   return s.length;
 }
 
-/* ── Helpers ─────────────────────────────────────────────── */
+/* ?? Helpers ??????????????????????????????????????????????? */
 function _gs1NormLot(lot) {
   if (!lot) return '';
   lot = String(lot).toUpperCase().replace(/\s/g,'');
   const idx = lot.indexOf('BY-');
   if (idx !== -1) {
-    // ตัด catalog suffix เช่น "1C.03.05.01.03.000002" ที่ต่อท้าย lot
-    // ใช้ \dC(?:\.\d+){4,} เพื่อ match รูปแบบ "1C.03.05.01.03.000002" (≥4 groups)
+    // 鉊萵鉊?catalog suffix 鉆鉊?鉊?"1C.03.05.01.03.000002" 鉊葭鉆?鉆葉鉊?鉊耜腺 lot
+    // 鉆?鉆?\dC(?:\.\d+){4,} 鉆鉊虞鉆葉 match 鉊?號鉊?鉊? "1C.03.05.01.03.000002" (?? groups)
     return lot.substring(idx).replace(/\dC(?:\.\d+){4,}.*$/, '').trim();
   }
   return lot.replace(/^\d{10,}/, '').replace(/C\.\d+(?:\.\d+)+/g,'').trim();
@@ -973,22 +1039,22 @@ function _gs1NormLot(lot) {
 function _gs1Fmt6(s) {
   if (!s || !/^\d{6}$/.test(s)) return s || '';
   const day = s.slice(4,6);
-  if (day === '00') return '20' + s.slice(0,2) + '-' + s.slice(2,4);  // Beyond ใส่ 00 = ไม่ระบุวัน
+  if (day === '00') return '20' + s.slice(0,2) + '-' + s.slice(2,4);  // Beyond 鉆葵鉆?00 = 鉆腹鉆腦鉊啤?鉊詮葷鉊晤?
   return '20' + s.slice(0,2) + '-' + s.slice(2,4) + '-' + day;
 }
 
-// ใช้งานได้ทั้งจาก lookup() และภายนอก
+// 鉆?鉆?鉊耜?鉆?鉆?鉊晤?鉊?鉊耜? lookup() 鉆艇鉊啤?鉊耜腺鉊葉鉊?
 function normalizeLot(lot) { return _gs1NormLot(lot); }
 
-/* ── parseCode: entry point จาก scan ───────────────────────
- *  รับ raw string จากกล้อง / HID scanner / พิมพ์มือ
- *  → decode → lookup → แสดงผล
- * ──────────────────────────────────────────────────────────*/
+/* ?? parseCode: entry point 鉊葡鉊?scan ???????????????????????
+ *  鉊?萵鉊?raw string 鉊葡鉊?鉊丞?鉊冢? / HID scanner / 鉊葩鉊﹤?鉆腹鉊獅葉
+ *  ??decode ??lookup ??鉆葵鉊?鉊艇
+ * ??????????????????????????????????????????????????????????*/
 function parseCode(raw) {
   if (!raw) return;
   raw = normalizeScannerLayout(raw);
 
-  // dedup key: ใช้ string ที่คงค่า GS ไว้เพื่อเปรียบเทียบที่แม่นยำ
+  // dedup key: 鉆?鉆?string 鉊葭鉆?鉊?鉆葡 GS 鉆葷鉆?鉊虞鉆葉鉆鉊腦鉊菽腺鉊?鉊葭鉊Ｒ?鉊葭鉆?鉊﹤?鉊腺鉊?
   const key = String(raw).replace(/[^\x1D\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
   if (!key) return;
 
@@ -996,11 +1062,11 @@ function parseCode(raw) {
   if (IS_PROCESSING) return;
   if (key === LAST_SCAN_TEXT && (now - LAST_SCAN_TIME) < DUP_MS) {
     const secLeft = Math.ceil((DUP_MS - (now - LAST_SCAN_TIME)) / 1000);
-    toast(`⚠️ สแกนซ้ำ — รอได้อีก ${secLeft} วิ หรือกด ✅ ยืนยันเพื่อบันทึกซ้ำ`, 'warn');
+    toast(`สแกนซ้ำเร็วเกินไป รอ ${secLeft} วินาที`, 'warn');
     return;
   }
 
-  // ── Decode ──────────────────────────────────────────────
+  // ?? Decode ??????????????????????????????????????????????
   const g = gs1Decode(raw);
 
   const d = {
@@ -1013,21 +1079,21 @@ function parseCode(raw) {
     ref:     g.ref,
   };
 
-  // ── Fallback สำหรับ barcode ที่ไม่ใช่ GS1 ──────────────
-  // (เช่น SN เปล่าๆ ที่ไม่มี AI prefix)
+  // ?? Fallback 鉊芹董鉊徇腦鉊晤? barcode 鉊葭鉆?鉊﹤?鉆?鉆?GS1 ??????????????
+  // (鉆鉊?鉊?SN 鉆鉊艇鉆葡鉆?鉊葭鉆?鉊﹤?鉊﹤葭 AI prefix)
   if (!d.gtin && !d.sn && !d.lot) {
     const plain = key.replace(/\x1D/g,'');
     if (plain.startsWith('BY-') || /^[A-Z]{2}-/.test(plain)) {
       d.lot = _gs1NormLot(plain);
     } else if (/^\d{12,14}$/.test(plain)) {
-      // EAN-8/12/13/14 → ตีความเป็น GTIN (ไม่ใช่ SN)
+      // EAN-8/12/13/14 ??鉊葭鉊葷鉊耜腹鉆鉊?鉊?GTIN (鉆腹鉆?鉊? SN)
       d.gtin = plain.replace(/^0+/,'');
     } else {
       d.sn = plain;
     }
   }
 
-  // ── Lookup ──────────────────────────────────────────────
+  // ?? Lookup ??????????????????????????????????????????????
   d.p = lookup(d);
 
   LAST           = d;
@@ -1044,7 +1110,7 @@ function lookup(d) {
   const lot = _gs1NormLot(d.lot);
   const sn  = String(d.sn||'').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
 
-  // ใช้ CACHE.products ที่โหลดจาก Sheet (ถ้ายังไม่มีให้ข้ามไป inferFromLot)
+  // 鉆?鉆?CACHE.products 鉊葭鉆?鉊徇艇鉊?鉊耜? Sheet (鉊?鉊耜腺鉊晤?鉆腹鉆腹鉊菽?鉊徇?鉊?鉊耜腹鉆? inferFromLot)
   const db = CACHE.products || [];
   let wildcardLotHit = null;
 
@@ -1064,7 +1130,7 @@ function lookup(d) {
 
   if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
 
-  // ── APEX GTIN-based lookup (before generic inferFromLot) ─────────────────
+  // ?? APEX GTIN-based lookup (before generic inferFromLot) ?????????????????
   if (gtinRaw) {
     const apexMatch = _apexGtinLookup(gtinRaw);
     if (apexMatch) return apexMatch;
@@ -1117,44 +1183,45 @@ function _mergeLotDetails(product, lot) {
   };
 }
 
-/* ── APEX GTIN prefix map ──────────────────────────────────────────────────
- * GTIN-13 ของ APEX SS series: 471302500 [3-digit product code] [check]
- * ตาม UDI Type 2 (shipped after 2023/6/1)
- * ─────────────────────────────────────────────────────────────────────── */
+/* ?? APEX GTIN prefix map ??????????????????????????????????????????????????
+ * GTIN-13 鉊葉鉊?APEX SS series: 471302500 [3-digit product code] [check]
+ * 鉊葡鉊?UDI Type 2 (shipped after 2023/6/1)
+ * ??????????????????????????????????????????????????????????????????????? */
 const _APEX_GTIN_PRODUCTS = {
   // XT / iX series
   '007': { name:'APEX XT Auto',                type:'device',     model:'XT Auto',            brand:'APEX Medical' },
   '022': { name:'APEX iX Auto Humidifier',     type:'device',     model:'iX Auto Humidifier', brand:'APEX Medical' },
   '040': { name:'APEX iX Auto',                type:'device',     model:'iX Auto',            brand:'APEX Medical' },
-  // Domus 1 G2 series (SS – Airway Clearance)
+  // Domus 1 G2 series (SS ??Airway Clearance)
   '100': { name:'APEX Domus 1 G2 Pump',        type:'device',     model:'Domus 1 G2 Pump',    brand:'APEX Medical' },
   '101': { name:'APEX Domus 1 G2 Mattress',    type:'accessory',  model:'Domus 1 G2 Mattress',brand:'APEX Medical' },
-  // เพิ่มเติมตาม product code ที่พบในอนาคต (ดูจาก 3 หลักหลัง 4713025 ใน GTIN-13)
+  // 鉆鉊葩鉆腹鉆鉊葩鉊﹤?鉊耜腹 product code 鉊葭鉆?鉊?鉊葉鉊葡鉊? (鉊號鉊葡鉊?3 鉊徇艇鉊晤?鉊徇艇鉊晤? 4713025 鉆? GTIN-13)
 };
 
 function _apexGtinLookup(gtinRaw) {
-  // APEX SS: GTIN ขึ้นต้นด้วย 4713025 (13 หลัก) หรือ 14713025 (14 หลัก)
-  const g = gtinRaw.replace(/^1(?=4713025)/, '');  // normalize 14-digit → 13-digit
+  // APEX SS: GTIN 鉊葆鉆?鉊?鉊?鉆葷鉊?4713025 (13 鉊徇艇鉊晤?) 鉊徇腦鉊獅葉 14713025 (14 鉊徇艇鉊晤?)
+  const g = gtinRaw.replace(/^1(?=4713025)/, '');  // normalize 14-digit ??13-digit
   if (!g.startsWith('4713025') || g.length !== 13) return null;
-  const code = g.slice(7, 10);  // 3-digit product code ตำแหน่ง 7-9
+  const code = g.slice(7, 10);  // 3-digit product code 鉊董鉆葦鉊?鉊?7-9
   return _APEX_GTIN_PRODUCTS[code] || { name:'APEX Device ('+code+')', type:'device', model:'', brand:'APEX Medical' };
 }
 
-// ── Lookup tables สำหรับ inferFromLot (maintainable แทน if-else chain) ──────
-// ลำดับสำคัญ: match ที่จำเพาะกว่าต้องมาก่อน (NM6A ก่อน NM6, NM5A ก่อน NM5)
+// ?? Lookup tables 鉊芹董鉊徇腦鉊晤? inferFromLot (maintainable 鉆?鉊?if-else chain) ??????
+// 鉊丞董鉊萵鉊葵鉊喪?鉊晤?: match 鉊葭鉆?鉊喪?鉊葡鉊啤?鉊抉?鉊耜?鉆葉鉊腹鉊耜?鉆葉鉊?(NM6A 鉊?鉊冢? NM6, NM5A 鉊?鉊冢? NM5)
 const _LOT_RULES = [
   { test: l => l.includes('NM6A'), type:'mask',      model:'EaseFit NM6A', name:'Beyond EaseFit NM6A', brand:'Hunan Beyond' },
   { test: l => l.includes('NM6'),  type:'mask',      model:'EaseFit NM6',  name:'Beyond EaseFit NM6',  brand:'Hunan Beyond' },
   { test: l => l.includes('NM5A'), type:'mask',      model:'EaseFit NM5A', name:'Beyond EaseFit NM5A', brand:'Hunan Beyond' },
   { test: l => l.includes('NM5'),  type:'mask',      model:'EaseFit NM5',  name:'Beyond EaseFit NM5',  brand:'Hunan Beyond' },
   { test: l => l.includes('PMI'),  type:'mask',      model:'EaseFit PMI',  name:'Beyond EaseFit PMI',  brand:'Hunan Beyond' },
-  // Breathing Tube HP1 — ตรวจจาก lot ที่มี HP (BY-C????HP หรือ HP1) → ต้องมาก่อน R20 เพราะ R20I อาจมี HP
+  // Breathing Tube HP1 ??鉊腦鉊抉?鉊葡鉊?lot 鉊葭鉆腹鉊?HP (BY-C????HP 鉊徇腦鉊獅葉 HP1) ??鉊?鉊冢?鉊﹤葡鉊?鉊冢? R20 鉆鉊腦鉊耜萼 R20I 鉊冢葡鉊腹鉊?HP
   { test: l => /HP\d*$/.test(l) || l.includes('HP1'), type:'accessory', model:'HP1', name:'Breathing Tube HP1', brand:'Hunan Beyond' },
   { test: l => l.includes('R30F107') || l.includes('R30F'), type:'device', model:'R-30F', name:'Beyond R-30F BPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('R25V'),  type:'device',    model:'R-25V',        name:'Beyond R-25V BPAP',   brand:'Hunan Beyond' },
+  { test: l => l.includes('R20A'),  type:'device',    model:'R-20A',        name:'Beyond R-20A CPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('R20'),   type:'device',    model:'R-20i',        name:'Beyond R-20i CPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('SPO2'),  type:'accessory', model:'SpO2 Kit',     name:'Beyond SpO2 Kits',    brand:'Hunan Beyond' },
-  // APEX LOT format: FFYYMMNNNN — 2 letters (factory) + YY + MM (01-12) + 4-digit seq
+  // APEX LOT format: FFYYMMNNNN ??2 letters (factory) + YY + MM (01-12) + 4-digit seq
   { test: l => /^[A-Z]{2}\d{2}(0[1-9]|1[0-2])\d{4}$/.test(l), type:'device', model:'', name:'APEX Device', brand:'APEX Medical' },
 ];
 
@@ -1188,6 +1255,125 @@ function inferFromLot(lot) {
   return { name, brand, type, model, size, ref };
 }
 
+
+function productLabel(p) {
+  return [p.product_code || '-', p.name || '-', p.brand || ''].join(' | ');
+}
+
+function populateProductFilters() {
+  const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
+  const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
+  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวด consumables'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = `<option value="">${escapeHtml(first)}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    if (values.includes(cur)) el.value = cur;
+  });
+}
+
+function filteredProducts(prefix) {
+  const cat = document.getElementById(prefix + 'Category')?.value || '';
+  const brand = document.getElementById(prefix + 'Brand')?.value || '';
+  const q = (document.getElementById(prefix + 'Search')?.value || '').toLowerCase().trim();
+  return (CACHE.products || []).filter(p => {
+    if ((prefix === 'manual' || prefix === 'take') && !p.product_code) return false;
+    if (cat && p.category !== cat) return false;
+    if (brand && p.brand !== brand) return false;
+    if (prefix === 'take' && p.type === 'device') return false;
+    if (prefix === 'take' && p.has_barcode && !/filter|hose|ท่อ|circuit|cushion|humidifier|chamber|chin strap|accessor/i.test((p.category || '') + ' ' + (p.name || ''))) return false;
+    const hay = [p.name, p.brand, p.product_code, p.category, p.model, p.ref].join(' ').toLowerCase();
+    return !q || hay.includes(q);
+  });
+}
+
+function renderManualProducts() {
+  const el = document.getElementById('manualProductList');
+  if (!el) return;
+  const rows = filteredProducts('manual').slice(0, 80);
+  el.innerHTML = rows.length ? rows.map((p, i) => `
+    <div class="manual-row">
+      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.category || '-')}</span></div>
+      <button class="btn-xs" onclick="selectManualProduct(${i})">เลือก</button>
+    </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
+  window.__manualRows = rows;
+}
+
+function selectManualProduct(i) {
+  const p = (window.__manualRows || [])[i];
+  if (!p) return;
+  LAST = { raw: p.product_code || p.name, p, manual: true, sn:'', lot:'', gtin:'' };
+  showResult(LAST);
+  const qty = document.getElementById('qtyI');
+  if (qty) { qty.value = ''; qty.focus(); }
+  updateActionButtons();
+}
+
+function updateActionButtons() {
+  const bIn = document.getElementById('bIn');
+  const bOut = document.getElementById('bOut');
+  if (!bIn || !bOut) return;
+  const isOut = MODE === 'out';
+  const qtyVal = parseInt(document.getElementById('qtyI')?.value || '', 10);
+  const needsQty = LAST && LAST.manual;
+  const purpose = document.getElementById('purposeI')?.value || '';
+  const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
+  const recipient = document.getElementById('locI')?.value.trim() || '';
+  const purposeOtherEl = document.getElementById('purposeOtherI');
+  if (purposeOtherEl) purposeOtherEl.style.display = purpose === 'อื่นๆ' ? 'block' : 'none';
+  const invalidQty = needsQty && (!qtyVal || qtyVal <= 0);
+  const invalidOut = isOut && (!recipient || !purpose || (purpose === 'อื่นๆ' && !purposeOther));
+  bIn.disabled = !!invalidQty;
+  bOut.disabled = !!(invalidQty || invalidOut);
+}
+
+document.addEventListener('input', e => {
+  if (['qtyI','locI','purposeOtherI'].includes(e.target.id)) updateActionButtons();
+});
+
+function currentStockQtyForProduct(p) {
+  const arr = p.type === 'mask' ? CACHE.mask : CACHE.accessory;
+  const hit = (arr || []).find(x => (x['Product Name'] || '') === (p.name || '') && (x['Brand'] || '') === (p.brand || '') && (p.type !== 'mask' || (x['Size'] || '') === (p.size || '')) && (x['Status'] || 'Active') === 'Active');
+  return hit ? Number(hit['Qty'] || 0) : 0;
+}
+
+function renderStocktake() {
+  const el = document.getElementById('stocktakeList');
+  if (!el) return;
+  const rows = filteredProducts('take').slice(0, 120);
+  el.innerHTML = rows.map(p => `
+    <div class="manual-row">
+      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
+      <input class="takeQty" data-code="${escapeHtml(p.product_code || '')}" type="number" min="0" placeholder="จำนวน" oninput="validateStocktakeSubmit()">
+    </div>`).join('') || '<div class="empty">ไม่พบสินค้า</div>';
+  validateStocktakeSubmit();
+}
+
+function validateStocktakeSubmit() {
+  const hasAny = [...document.querySelectorAll('.takeQty')].some(x => x.value !== '' && Number(x.value) >= 0);
+  const btn = document.getElementById('stocktakeSubmit');
+  if (btn) btn.disabled = !hasAny;
+}
+
+async function submitStocktake() {
+  const items = [...document.querySelectorAll('.takeQty')]
+    .filter(x => x.value !== '' && x.dataset.code)
+    .map(x => ({ productCode: x.dataset.code, qty: Number(x.value) }));
+  if (!items.length) return;
+  setPill('busy');
+  try {
+    const res = await apiPost({ action:'batch_stocktake', items, user:CUR_USER, staffName:CUR_STAFF });
+    if (!res.ok) throw new Error(res.error || 'API error');
+    toast('บันทึก Stocktake ' + (res.updated || items.length) + ' รายการแล้ว', 'ok');
+    await loadAll();
+    setPill('ok');
+  } catch(e) {
+    setPill('err');
+    toast('Stocktake ล้มเหลว: ' + e.message, 'err');
+  }
+}
+
+
 async function startScan() {
   if (scanOn || IS_PROCESSING) return;
   scanner = new Html5Qrcode('reader');
@@ -1202,7 +1388,7 @@ async function startScan() {
     scanOn = true;
   } catch(e) {
     document.getElementById('reader').innerHTML =
-      '<p style="text-align:center;padding:18px;color:#aaa;font-size:12px">ไม่สามารถเข้าถึงกล้อง<br>ป้อนรหัสด้วยตนเองแทน</p>';
+      '<p style="text-align:center;padding:18px;color:#aaa;font-size:12px">เปิดกล้องไม่สำเร็จ<br>กรุณาอนุญาตกล้องหรือกรอกเอง</p>';
   }
 }
 
@@ -1226,16 +1412,19 @@ function updateModeUI() {
   document.getElementById('mOut').classList.toggle('on', !isIn);
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
-  document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดยใคร' : 'จ่ายให้เซลล์คนไหน';
-  document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ฝ่ายขายเหนือ';
+  document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
+  document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
   document.getElementById('scanHint').innerHTML = isIn
-    ? '<span class="dot"></span>โหมดรับเข้า — เล็งกล้องที่ QR / Barcode'
-    : '<span class="dot"></span>โหมดจ่ายออก — ยิงเพื่อดึงข้อมูล แล้วกดจ่ายออกเอง';
+    ? '<span class="dot"></span>สแกนรับเข้า หรือกรอก QR / Barcode'
+    : '<span class="dot"></span>สแกนจ่ายออก แล้วตรวจสอบก่อนกดจ่ายออก';
 
-  // แสดงช่อง Qty เฉพาะโหมด Stock In + ประเภทที่ไม่ใช่ device
+  // 鉆葵鉊?鉊?鉊冢? Qty 鉆鉊?鉊耜萼鉆葦鉊﹤? Stock In + 鉊腦鉊啤?鉊?鉊葭鉆?鉊﹤?鉆?鉆?device
   const curType = document.getElementById('iType')?.value || '';
-  const showQty = isIn && curType !== 'device';
+  const showQty = (LAST && LAST.manual) || (isIn && curType !== 'device');
   document.getElementById('qtyRow').style.display = showQty ? 'block' : 'none';
+  const outFields = document.getElementById('outRequiredFields');
+  if (outFields) outFields.style.display = isIn ? 'none' : 'block';
+  updateActionButtons();
 }
 
 function onTypeChange() {
@@ -1255,9 +1444,9 @@ function showResult(d) {
 
   if (d.p) {
     rows.push(['สินค้า', d.p.name]);
-    rows.push(['แบรนด์', d.p.brand]);
+    rows.push(['Brand', d.p.brand]);
     rows.push(['ประเภท', d.p.type]);
-    rows.push(['รุ่น', d.p.model || '-']);
+    rows.push(['Model', d.p.model || '-']);
     if (d.p.size) rows.push(['Size', d.p.size]);
     if (d.p.ref) rows.push(['REF', d.p.ref]);
   }
@@ -1265,10 +1454,10 @@ function showResult(d) {
   if (d.sn) rows.push(['SN', d.sn]);
   if (d.lot) rows.push(['LOT', d.lot]);
   if (d.gtin) rows.push(['GTIN', d.gtin]);
-  if (d.mfgDate) rows.push(['วันผลิต', d.mfgDate]);
-  if (d.expiry) rows.push(['หมดอายุ', d.expiry]);
+  if (d.mfgDate) rows.push(['Mfg Date', d.mfgDate]);
+  if (d.expiry) rows.push(['Expiry', d.expiry]);
 
-  if (!rows.length) rows.push(['รหัส', d.raw]);
+  if (!rows.length) rows.push(['ข้อมูล', d.raw]);
 
   document.getElementById('rkv').innerHTML = rows.map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
 
@@ -1294,6 +1483,8 @@ function resetScan(opts = {}) {
   document.getElementById('mc').value = '';
   document.getElementById('qtyI').value = '1';
   document.getElementById('noteI').value = '';
+  const p = document.getElementById('purposeI'); if (p) p.value = '';
+  const po = document.getElementById('purposeOtherI'); if (po) { po.value = ''; po.style.display = 'none'; }
   if (opts.clearLocation) document.getElementById('locI').value = '';
   if (!opts.keepScanner) {
     stopScannerOnly();
@@ -1306,9 +1497,9 @@ function resetScan(opts = {}) {
   }
 }
 
-/* ══════════════════════════════════════════════════════════
- *  OPTIMISTIC CACHE PATCH — อัปเดต UI ทันที ไม่รอ loadAll()
- * ══════════════════════════════════════════════════════════*/
+/* ??????????????????????????????????????????????????????????
+ *  OPTIMISTIC CACHE PATCH ??鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?鉆腹鉆腦鉊?loadAll()
+ * ??????????????????????????????????????????????????????????*/
 function _patchCache(action, b) {
   const type = b.type;
   const qty  = Number(b.qty || 1);
@@ -1377,7 +1568,7 @@ function _patchCache(action, b) {
     }
   }
 
-  // prepend history (เก็บแค่ 200 รายการใน cache)
+  // prepend history (鉆鉊?鉊?鉊? 200 鉊?葡鉊Ｒ?鉊耜腦鉆? cache)
   const now = new Date();
   CACHE.history.unshift({
     'Date':                now.toLocaleDateString('th-TH'),
@@ -1397,8 +1588,14 @@ function _patchCache(action, b) {
 function _scheduleBgSync() {
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = setTimeout(async () => {
-    try { await loadAll(); _lastSyncTime = Date.now(); } catch(e) {}
-  }, 30_000);  // sync จริงใน 30 วินาทีหลังการกระทำสุดท้าย
+    try {
+      await loadAll(); _lastSyncTime = Date.now();
+    } catch(e) {
+      setTimeout(async () => {
+        try { await loadAll(); _lastSyncTime = Date.now(); } catch(e2) {}
+      }, 5_000);
+    }
+  }, 8_000);  // sync 鉊腦鉊毯?鉆?  8 鉊抉葩鉊葡鉊葭鉊徇艇鉊晤?鉊葡鉊??鉊?萼鉊董鉊芹虜鉊?鉆葡鉊?
 }
 
 async function doAct(action) {
@@ -1409,15 +1606,23 @@ async function doAct(action) {
   const type = document.getElementById('iType').value;
   const loc  = document.getElementById('locI').value.trim();
   const note = document.getElementById('noteI').value.trim();
-  const qty  = (action === 'in' && type !== 'device')
-    ? Math.min(9999, Math.max(1, parseInt(document.getElementById('qtyI').value || '1', 10)))
+  const qtyInput = parseInt(document.getElementById('qtyI').value || '', 10);
+  const qty  = (LAST && LAST.manual) || (action === 'in' && type !== 'device')
+    ? Math.min(9999, Math.max(1, isNaN(qtyInput) ? 0 : qtyInput))
     : 1;
+  const purpose = document.getElementById('purposeI')?.value || '';
+  const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
   const name = LAST.p?.name || LAST.sn || LAST.raw;
   const brand = LAST.p?.brand || '';
   const model = LAST.p?.model || '';
 
-  if (action === 'out' && !loc) {
-    toast('กรุณาระบุว่าเอาไปให้เซลล์คนไหน', 'warn');
+  if (((LAST && LAST.manual) || (action === 'in' && type !== 'device')) && (!qty || qty <= 0)) {
+    toast('กรุณากรอกจำนวนให้ถูกต้อง', 'warn');
+    IS_PROCESSING = false;
+    return;
+  }
+  if (action === 'out' && (!loc || !purpose || (purpose === 'อื่นๆ' && !purposeOther))) {
+    toast('กรุณาระบุวัตถุประสงค์และผู้เบิกให้ครบ', 'warn');
     IS_PROCESSING = false;
     return;
   }
@@ -1441,18 +1646,29 @@ async function doAct(action) {
       mfgDate: LAST.mfgDate,
       expiry: LAST.expiry,
       location: loc,
+      recipient: loc,
+      purpose,
+      purposeOther,
       note,
       qty,
-      user: CUR_USER
+      productCode: LAST.p?.product_code || '',
+      user: CUR_USER,
+      staffName: CUR_STAFF
     };
 
     const res = await apiPost(payload);
     if (!res.ok) {
       if (res.error === 'DUPLICATE') {
         const d = res.duplicate || {};
-        const detail = d.row ? ` (ยัง Active ที่ row ${d.row})` : '';
+        const detail = d.row ? ` (Active row ${d.row})` : '';
         toast('⚠️ สินค้านี้ยังมีในสต็อก' + detail, 'warn');
         setPill('ok');
+        focusScanInput(120);
+        return;
+      }
+      if (res.error === 'Item not found') {
+        toast('❌ ไม่พบในสต็อก — ลองเลือกประเภทให้ถูกต้อง หรือตรวจสอบ SN/LOT', 'err');
+        setPill('err');
         focusScanInput(120);
         return;
       }
@@ -1460,7 +1676,7 @@ async function doAct(action) {
     }
     
     const keepLoc = loc;
-    _patchCache(action, payload);  // อัปเดต UI ทันที
+    _patchCache(action, payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
     renderStock();
     renderHist(false);
     updateStats();
@@ -1473,18 +1689,21 @@ async function doAct(action) {
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
       focusScanInput(80);
-      toast('✅ จ่ายออกสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
+      toast('✅ จ่ายออกสำเร็จ', 'ok');
+    } else if (res.merged) {
+      toast('✅ รับเข้าแล้ว — รวมกับล็อตเดิม (คงเหลือ ' + res.newQty + ' ชิ้น)', 'ok');
     } else {
-      toast('✅ รับเข้าสำเร็จ พร้อมสแกนรายการถัดไป', 'ok');
+      toast('✅ รับเข้าสำเร็จ', 'ok');
     }
 
-    _scheduleBgSync();  // sync จริงใน background หลัง 30 วิ
+    _scheduleBgSync();  // sync 鉊腦鉊毯?鉆? background 鉊徇艇鉊晤? 8 鉊抉葩
   } catch(e) {
     setPill('err');
     toast('❌ ' + e.message, 'err');
   } finally {
     document.getElementById('bIn').disabled = false;
     document.getElementById('bOut').disabled = false;
+    updateActionButtons();
     IS_PROCESSING = false;
     focusScanInput(120);
   }
@@ -1495,9 +1714,12 @@ let _qoItem = null;
 function quickOut(item) {
   _qoItem = item;
   document.getElementById('modalItemName').textContent =
-    (item['Product Name'] || '-') + (item['Brand'] ? ' · ' + item['Brand'] : '');
+    (item['Product Name'] || '-') + (item['Brand'] ? ' 繚 ' + item['Brand'] : '');
   document.getElementById('modalWho').value = '';
-  // แสดงช่อง qty เฉพาะ mask/accessory (device ออกได้แค่ทีละ 1 เครื่อง)
+  document.getElementById('modalPurpose').value = '';
+  document.getElementById('modalPurposeOther').value = '';
+  document.getElementById('modalPurposeOther').style.display = 'none';
+  // 鉆葵鉊?鉊?鉊冢? qty 鉆鉊?鉊耜萼 mask/accessory (device 鉊冢葉鉊?鉊?鉆?鉆?鉊菽艇鉊?1 鉆鉊腦鉊獅?鉊冢?)
   const isAgg = item._type === 'mask' || item._type === 'accessory';
   const qtyEl = document.getElementById('modalQty');
   qtyEl.style.display = isAgg ? 'block' : 'none';
@@ -1515,13 +1737,15 @@ function closeModal() {
 
 function confirmQuickOut() {
   const who = document.getElementById('modalWho').value.trim();
+  const purpose = document.getElementById('modalPurpose').value;
+  const purposeOther = document.getElementById('modalPurposeOther').value.trim();
   if (!who) { document.getElementById('modalWho').focus(); return; }
+  if (!purpose || (purpose === 'อื่นๆ' && !purposeOther)) { document.getElementById('modalPurpose').focus(); return; }
 
   const item = _qoItem;
   closeModal();
   if (!item) return;
 
-  // ใช้ out_by_id เมื่อทราบ _sheetRow เพื่อจ่ายออกแถวที่ผู้ใช้กดจริง ๆ
   const useById = !!item._sheetRow;
 
   const isAgg = item._type === 'mask' || item._type === 'accessory';
@@ -1542,16 +1766,20 @@ function confirmQuickOut() {
     lot: item['LOT Number'] || '',
     gtin: item['GTIN / Barcode'] || '',
     location: who,
+    recipient: who,
+    purpose,
+    purposeOther,
     note: 'quick out from stock card',
     qty: outQty,
-    user: CUR_USER
+    user: CUR_USER,
+    staffName: CUR_STAFF
   };
 
   setPill('busy');
   apiPost(payload).then(res => {
     if (!res.ok) throw new Error(res.error || 'API error');
-    toast('🔺 จ่ายออกให้ ' + who + ' แล้ว', 'ok');
-    _patchCache('out', payload);  // อัปเดต UI ทันที
+    toast('จ่ายออกให้ ' + who + ' สำเร็จ', 'ok');
+    _patchCache('out', payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
     renderStock();
     renderHist(false);
     updateStats();
@@ -1563,7 +1791,7 @@ function confirmQuickOut() {
   });
 }
 
-// ปิด modal ถ้ากดพื้นหลัง
+// 鉊葩鉊?modal 鉊?鉊耜?鉊?鉊獅?鉊葦鉊丞萵鉊?
 document.addEventListener('click', e => {
   const modal = document.getElementById('quickOutModal');
   if (e.target === modal) closeModal();
@@ -1575,7 +1803,7 @@ function updateStats() {
   document.getElementById('sAc').textContent = sumQty(CACHE.accessory, 'Qty') || 0;
   renderStockBreakdown();
 
-  // นับสินค้าที่ต้องระวัง
+  // 鉊萵鉊葵鉊毯?鉊?鉊耜?鉊菽?鉊?鉊冢?鉊?萼鉊抉萵鉊?
   const today = new Date(); today.setHours(0,0,0,0);
   const WARN_DAYS = 90, LOW_QTY = 3;
   let alerts = 0;
@@ -1589,7 +1817,7 @@ function updateStats() {
     }
   });
   const alertEl = document.getElementById('alertBadge');
-  if (alertEl) alertEl.textContent = alerts > 0 ? `⚠️ ${alerts} รายการต้องระวัง` : '';
+  if (alertEl) alertEl.textContent = alerts > 0 ? `⚠️ ${alerts} รายการต้องตรวจสอบ` : '';
   if (alertEl) alertEl.style.display = alerts > 0 ? 'block' : 'none';
 }
 
@@ -1603,7 +1831,7 @@ function renderStockBreakdown() {
     it['Brand'] || ''
   ], () => 1).map(x => ({
     main: x.key[0],
-    sub: [x.key[1], x.key[2]].filter(Boolean).join(' · '),
+    sub: [x.key[1], x.key[2]].filter(Boolean).join(' 繚 '),
     qty: x.qty
   }));
 
@@ -1615,7 +1843,7 @@ function renderStockBreakdown() {
     it['Brand'] || ''
   ], it => Number(it['Qty'] || 0)).map(x => ({
     main: `${x.key[0]} / ${x.key[1]}`,
-    sub: [x.key[3], x.key[4], x.key[2] ? 'REF '+x.key[2] : ''].filter(Boolean).join(' · '),
+    sub: [x.key[3], x.key[4], x.key[2] ? 'REF '+x.key[2] : ''].filter(Boolean).join(' 繚 '),
     qty: x.qty
   }));
 
@@ -1678,7 +1906,7 @@ function renderStock() {
 
   const items = [
     ...CACHE.device.map(x => ({...x, _type:'device'})).sort((a,b) => {
-      // Active ก่อน → SN A→Z (เหมือน sortDeviceSheet เดิม แต่ทำใน JS แทน)
+      // Active 鉊?鉊冢? ??SN A? (鉆鉊徇腹鉊獅葉鉊?sortDeviceSheet 鉆鉊葩鉊?鉆?鉆?鉊喪?鉊?JS 鉆?鉊?
       const sa = a['Status'] === 'Active' ? 0 : 1;
       const sb = b['Status'] === 'Active' ? 0 : 1;
       if (sa !== sb) return sa - sb;
@@ -1698,7 +1926,7 @@ function renderStock() {
   });
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-ic">📦</div><div>ยังไม่มีข้อมูล</div></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-ic">📦</div><div>ไม่พบข้อมูลในสต็อก</div></div>`;
     return;
   }
 
@@ -1715,13 +1943,13 @@ function renderStock() {
     const loc   = it['Location'] || it['Location / Hospital'] || '-';
     const expRaw = it['Expiry'] || it['Expiry Date'] || '';
 
-    // คำนวณ expiry alert
+    // 鉊董鉊葷鉊?expiry alert
     let expBadge = '';
     if (expRaw) {
       const parts = String(expRaw).split('/');
       let expDate;
       if (parts.length === 3) {
-        // รูปแบบ dd/MM/yyyy
+        // 鉊?號鉊?鉊? dd/MM/yyyy
         expDate = new Date(+parts[2], +parts[1]-1, +parts[0]);
       } else {
         expDate = new Date(expRaw);
@@ -1755,7 +1983,7 @@ function renderStock() {
         </dl>
         <div class="ic-ft">
           <div class="ic-meta">#${idx + 1}</div>
-          <button class="btn-co" data-idx="${idx}">🔺 จ่ายออก</button>
+          <button class="btn-co" data-idx="${idx}">? 鉊?鉊耜腺鉊冢葉鉊?/button>
         </div>
       </div>
     `;
@@ -1767,12 +1995,26 @@ function renderStock() {
   });
 }
 
+function renderPurposeSummary(items) {
+  const el = document.getElementById('purposeSummary');
+  if (!el) return;
+  const month = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long' });
+  const sums = {'ขาย':0,'ของแถม':0,'เดโม':0,'อื่นๆ':0};
+  (items || CACHE.history || []).forEach(it => {
+    if (String(it['Action'] || '') !== 'Stock Out') return;
+    const p = String(it['Purpose'] || '').startsWith('อื่นๆ') ? 'อื่นๆ' : String(it['Purpose'] || 'อื่นๆ');
+    sums[p] = (sums[p] || 0) + Number(it['Qty'] || 1);
+  });
+  el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
+}
+
 function renderHist(append, items) {
   const list = document.getElementById('hiList');
   items = items || CACHE.history || [];
+  if (!append) renderPurposeSummary(items);
 
   if (!items.length && !append) {
-    list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>ยังไม่มีประวัติ</div></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-ic">??</div><div>鉊Ｒ萵鉊?鉊﹤?鉊﹤葭鉊腦鉊啤葷鉊晤?鉊?/div></div>`;
     document.getElementById('hiMore').style.display = 'none';
     return;
   }
@@ -1782,10 +2024,10 @@ function renderHist(append, items) {
     const isIn = action === 'Stock In';
     return `
       <div class="hi">
-        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇️' : '⬆️'}</div>
+        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '漎?' : '漎?'}</div>
         <div>
           <div class="hn">${escapeHtml(it['Product Name'] || '-')}</div>
-          <div class="hm">${escapeHtml(it['Action'] || '-')} • ${escapeHtml(it['Location / Recipient'] || '-')} • ${escapeHtml(it['Recorded By'] || '-')}</div>
+          <div class="hm">${escapeHtml(it['Action'] || '-')} ??${escapeHtml(it['Location / Recipient'] || '-')} ??${escapeHtml(it['Recorded By'] || '-')}</div>
         </div>
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
       </div>
@@ -1798,7 +2040,7 @@ function renderHist(append, items) {
     list.innerHTML = html;
   }
 
-  // แสดงปุ่มโหลดเพิ่มถ้าได้ครบ page
+  // 鉆葵鉊?鉊虜鉆腹鉆葦鉊丞?鉆鉊葩鉆腹鉊?鉊耜?鉊?鉊腦鉊?page
   document.getElementById('hiMore').style.display =
     items.length >= HIST_PAGE ? 'block' : 'none';
 }
@@ -1809,24 +2051,33 @@ async function loadMoreHist() {
     const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:HIST_OFFSET }));
     if (!res.ok) throw new Error(res.error);
     const more = res.history || [];
+    const seen = new Set(CACHE.history.map(h =>
+      [h['Date'], h['Time'], h['Product Name'], h['Action']].join('|')
+    ));
+    const fresh = more.filter(h => {
+      const key = [h['Date'], h['Time'], h['Product Name'], h['Action']].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
-    // concat ก่อนแล้วค่อย render เฉพาะรายการใหม่ ป้องกัน cache ผิดชั่วคราว
-    CACHE.history = CACHE.history.concat(more);
-    renderHist(true, more);
+    // concat 鉊?鉊冢?鉆艇鉆葷鉊?鉊冢腺 render 鉆鉊?鉊耜萼鉊?葡鉊Ｒ?鉊耜腦鉆葦鉊﹤? 鉊?鉊冢?鉊萵鉊?cache 鉊葩鉊?鉊晤?鉊抉?鉊?葡鉊?
+    CACHE.history = CACHE.history.concat(fresh);
+    renderHist(true, fresh);
 
     if (more.length < HIST_PAGE) document.getElementById('hiMore').style.display = 'none';
   } catch(e) {
-    toast('โหลดไม่ได้: ' + e.message, 'err');
+    toast('鉆葦鉊丞?鉆腹鉆?鉊?: ' + e.message, 'err');
     HIST_OFFSET -= HIST_PAGE;
   }
 }
 
 function goTab(tab) {
-  ['scan','stock','hist','cfg'].forEach(k => {
+  ['scan','stock','hist','take','cfg'].forEach(k => {
     document.getElementById('t-' + k).classList.toggle('on', k === tab);
     document.getElementById('v-' + k).style.display = (k === tab ? 'block' : 'none');
   });
-  // sync อัตโนมัติถ้าเปิดแท็บ Stock/History และไม่ได้ sync มานานเกิน 60 วิ
+  // sync 鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉆葡鉆鉊葩鉊?鉊?鉊?Stock/History 鉆艇鉊啤?鉊﹤?鉆?鉆?sync 鉊﹤葡鉊葡鉊?鉊葩鉊?60 鉊抉葩
   if ((tab === 'stock' || tab === 'hist') && Date.now() - _lastSyncTime > 60_000) {
     loadAll().then(() => { _lastSyncTime = Date.now(); }).catch(() => {});
   }
@@ -1835,7 +2086,7 @@ function goTab(tab) {
 function setPill(mode) {
   const el = document.getElementById('pill');
   el.className = 'pill ' + mode;
-  el.textContent = mode === 'ok' ? '● Connected' : mode === 'busy' ? '● Working' : mode === 'err' ? '● Error' : '● Sheet';
+  el.textContent = mode === 'ok' ? '??Connected' : mode === 'busy' ? '??Working' : mode === 'err' ? '??Error' : '??Sheet';
 }
 
 function toast(msg, type='ok') {
@@ -1856,30 +2107,30 @@ function escapeHtml(str) {
 }
 
 async function sortDeviceSheetNow() {
-  if (!API_URL) { toast('ยังไม่ได้เชื่อมต่อ API', 'warn'); return; }
-  toast('⏳ กำลังจัดเรียง...', 'ok');
+  if (!API_URL) { toast('鉊Ｒ萵鉊?鉊﹤?鉆?鉆?鉊虞鉆葉鉊﹤?鉆葉 API', 'warn'); return; }
+  toast('??鉊董鉊丞萵鉊?鉊晤?鉆鉊?葭鉊Ｒ?...', 'ok');
   setPill('busy');
   try {
     const res = await apiPost({ action: 'sort', user: CUR_USER });
     if (!res.ok) throw new Error(res.error || 'API error');
-    toast('✅ จัดเรียง Device Sheet A-Z แล้ว', 'ok');
+    toast('??鉊萵鉊?鉊?葭鉊Ｒ? Device Sheet A-Z 鉆艇鉆葷', 'ok');
     setPill('ok');
-    await loadAll();  // รีโหลด cache ให้ตรงกับ Sheet
+    await loadAll();  // 鉊?葭鉆葦鉊丞? cache 鉆葦鉆?鉊??鉊萵鉊?Sheet
   } catch(e) {
     setPill('err');
-    toast('❌ ' + e.message, 'err');
+    toast('??' + e.message, 'err');
   }
 }
 
 async function exportCSV() {
-  if (!API_URL) { toast('ยังไม่ได้เชื่อมต่อ API', 'warn'); return; }
-  toast('⏳ กำลัง export...', 'ok');
+  if (!API_URL) { toast('鉊Ｒ萵鉊?鉊﹤?鉆?鉆?鉊虞鉆葉鉊﹤?鉆葉 API', 'warn'); return; }
+  toast('??鉊董鉊丞萵鉊?export...', 'ok');
   try {
-    // ดึงประวัติทั้งหมด (สูงสุด 9999 รายการ) ไม่ใช้แค่ cache หน้าปัจจุบัน
+    // 鉊葆鉊?鉊?萼鉊抉萵鉊葩鉊萵鉆?鉊徇腹鉊?(鉊芹號鉊葵鉊詮? 9999 鉊?葡鉊Ｒ?鉊耜腦) 鉆腹鉆?鉊?鉆?鉆?cache 鉊徇?鉆葡鉊萵鉊?鉊詮?鉊晤?
     const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:9999, offset:0 }));
     if (!res.ok) throw new Error(res.error);
     const items = res.history || [];
-    if (!items.length) { toast('ยังไม่มีประวัติให้ export', 'warn'); return; }
+    if (!items.length) { toast('鉊Ｒ萵鉊?鉊﹤?鉊﹤葭鉊腦鉊啤葷鉊晤?鉊毯?鉊徇? export', 'warn'); return; }
 
     const headers = Object.keys(items[0]);
     const csv = [
@@ -1887,7 +2138,7 @@ async function exportCSV() {
       ...items.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    // เพิ่ม BOM เพื่อให้ Excel เปิดภาษาไทยได้ถูกต้อง
+    // 鉆鉊葩鉆腹 BOM 鉆鉊虞鉆葉鉆葦鉆?Excel 鉆鉊葩鉊?鉊耜萱鉊耜?鉊腺鉆?鉆?鉊嫩?鉊?鉊冢?
     const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1898,9 +2149,9 @@ async function exportCSV() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast(`✅ Export ${items.length} รายการแล้ว`, 'ok');
+    toast(`??Export ${items.length} 鉊?葡鉊Ｒ?鉊耜腦鉆艇鉆葷`, 'ok');
   } catch(e) {
-    toast('Export ไม่ได้: ' + e.message, 'err');
+    toast('Export 鉆腹鉆?鉊?: ' + e.message, 'err');
   }
 }
 </script>
