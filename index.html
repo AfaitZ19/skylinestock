@@ -166,11 +166,14 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 /* Role: admin-only elements hidden for stock */
 .admin-only{display:none}
 body.admin .admin-only{display:inline-flex}
-.manual-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
-.manual-row b{font-size:13px;color:var(--ink)}
+.manual-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)}
+.manual-row.selectable{cursor:pointer}
+.manual-row.selectable:active{background:var(--BL)}
+.manual-row b{font-size:13px;color:var(--tx)}
 .manual-row span{font-size:11px;color:var(--mu)}
-.manual-row input,.modal select{border:1px solid var(--line);border-radius:8px;padding:9px;width:110px;background:#fff}
-.stocktake-list{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;margin:8px 0}
+.manual-row input,.modal select{border:1px solid var(--bd);border-radius:8px;padding:9px;width:110px;background:#fff}
+.manual-select-btn{background:var(--B);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+.stocktake-list{max-height:320px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:0 10px;background:#fff;margin:8px 0}
 </style>
 </head>
 <body>
@@ -1292,9 +1295,9 @@ function renderManualProducts() {
   if (!el) return;
   const rows = filteredProducts('manual').slice(0, 80);
   el.innerHTML = rows.length ? rows.map((p, i) => `
-    <div class="manual-row">
+    <div class="manual-row selectable" onclick="selectManualProduct(${i})">
       <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.category || '-')}</span></div>
-      <button class="btn-xs" onclick="selectManualProduct(${i})">เลือก</button>
+      <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
     </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
   window.__manualRows = rows;
 }
