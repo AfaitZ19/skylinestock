@@ -327,7 +327,7 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="scan-secondary">
-      <div class="scrd" id="manualProductPanel">
+      <div class="scrd" id="manualProductPanel" style="display:none">
         <h3>เลือกสินค้าจากรายการ</h3>
         <div class="chips" style="margin-top:6px">
           <select class="fsel" id="manualCategory" onchange="renderManualProducts()"><option value="">ทุกหมวดหมู่</option></select>
@@ -1210,6 +1210,8 @@ function parseCode(raw) {
     document.getElementById('rkv').innerHTML = '';
     document.getElementById('rbox').classList.remove('on');
     document.getElementById('sf').style.display = 'none';
+    const manualProductPanel = document.getElementById('manualProductPanel');
+    if (manualProductPanel) manualProductPanel.style.display = 'block';
     renderManualProducts();
     const manualSearch = document.getElementById('manualSearch');
     if (manualSearch) manualSearch.focus();
@@ -1652,6 +1654,9 @@ function procM() {
 }
 
 function showResult(d) {
+  const manualProductPanel = document.getElementById('manualProductPanel');
+  if (manualProductPanel) manualProductPanel.style.display = 'none';
+
   const rows = [];
 
   if (d.p) {
@@ -1694,6 +1699,8 @@ function resetScan(opts = {}) {
   document.getElementById('rkv').innerHTML = '';
   document.getElementById('rbox').classList.remove('on');
   document.getElementById('sf').style.display = 'none';
+  const manualProductPanel = document.getElementById('manualProductPanel');
+  if (manualProductPanel) manualProductPanel.style.display = 'none';
   document.getElementById('mc').value = '';
   document.getElementById('qtyI').value = '1';
   const snLot = document.getElementById('snLotI');
