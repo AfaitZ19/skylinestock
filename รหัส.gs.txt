@@ -3077,17 +3077,17 @@ function buildHistorySheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:P1').merge().setValue('Stock Movement History — Skyline Medical')
+  ws.getRange('A1:K1').merge().setValue('Stock Movement History — Skyline Medical')
     .setBackground('#4a3580').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
   const headers = [
-    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action','Qty',
-    'Before Qty','After Qty','Purpose','Location / Recipient','Recorded By','Operator','Note','Reference'
+    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action',
+    'Location / Recipient','Recorded By','Operator','Purpose'
   ];
   styleHeaderRow(ws, 2, headers, '#4a3580');
 
-  const widths = [14,8,14,30,18,26,12,8,10,10,14,22,14,18,22,18];
+  const widths = [14,8,14,30,18,26,12,22,14,18,14];
   widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
   ws.setFrozenRows(2);
   return ws;
@@ -3754,24 +3754,31 @@ function readHistory(ss, n, offset) {
 
 function ensureHistoryColumns_(sheet) {
   if (!sheet) return;
-  const expected = [
-    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action','Qty',
-    'Before Qty','After Qty','Purpose','Location / Recipient','Recorded By','Operator','Note','Reference'
+  const expectedCompact = [
+    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action',
+    'Location / Recipient','Recorded By','Operator','Purpose'
   ];
-  if (sheet.getMaxColumns() < expected.length) {
-    sheet.insertColumnsAfter(sheet.getMaxColumns(), expected.length - sheet.getMaxColumns());
-  }
-  const width = Math.max(sheet.getLastColumn(), expected.length);
+  const width = Math.max(sheet.getLastColumn(), expectedCompact.length);
   const headers = sheet.getRange(HDR_ROW, 1, 1, width).getValues()[0];
   let changed = false;
-  expected.forEach((name, i) => {
-    const cur = String(headers[i] || '').trim();
-    if (!cur || (i === 11 && cur === 'Recipient')) {
+
+  // Repair the existing 11-column History layout without adding new columns.
+  expectedCompact.forEach((name, i) => {
+    if (String(headers[i] || '').trim() !== name) {
       headers[i] = name;
       changed = true;
     }
   });
+
   if (changed) sheet.getRange(HDR_ROW, 1, 1, width).setValues([headers]);
+
+  // Remove the duplicate block that was briefly created to the right of the old layout.
+  const duplicate = ['Location / Recipient','Recorded By','Operator','Note','Reference'];
+  const dupHeaders = sheet.getRange(HDR_ROW, 12, 1, duplicate.length).getValues()[0]
+    .map(h => String(h || '').trim());
+  if (dupHeaders.every((h, i) => h === duplicate[i])) {
+    sheet.deleteColumns(12, duplicate.length);
+  }
 }
 
 function normalizeHistoryRecord_(o) {
@@ -3961,16 +3968,31 @@ function appendHistory(ss, b, date, time, action) {
   const snLot = b.sn ? 'SN: ' + b.sn : (b.lot ? 'LOT: ' + b.lot : (b.productCode ? 'CODE: ' + b.productCode : ''));
   const qty = Math.max(1, parseInt(b.qty || 1, 10));
 
-  sheet.appendRow([
-    date, time, tl[b.type] || b.type, b.name || '', b.brand || '', snLot, action, qty,
-    Number.isFinite(Number(b.beforeQty)) ? Number(b.beforeQty) : '',
-    Number.isFinite(Number(b.afterQty)) ? Number(b.afterQty) : '',
-    b.purpose || '', b.recipient || b.location || '', b.user || '', b.operator || b.staffName || b.user || '',
-    b.note || '', b.ref || ''
-  ]);
+  const valueByHeader = {
+    'Date': date,
+    'Time': time,
+    'Type': tl[b.type] || b.type,
+    'Product Name': b.name || '',
+    'Brand': b.brand || '',
+    'Serial / LOT': snLot,
+    'Action': action,
+    'Qty': qty,
+    'Before Qty': Number.isFinite(Number(b.beforeQty)) ? Number(b.beforeQty) : '',
+    'After Qty': Number.isFinite(Number(b.afterQty)) ? Number(b.afterQty) : '',
+    'Purpose': b.purpose || '',
+    'Location / Recipient': b.recipient || b.location || '',
+    'Recipient': b.recipient || b.location || '',
+    'Recorded By': b.user || '',
+    'Operator': b.operator || b.staffName || b.user || '',
+    'Note': b.note || '',
+    'Reference': b.ref || ''
+  };
+  const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(h => String(h || '').trim());
+  sheet.appendRow(headers.map(h => valueByHeader[h] == null ? '' : valueByHeader[h]));
 
   const r = sheet.getLastRow();
-  sheet.getRange(r,1,1,16)
+  sheet.getRange(r,1,1,sheet.getLastColumn())
     .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
     .setFontFamily('Arial')
     .setFontSize(10)
