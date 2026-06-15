@@ -2308,10 +2308,15 @@ function renderPurposeSummary(items) {
   const sums = {'ขาย':0,'ของแถม':0,'เดโม':0,'อื่นๆ':0};
   (items || CACHE.history || []).forEach(it => {
     if (String(it['Action'] || '') !== 'Stock Out') return;
-    const p = String(it['Purpose'] || '').startsWith('อื่นๆ') ? 'อื่นๆ' : String(it['Purpose'] || 'อื่นๆ');
+    const rawPurpose = historyPurpose(it);
+    const p = rawPurpose.startsWith('อื่นๆ') ? 'อื่นๆ' : (rawPurpose || 'อื่นๆ');
     sums[p] = (sums[p] || 0) + Number(it['Qty'] || 1);
   });
   el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
+}
+
+function historyPurpose(it) {
+  return String(it['Purpose'] || it['purpose'] || it['วัตถุประสงค์'] || it['วัตถุประสงค์การเบิก'] || '').trim();
 }
 
 function historyRecipient(it) {
@@ -2336,7 +2341,7 @@ function renderHist(append, items) {
   const html = items.map(it => {
     const action = String(it['Action'] || '');
     const isIn = action === 'Stock In';
-    const purpose = String(it['Purpose'] || '');
+    const purpose = historyPurpose(it);
     return `
       <div class="hi">
         <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇' : '⬆'}</div>
@@ -2346,7 +2351,7 @@ function renderHist(append, items) {
             ${(it['Qty'] !== undefined && it['Qty'] !== null && it['Qty'] !== '') ? `<div class="hi-qty ${isIn ? 'in' : 'out'}">${isIn ? '+' : '-'}${escapeHtml(String(it['Qty']))}</div>` : ''}
           </div>
           <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(historyRecipient(it) || '-')} · ${escapeHtml(historyRecordedBy(it) || '-')}</div>
-          ${purpose ? `<div class="hm">วัตถุประสงค์: ${escapeHtml(purpose)}</div>` : ''}
+          ${!isIn ? `<div class="hm">วัตถุประสงค์: ${escapeHtml(purpose || '-')}</div>` : ''}
           ${it['Serial / LOT'] ? `<div class="hm">${escapeHtml(it['Serial / LOT'])}</div>` : ''}
         </div>
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
