@@ -426,7 +426,7 @@ body.admin .admin-only{display:inline-flex}
       <div class="scrd">
         <h3>นับสต็อกแบบเร็ว</h3>
         <div class="chips" style="margin-top:6px">
-          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวดสินค้าใช้แล้วหมด</option></select>
+          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวดสินค้า</option></select>
           <select class="fsel" id="takeBrand" onchange="renderStocktake()"><option value="">ทุกแบรนด์</option></select>
         </div>
         <input class="finp" id="takeSearch" type="search" placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า" oninput="renderStocktake()">
@@ -1414,7 +1414,7 @@ function productLabel(p) {
 function populateProductFilters() {
   const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
   const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
-  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวดสินค้าใช้แล้วหมด'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
+  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวดสินค้า'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
     const el = document.getElementById(id);
     if (!el) return;
     const cur = el.value;
