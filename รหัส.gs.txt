@@ -3944,6 +3944,14 @@ function markOut(sheet, r, type, date) {
   sheet.getRange(r, COL_STATUS).setFontColor('#b92e2e').setFontWeight('bold');
 }
 
+function formatOutDetail_(location, purpose, note) {
+  const parts = [];
+  if (location) parts.push('OUT TO: ' + location);
+  if (purpose) parts.push('PURPOSE: ' + purpose);
+  if (note) parts.push(note);
+  return parts.join(' | ');
+}
+
 function appendHistory(ss, b, date, time, action) {
   const sheet = ss.getSheetByName(TABS.history);
   if (!sheet) return;
@@ -4151,9 +4159,9 @@ function doStockOut(ss, b, date, time) {
       if (snMatch || lotMatch || gtinMatch) {
         markOut(sheet, r, b.type, date);
 
-        if (b.location || b.note) {
+        if (b.location || b.purpose || b.note) {
           const oldNote = normalizeText(row[15]);  // col 16 = Note
-          const extra = (b.location ? ('OUT TO: ' + b.location) : '') + (b.note ? (' | ' + b.note) : '');
+          const extra = formatOutDetail_(b.location || b.recipient || '', b.purpose || '', b.note || '');
           sheet.getRange(r, 16).setValue(oldNote ? oldNote + ' | ' + extra : extra);
         }
 
@@ -4197,7 +4205,7 @@ function doStockOut(ss, b, date, time) {
     }
 
     // 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆鉊芹腹鉊?鉆鉊虞鉆葉 track 鉊抉?鉊耜?鉆葡鉊Ｒ?鉊徇?鉆?鉊?
-    appendOutRow(sheet, b.type, row, date, time, b.location || '', b.note || '', actualOutQty);
+    appendOutRow(sheet, b.type, row, date, time, b.location || b.recipient || '', b.note || '', actualOutQty, b.purpose || '');
     b.qty = actualOutQty;
     b.beforeQty = qty;
     b.afterQty = Math.max(0, qty - actualOutQty);
@@ -4211,7 +4219,7 @@ function doStockOut(ss, b, date, time) {
 }
 
 /* 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆? Mask / Accessory sheet */
-function appendOutRow(sheet, type, srcRow, date, time, location, note, qty) {
+function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purpose) {
   qty = Math.max(1, parseInt(qty || 1, 10));
   const seq = sheet.getLastRow() - HDR_ROW + 1;
   let outRow = [];
@@ -4231,7 +4239,7 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty) {
       srcRow[MASK_COL_GTIN - 1],   // GTIN
       srcRow[MASK_COL_MFG    - 1],   // Mfg Date
       qty,                           // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
-      (location ? 'OUT TO: ' + location : '') + (note ? (location ? ' | ' : '') + note : ''),
+      formatOutDetail_(location, purpose, note),
       srcRow[MASK_COL_EXPIRY - 1] || ''  // Expiry
     ];
   } else if (type === 'accessory') {
@@ -4247,7 +4255,7 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty) {
       srcRow[ACC_COL_MFG  - 1],    // Mfg Date
       qty,                    // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
       location,               // Location = 鉊虞鉆葉鉊號鉆腦鉊晤?
-      note
+      formatOutDetail_('', purpose, note)
     ];
   }
 
@@ -4323,9 +4331,9 @@ function doStockOutByRow(ss, b, date, time) {
 
   if (b.type === 'device') {
     markOut(sheet, r, b.type, date);
-    if (b.location || b.note) {
+    if (b.location || b.purpose || b.note) {
       const oldNote = normalizeText(srcRow[15]);
-      const extra = (b.location ? 'OUT TO: ' + b.location : '') + (b.note ? ' | ' + b.note : '');
+      const extra = formatOutDetail_(b.location || b.recipient || '', b.purpose || '', b.note || '');
       sheet.getRange(r, 16).setValue(oldNote ? oldNote + ' | ' + extra : extra);
     }
     // sort 鉊徇艇鉊晤? appendHistory 鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?row index 鉆鉊艇鉊菽?鉊Ｒ?
@@ -4341,7 +4349,7 @@ function doStockOutByRow(ss, b, date, time) {
     } else {
       markOut(sheet, r, b.type, date);
     }
-    appendOutRow(sheet, b.type, srcRow, date, time, b.recipient || b.location || '', b.note || '', actualOutQty);
+    appendOutRow(sheet, b.type, srcRow, date, time, b.recipient || b.location || '', b.note || '', actualOutQty, b.purpose || '');
     b.qty = actualOutQty;
     b.beforeQty = qty;
     b.afterQty = Math.max(0, qty - actualOutQty);
