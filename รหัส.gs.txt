@@ -3077,13 +3077,13 @@ function buildHistorySheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:K1').merge().setValue('Stock Movement History — Skyline Medical')
+  ws.getRange('A1:P1').merge().setValue('Stock Movement History — Skyline Medical')
     .setBackground('#4a3580').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
   const headers = [
     'Date','Time','Type','Product Name','Brand','Serial / LOT','Action','Qty',
-    'Before Qty','After Qty','Purpose','Recipient','Recorded By','Operator','Note','Reference'
+    'Before Qty','After Qty','Purpose','Location / Recipient','Recorded By','Operator','Note','Reference'
   ];
   styleHeaderRow(ws, 2, headers, '#4a3580');
 
@@ -3728,6 +3728,7 @@ function readStock(ss, type) {
 function readHistory(ss, n, offset) {
   const sheet = ss.getSheetByName(TABS.history);
   if (!sheet) return [];
+  ensureHistoryColumns_(sheet);
   const last = sheet.getLastRow();
   if (last < DATA_START) return [];
 
@@ -3747,8 +3748,44 @@ function readHistory(ss, n, offset) {
   return data.reverse().map(row => {
     const o = {};
     headers.forEach((h, j) => { if (h) o[h] = row[j]; });
-    return o;
+    return normalizeHistoryRecord_(o);
   }).filter(r => r['Product Name']);
+}
+
+function ensureHistoryColumns_(sheet) {
+  if (!sheet) return;
+  const expected = [
+    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action','Qty',
+    'Before Qty','After Qty','Purpose','Location / Recipient','Recorded By','Operator','Note','Reference'
+  ];
+  if (sheet.getMaxColumns() < expected.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), expected.length - sheet.getMaxColumns());
+  }
+  const width = Math.max(sheet.getLastColumn(), expected.length);
+  const headers = sheet.getRange(HDR_ROW, 1, 1, width).getValues()[0];
+  let changed = false;
+  expected.forEach((name, i) => {
+    const cur = String(headers[i] || '').trim();
+    if (!cur || (i === 11 && cur === 'Recipient')) {
+      headers[i] = name;
+      changed = true;
+    }
+  });
+  if (changed) sheet.getRange(HDR_ROW, 1, 1, width).setValues([headers]);
+}
+
+function normalizeHistoryRecord_(o) {
+  if (!o) return {};
+  if (!o['Location / Recipient']) {
+    o['Location / Recipient'] = o['Recipient'] || o['Location'] || o['Location / Hospital'] || '';
+  }
+  if (!o['Recorded By']) {
+    o['Recorded By'] = o['Record by'] || o['Record By'] || o['record by'] || o['User'] || '';
+  }
+  if (!o['Purpose']) {
+    o['Purpose'] = o['วัตถุประสงค์'] || '';
+  }
+  return o;
 }
 
 /* =========================================================
@@ -3910,6 +3947,7 @@ function markOut(sheet, r, type, date) {
 function appendHistory(ss, b, date, time, action) {
   const sheet = ss.getSheetByName(TABS.history);
   if (!sheet) return;
+  ensureHistoryColumns_(sheet);
 
   const tl = {device:'Device', mask:'Mask', accessory:'Accessory'};
   const snLot = b.sn ? 'SN: ' + b.sn : (b.lot ? 'LOT: ' + b.lot : (b.productCode ? 'CODE: ' + b.productCode : ''));

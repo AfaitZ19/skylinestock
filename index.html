@@ -1806,6 +1806,7 @@ function _patchCache(action, b) {
     'Brand':               b.brand    || '',
     'Serial / LOT':        b.sn ? 'SN: '+b.sn : (b.lot ? 'LOT: '+b.lot : ''),
     'Action':              action === 'in' ? 'Stock In' : 'Stock Out',
+    'Purpose':             b.purpose || '',
     'Location / Recipient':b.location || '',
     'Recorded By':         b.user     || CUR_USER || '',
     'Note':                b.note     || '',
@@ -2313,6 +2314,14 @@ function renderPurposeSummary(items) {
   el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
 }
 
+function historyRecipient(it) {
+  return it['Location / Recipient'] || it['Recipient'] || it['Location'] || it['Location / Hospital'] || '';
+}
+
+function historyRecordedBy(it) {
+  return it['Recorded By'] || it['Record by'] || it['Record By'] || it['record by'] || it['User'] || '';
+}
+
 function renderHist(append, items) {
   const list = document.getElementById('hiList');
   items = items || CACHE.history || [];
@@ -2327,6 +2336,7 @@ function renderHist(append, items) {
   const html = items.map(it => {
     const action = String(it['Action'] || '');
     const isIn = action === 'Stock In';
+    const purpose = String(it['Purpose'] || '');
     return `
       <div class="hi">
         <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇' : '⬆'}</div>
@@ -2335,7 +2345,8 @@ function renderHist(append, items) {
             <div class="hn">${escapeHtml(it['Product Name'] || '-')}</div>
             ${(it['Qty'] !== undefined && it['Qty'] !== null && it['Qty'] !== '') ? `<div class="hi-qty ${isIn ? 'in' : 'out'}">${isIn ? '+' : '-'}${escapeHtml(String(it['Qty']))}</div>` : ''}
           </div>
-          <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(it['Location / Recipient'] || '-')} · ${escapeHtml(it['Recorded By'] || '-')}</div>
+          <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(historyRecipient(it) || '-')} · ${escapeHtml(historyRecordedBy(it) || '-')}</div>
+          ${purpose ? `<div class="hm">วัตถุประสงค์: ${escapeHtml(purpose)}</div>` : ''}
           ${it['Serial / LOT'] ? `<div class="hm">${escapeHtml(it['Serial / LOT'])}</div>` : ''}
         </div>
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
