@@ -518,6 +518,8 @@ let HID_ENABLED = false;
 let hidBufferTimer = null;
 let HID_BUFFER = '';
 let HID_AUTO_RESUME = false;
+let HID_LAST_TEXT = '';
+let HID_LAST_TIME = 0;
 const AUTO_SAVE_ON_SCAN_IN = true;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
@@ -570,6 +572,7 @@ function enableHIDMode(auto = false) {
   if (hidBtn) {
     hidBtn.classList.add('on');
     hidBtn.textContent = 'เครื่องสแกนเปิด';
+    hidBtn.title = 'เครื่องสแกนเปิดอยู่';
   }
   if (manualBtn) manualBtn.classList.remove('on');
   clearHidInput();
@@ -588,6 +591,7 @@ function disableHIDMode(updateButtons = true) {
     if (hidBtn) {
       hidBtn.classList.remove('on');
       hidBtn.textContent = 'ใช้เครื่องสแกน';
+      hidBtn.title = 'คลิกเพื่อเปิดเครื่องสแกน';
     }
     if (manualBtn) manualBtn.classList.add('on');
   }
@@ -679,19 +683,28 @@ function processScannerText(text) {
 
 function flushHidBuffer() {
   const el = getHidInput();
-  const code = (HID_BUFFER + (el ? el.value : '')).trim();
-  HID_BUFFER = '';
-  clearTimeout(hidBufferTimer);
-  clearHidInput();
-  if (code && code.replace(/\x1D/g,'').length >= 4) processScannerText(code);
+  submitHidCode(HID_BUFFER + (el ? el.value : ''));
   focusHidInput();
 }
 
-function queueHidChar(ch) {
-  HID_BUFFER += ch;
-  clearHidInput();
+function submitHidCode(raw) {
   clearTimeout(hidBufferTimer);
-  hidBufferTimer = setTimeout(flushHidBuffer, 450);
+  const code = String(raw || '').replace(/[\n\t]/g, '').trim();
+  HID_BUFFER = '';
+  clearHidInput();
+  if (!code || code.replace(/\x1D/g,'').length < 4) return false;
+
+  const key = code.replace(/\s/g, '').toUpperCase();
+  const now = Date.now();
+  if (key === HID_LAST_TEXT && (now - HID_LAST_TIME) < 250) {
+    focusHidInput();
+    return false;
+  }
+  HID_LAST_TEXT = key;
+  HID_LAST_TIME = now;
+  processScannerText(code);
+  focusHidInput();
+  return true;
 }
 
 function setupHidScanner() {
@@ -724,22 +737,12 @@ function setupHidScanner() {
     clearTimeout(hidBufferTimer);
 
     if (el.value.includes('\n') || el.value.includes('\t')) {
-      const code = (HID_BUFFER + el.value).replace(/[\n\t]/g, '').trim();
-      HID_BUFFER = '';
-      clearHidInput();
-      if (code) processScannerText(code);
-      focusHidInput();
+      submitHidCode(HID_BUFFER + el.value);
       return;
     }
 
     hidBufferTimer = setTimeout(() => {
-      const code = HID_BUFFER + el.value;
-      if (code && code.replace(/\x1D/g,'').length >= 4) {
-        HID_BUFFER = '';
-        clearHidInput();
-        processScannerText(code);
-      }
-      focusHidInput();
+      submitHidCode(HID_BUFFER + el.value);
     }, 800);
   });
 
@@ -1214,8 +1217,30 @@ function parseCode(raw) {
     }
   }
 
-  // ?? Lookup ??????????????????????????????????????????????
-  d.p = lookup(d);
+  // Stock-out must resolve against real stock rows first. ProductDB is only
+  // a product catalog and is not enough to decide which stock row to consume.
+  const stockHit = MODE === 'out' ? findStockItemForScan(d) : null;
+  if (stockHit && stockHit.ambiguous) {
+    PENDING_SCAN = { raw: key, gtin: d.gtin || '', sn: d.sn || '', lot: d.lot || '' };
+    LAST = null;
+    LAST_SCAN_TEXT = key;
+    LAST_SCAN_TIME = now;
+    stopScannerOnly();
+    document.getElementById('rkv').innerHTML = '';
+    document.getElementById('rbox').classList.remove('on');
+    document.getElementById('sf').style.display = 'none';
+    return;
+  }
+  if (stockHit) {
+    d.stockItem = stockHit;
+    d.p = productFromStockItem(stockHit);
+    d.sn = stockHit['Serial Number (SN)'] || d.sn || '';
+    d.lot = stockHit['LOT Number'] || d.lot || '';
+    d.gtin = stockHit['GTIN / Barcode'] || d.gtin || '';
+  } else {
+    // ?? Lookup ??????????????????????????????????????????????
+    d.p = lookup(d);
+  }
 
   if (!d.p && (d.gtin || d.sn || d.lot)) {
     PENDING_SCAN = {
@@ -1244,9 +1269,63 @@ function parseCode(raw) {
   LAST_SCAN_TEXT = key;
   LAST_SCAN_TIME = now;
 
-  stopScannerOnly();
+  const autoInCanContinue = MODE === 'in' && AUTO_SAVE_ON_SCAN_IN && scanOn && d.p && d.p.type &&
+    !((d.p.type === 'device' && !d.sn) || ((d.p.type === 'mask' || d.p.type === 'accessory') && !d.lot));
+  if (!autoInCanContinue) stopScannerOnly();
   showResult(d);
   toast('สแกนสำเร็จ', 'ok');
+}
+
+function activeStockItems() {
+  return [
+    ...CACHE.device.map(x => ({...x, _type:'device'})),
+    ...CACHE.mask.map(x => ({...x, _type:'mask'})),
+    ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
+  ].filter(x => {
+    const status = String(x['Status'] || 'Active').trim().toLowerCase();
+    if (status !== 'active') return false;
+    if (x._type !== 'device' && Number(x['Qty'] || 0) <= 0) return false;
+    return true;
+  });
+}
+
+function productFromStockItem(x) {
+  return {
+    name: x['Product Name'] || '',
+    brand: x['Brand'] || '',
+    type: x._type || '',
+    model: x['Model'] || '',
+    size: x['Size'] || '',
+    ref: x['REF'] || '',
+    product_code: x['Serial Number (SN)'] || x['LOT Number'] || String(x._sheetRow || '')
+  };
+}
+
+function findStockItemForScan(d) {
+  const sn = String(d.sn || '').trim().toUpperCase();
+  const lot = _gs1NormLot(d.lot || '');
+  const gtin = String(d.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const rows = activeStockItems();
+
+  const matches = rows.filter(x => {
+    const rowSn = String(x['Serial Number (SN)'] || '').trim().toUpperCase();
+    const rowLot = _gs1NormLot(x['LOT Number'] || '');
+    const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+    if (sn && rowSn && rowSn === sn) return true;
+    if (lot && rowLot && rowLot === lot) return true;
+    if (gtin && rowGtin && rowGtin === gtin) return true;
+    return false;
+  });
+
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    toast('พบหลายล็อต/หลายแถวในสต็อก กรุณาเลือกจากรายการสต็อก', 'warn');
+    const manualProductPanel = document.getElementById('manualProductPanel');
+    if (manualProductPanel) manualProductPanel.style.display = 'block';
+    renderManualProducts();
+    return { ambiguous: true };
+  }
+  return null;
 }
 
 function lookup(d) {
@@ -1457,6 +1536,10 @@ function filteredProducts(prefix) {
       ...CACHE.mask.map(x => ({...x, _type:'mask'})),
       ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
     ].filter(x => {
+      const status = String(x['Status'] || 'Active').trim().toLowerCase();
+      if (status !== 'active') return false;
+      if (x._type !== 'device' && Number(x['Qty'] || 0) <= 0) return false;
+      if (cat && ['device','mask','accessory'].includes(cat) && x._type !== cat) return false;
       if (brand && (x['Brand'] || '') !== brand) return false;
       const hay = [
         x['Product Name'], x['Brand'], x['Model'], x['Size'], x['REF'],
@@ -1530,6 +1613,8 @@ function selectManualProduct(i) {
   if (snLot && snLot.offsetParent !== null) snLot.focus();
   else if (qty) qty.focus();
   updateActionButtons();
+  const outBtn = document.getElementById('bOut');
+  if (outBtn) outBtn.disabled = false;
 }
 
 function requiredTrackingValue(type) {
@@ -1553,6 +1638,7 @@ function transactionNeedsQty(action, type) {
 }
 
 function transactionNeedsTracking(action, type) {
+  if (action === 'out' && LAST?.stockItem) return false;
   if (action === 'out' && LAST?.manual && (type === 'mask' || type === 'accessory')) return false;
   return type === 'device' || type === 'mask' || type === 'accessory';
 }
@@ -1605,7 +1691,7 @@ function updateActionButtons() {
   const invalidQty = needsQty && (!qtyVal || qtyVal <= 0);
   const invalidOut = isOut && (!recipient || !purpose || (purpose === 'อื่นๆ' && !purposeOther));
   bIn.disabled = !!(invalidQty || missingTracking);
-  bOut.disabled = !LAST;
+  bOut.disabled = false;
   bOut.title = invalidQty ? 'กรุณากรอกจำนวนให้ถูกต้อง'
     : missingTracking ? 'กรุณากรอก SN/LOT'
     : invalidOut ? 'กรุณาระบุผู้รับและวัตถุประสงค์'
@@ -1703,6 +1789,7 @@ function updateModeUI() {
   document.getElementById('mOut').classList.toggle('on', !isIn);
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
+  document.getElementById('bOut').disabled = false;
   document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
   document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
   document.getElementById('scanHint').innerHTML = isIn
@@ -1856,6 +1943,7 @@ function _patchCache(action, b) {
   if (action === 'out') {
     if (type === 'device') {
       const idx = CACHE.device.findIndex(x =>
+        (b.sheetRow && Number(x._sheetRow) === Number(b.sheetRow)) ||
         (b.sn && (x['Serial Number (SN)'] || '').toUpperCase() === b.sn.toUpperCase()) ||
         (b.lot && _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot))
       );
@@ -1863,9 +1951,10 @@ function _patchCache(action, b) {
     } else {
       const arr = type === 'mask' ? CACHE.mask : CACHE.accessory;
       const hit = arr.find(x =>
-        _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '') &&
-        (x['Product Name'] || '') === (b.name || '') &&
-        (type !== 'mask' || (x['Size'] || '') === (b.size || ''))
+        (b.sheetRow && Number(x._sheetRow) === Number(b.sheetRow)) ||
+        (_gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '') &&
+          (x['Product Name'] || '') === (b.name || '') &&
+          (type !== 'mask' || (x['Size'] || '') === (b.size || '')))
       );
       if (hit) {
         hit['Qty'] = Math.max(0, (Number(hit['Qty']) || 0) - qty);
@@ -1906,11 +1995,16 @@ function _scheduleBgSync() {
 }
 
 async function doAct(action) {
-  if (!LAST) return;
+  if (!LAST) {
+    toast(action === 'out' ? 'กรุณาสแกนหรือเลือกสินค้าในสต็อกก่อนจ่ายออก' : 'กรุณาสแกนหรือเลือกสินค้าก่อนรับเข้า', 'warn');
+    focusScanInput(80);
+    return;
+  }
   if (IS_PROCESSING) return;
   IS_PROCESSING = true;
 
-  const type = document.getElementById('iType').value;
+  const stockItem = action === 'out' ? LAST.stockItem : null;
+  const type = stockItem?._type || document.getElementById('iType').value;
   const loc  = document.getElementById('locI').value.trim();
   const note = document.getElementById('noteI').value.trim();
   const qtyInput = parseInt(document.getElementById('qtyI').value || '', 10);
@@ -1920,19 +2014,23 @@ async function doAct(action) {
   const purpose = document.getElementById('purposeI')?.value || '';
   const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
   const tracking = requiredTrackingValue(type);
-  const sn = tracking.key === 'sn' ? tracking.value : (LAST.sn || '');
-  const lot = tracking.key === 'lot' ? tracking.value : (LAST.lot || '');
-  const name = LAST.p?.name || sn || LAST.raw;
-  const brand = LAST.p?.brand || '';
-  const model = LAST.p?.model || '';
+  const sn = stockItem ? (stockItem['Serial Number (SN)'] || LAST.sn || '') : (tracking.key === 'sn' ? tracking.value : (LAST.sn || ''));
+  const lot = stockItem ? (stockItem['LOT Number'] || LAST.lot || '') : (tracking.key === 'lot' ? tracking.value : (LAST.lot || ''));
+  const name = stockItem ? (stockItem['Product Name'] || '') : (LAST.p?.name || sn || LAST.raw);
+  const brand = stockItem ? (stockItem['Brand'] || '') : (LAST.p?.brand || '');
+  const model = stockItem ? (stockItem['Model'] || '') : (LAST.p?.model || '');
+  const size = stockItem ? (stockItem['Size'] || '') : (LAST.p?.size || '');
+  const ref = stockItem ? (stockItem['REF'] || '') : (LAST.p?.ref || '');
+  const gtin = stockItem ? (stockItem['GTIN / Barcode'] || '') : LAST.gtin;
+  const maxStockQty = stockItem && type !== 'device' ? Number(stockItem['Qty'] || 0) : 1;
 
-  if (type === 'device' && !sn) {
+  if (type === 'device' && !sn && !(action === 'out' && stockItem)) {
     toast('กรุณากรอกเลขเครื่อง (SN) ก่อนบันทึก', 'warn');
     IS_PROCESSING = false;
     updateActionButtons();
     return;
   }
-  if ((type === 'mask' || type === 'accessory') && !lot && !(action === 'out' && LAST.manual)) {
+  if ((type === 'mask' || type === 'accessory') && !lot && !(action === 'out' && stockItem)) {
     toast('กรุณากรอกเลขล็อต (LOT) ก่อนบันทึก', 'warn');
     IS_PROCESSING = false;
     updateActionButtons();
@@ -1943,6 +2041,12 @@ async function doAct(action) {
     IS_PROCESSING = false;
     return;
   }
+  if (action === 'out' && stockItem && type !== 'device' && qty > maxStockQty) {
+    toast('จำนวนจ่ายออกมากกว่าคงเหลือ (' + maxStockQty + ' ชิ้น)', 'warn');
+    IS_PROCESSING = false;
+    updateActionButtons();
+    return;
+  }
   if (action === 'out' && (!loc || !purpose || (purpose === 'อื่นๆ' && !purposeOther))) {
     toast('กรุณาระบุวัตถุประสงค์และผู้เบิกให้ครบ', 'warn');
     IS_PROCESSING = false;
@@ -1950,11 +2054,10 @@ async function doAct(action) {
   }
 
   document.getElementById('bIn').disabled = true;
-  document.getElementById('bOut').disabled = true;
+  document.getElementById('bOut').disabled = false;
   setPill('busy');
 
   try {
-    const stockItem = action === 'out' ? LAST.stockItem : null;
     const submitAction = stockItem?._sheetRow ? 'out_by_id' : action;
     const payload = {
       action: submitAction,
@@ -1963,11 +2066,11 @@ async function doAct(action) {
       name,
       brand,
       model,
-      size: LAST.p?.size || '',
-      ref: LAST.p?.ref || '',
+      size,
+      ref,
       sn,
       lot,
-      gtin: LAST.gtin,
+      gtin,
       mfgDate: LAST.mfgDate,
       expiry: LAST.expiry,
       location: loc,
