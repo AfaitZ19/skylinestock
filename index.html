@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -426,7 +426,7 @@ body.admin .admin-only{display:inline-flex}
       <div class="scrd">
         <h3>นับสต็อกแบบเร็ว</h3>
         <div class="chips" style="margin-top:6px">
-          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวดสินค้า</option></select>
+          <select class="fsel" id="takeCategory" onchange="renderStocktake()"><option value="">ทุกหมวดสินค้าใช้แล้วหมด</option></select>
           <select class="fsel" id="takeBrand" onchange="renderStocktake()"><option value="">ทุกแบรนด์</option></select>
         </div>
         <input class="finp" id="takeSearch" type="search" placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า" oninput="renderStocktake()">
@@ -654,6 +654,14 @@ function processScannerText(text) {
     if (!scannedItem.p || !scannedItem.p.type) {
       toast('ยังระบุสินค้าไม่ได้ — เลือกประเภทหรือตรวจข้อมูลก่อนรับเข้า', 'warn');
       focusScanInput(120);
+      return;
+    }
+    const type = scannedItem.p.type || document.getElementById('iType')?.value || '';
+    const tracking = requiredTrackingValue(type);
+    if (['device','mask','accessory'].includes(type) && !tracking.value) {
+      toast(type === 'device' ? 'กรอกเลขเครื่อง (SN) ก่อนรับเข้า' : 'กรอกเลขล็อต (LOT) ก่อนรับเข้า', 'warn');
+      const snLot = document.getElementById('snLotI');
+      if (snLot) setTimeout(() => snLot.focus(), 80);
       return;
     }
     // 鉊芹?鉊?鉊?萵鉊?鉊?鉊?= 鉊萵鉊?鉊嗣?鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉊晤?鉊葭
@@ -1022,6 +1030,19 @@ function gs1Decode(raw) {
     .replace(/[^\x1D\x20-\x7E]/g, '')  // 鉊丞? non-printable 鉊Ｒ?鉆鉊抉?鉊?GS
     .replace(/\s/g, '')
     .toUpperCase();
+
+  // Plain retail barcodes (EAN/UPC/GTIN) are just digits. Do not let the
+  // positional GS1 parser reinterpret their leading digits as AI codes.
+  if (/^\d{8}$|^\d{12,14}$/.test(s)) {
+    return {
+      gtin: s.replace(/^0+/, ''),
+      sn: '',
+      lot: '',
+      mfgDate: '',
+      expiry: '',
+      ref: ''
+    };
+  }
 
   const fields = {};
 
@@ -1416,7 +1437,7 @@ function productLabel(p) {
 function populateProductFilters() {
   const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
   const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
-  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวดสินค้า'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
+  [['manualCategory', cats, 'ทุกหมวดหมู่'], ['takeCategory', cats, 'ทุกหมวดสินค้าใช้แล้วหมด'], ['manualBrand', brands, 'ทุกแบรนด์'], ['takeBrand', brands, 'ทุกแบรนด์']].forEach(([id, values, first]) => {
     const el = document.getElementById(id);
     if (!el) return;
     const cur = el.value;
@@ -1429,6 +1450,36 @@ function filteredProducts(prefix) {
   const cat = document.getElementById(prefix + 'Category')?.value || '';
   const brand = document.getElementById(prefix + 'Brand')?.value || '';
   const q = (document.getElementById(prefix + 'Search')?.value || '').toLowerCase().trim();
+
+  if (prefix === 'manual' && MODE === 'out') {
+    return [
+      ...CACHE.device.map(x => ({...x, _type:'device'})),
+      ...CACHE.mask.map(x => ({...x, _type:'mask'})),
+      ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
+    ].filter(x => {
+      if (brand && (x['Brand'] || '') !== brand) return false;
+      const hay = [
+        x['Product Name'], x['Brand'], x['Model'], x['Size'], x['REF'],
+        x['Serial Number (SN)'], x['LOT Number'], x['GTIN / Barcode']
+      ].join(' ').toLowerCase();
+      return !q || hay.includes(q);
+    }).map(x => ({
+      name: x['Product Name'] || '',
+      brand: x['Brand'] || '',
+      type: x._type,
+      model: x['Model'] || '',
+      size: x['Size'] || '',
+      ref: x['REF'] || '',
+      product_code: x['Serial Number (SN)'] || x['LOT Number'] || String(x._sheetRow || ''),
+      category: 'ในสต็อก',
+      sn: x['Serial Number (SN)'] || '',
+      lot: x['LOT Number'] || '',
+      gtin: x['GTIN / Barcode'] || '',
+      qty: x['Qty'] || '',
+      stockItem: x
+    }));
+  }
+
   return (CACHE.products || []).filter(p => {
     if ((prefix === 'manual' || prefix === 'take') && !p.product_code) return false;
     if (cat && p.category !== cat) return false;
@@ -1446,7 +1497,7 @@ function renderManualProducts() {
   const rows = filteredProducts('manual').slice(0, 80);
   el.innerHTML = rows.length ? rows.map((p, i) => `
     <div class="manual-row selectable" onclick="selectManualProduct(${i})">
-      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.category || '-')}</span></div>
+      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
       <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
     </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
   window.__manualRows = rows;
@@ -1456,7 +1507,15 @@ function selectManualProduct(i) {
   const p = (window.__manualRows || [])[i];
   if (!p) return;
   const pending = PENDING_SCAN;
-  LAST = { raw: p.product_code || p.name, p, manual: true, sn:'', lot:'', gtin:'' };
+  LAST = {
+    raw: p.product_code || p.name,
+    p,
+    manual: true,
+    stockItem: p.stockItem || null,
+    sn: p.sn || '',
+    lot: p.lot || '',
+    gtin: p.gtin || ''
+  };
   if (pending && (pending.gtin || pending.lot || pending.sn)) {
     LAST.learnGtin = pending.gtin || '';
     LAST.learnLot = pending.lot || '';
@@ -1466,7 +1525,7 @@ function selectManualProduct(i) {
   }
   showResult(LAST);
   const qty = document.getElementById('qtyI');
-  if (qty) qty.value = '';
+  if (qty) qty.value = '1';
   const snLot = document.getElementById('snLotI');
   if (snLot && snLot.offsetParent !== null) snLot.focus();
   else if (qty) qty.focus();
@@ -1487,6 +1546,15 @@ function syncSnLotInput() {
   if (cur.key === 'sn') LAST.sn = cur.value;
   if (cur.key === 'lot') LAST.lot = cur.value;
   updateActionButtons();
+}
+
+function transactionNeedsQty(action, type) {
+  return type === 'mask' || type === 'accessory';
+}
+
+function transactionNeedsTracking(action, type) {
+  if (action === 'out' && LAST?.manual && (type === 'mask' || type === 'accessory')) return false;
+  return type === 'device' || type === 'mask' || type === 'accessory';
 }
 
 function updateSnLotField(force = false) {
@@ -1527,21 +1595,29 @@ function updateActionButtons() {
   const isOut = MODE === 'out';
   const type = document.getElementById('iType')?.value || LAST?.p?.type || '';
   const qtyVal = parseInt(document.getElementById('qtyI')?.value || '', 10);
-  const needsQty = LAST && LAST.manual;
+  const needsQty = LAST && transactionNeedsQty(MODE, type);
   const purpose = document.getElementById('purposeI')?.value || '';
   const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
   const recipient = document.getElementById('locI')?.value.trim() || '';
   const purposeOtherEl = document.getElementById('purposeOtherI');
   if (purposeOtherEl) purposeOtherEl.style.display = purpose === 'อื่นๆ' ? 'block' : 'none';
-  const missingTracking = LAST && ['device','mask','accessory'].includes(type) && !requiredTrackingValue(type).value;
+  const missingTracking = LAST && transactionNeedsTracking(MODE, type) && !requiredTrackingValue(type).value;
   const invalidQty = needsQty && (!qtyVal || qtyVal <= 0);
   const invalidOut = isOut && (!recipient || !purpose || (purpose === 'อื่นๆ' && !purposeOther));
   bIn.disabled = !!(invalidQty || missingTracking);
-  bOut.disabled = !!(invalidQty || invalidOut || missingTracking);
+  bOut.disabled = !LAST;
+  bOut.title = invalidQty ? 'กรุณากรอกจำนวนให้ถูกต้อง'
+    : missingTracking ? 'กรุณากรอก SN/LOT'
+    : invalidOut ? 'กรุณาระบุผู้รับและวัตถุประสงค์'
+    : '';
 }
 
 document.addEventListener('input', e => {
-  if (['qtyI','locI','purposeOtherI','snLotI'].includes(e.target.id)) updateActionButtons();
+  if (['qtyI','locI','purposeI','purposeOtherI','snLotI'].includes(e.target.id)) updateActionButtons();
+});
+
+document.addEventListener('change', e => {
+  if (['qtyI','locI','purposeI','purposeOtherI','snLotI','iType'].includes(e.target.id)) updateActionButtons();
 });
 
 function currentStockQtyForProduct(p) {
@@ -1616,6 +1692,8 @@ function stopScannerOnly() {
 
 function setMode(m) {
   MODE = m;
+  if (LAST) resetScan({ clearLocation:false, keepScanner:true });
+  renderManualProducts();
   updateModeUI();
 }
 
@@ -1634,7 +1712,7 @@ function updateModeUI() {
   // 鉆葵鉊?鉊?鉊冢? Qty 鉆鉊?鉊耜萼鉆葦鉊﹤? Stock In + 鉊腦鉊啤?鉊?鉊葭鉆?鉊﹤?鉆?鉆?device
   const curType = document.getElementById('iType')?.value || '';
   updateSnLotField();
-  const showQty = (LAST && LAST.manual) || (isIn && curType !== 'device');
+  const showQty = LAST && transactionNeedsQty(MODE, curType);
   document.getElementById('qtyRow').style.display = showQty ? 'block' : 'none';
   const outFields = document.getElementById('outRequiredFields');
   if (outFields) outFields.style.display = isIn ? 'none' : 'block';
@@ -1836,7 +1914,7 @@ async function doAct(action) {
   const loc  = document.getElementById('locI').value.trim();
   const note = document.getElementById('noteI').value.trim();
   const qtyInput = parseInt(document.getElementById('qtyI').value || '', 10);
-  const qty  = (LAST && LAST.manual) || (action === 'in' && type !== 'device')
+  const qty  = transactionNeedsQty(action, type)
     ? Math.min(9999, Math.max(1, isNaN(qtyInput) ? 0 : qtyInput))
     : 1;
   const purpose = document.getElementById('purposeI')?.value || '';
@@ -1854,13 +1932,13 @@ async function doAct(action) {
     updateActionButtons();
     return;
   }
-  if ((type === 'mask' || type === 'accessory') && !lot) {
+  if ((type === 'mask' || type === 'accessory') && !lot && !(action === 'out' && LAST.manual)) {
     toast('กรุณากรอกเลขล็อต (LOT) ก่อนบันทึก', 'warn');
     IS_PROCESSING = false;
     updateActionButtons();
     return;
   }
-  if (((LAST && LAST.manual) || (action === 'in' && type !== 'device')) && (!qty || qty <= 0)) {
+  if (transactionNeedsQty(action, type) && (!qty || qty <= 0)) {
     toast('กรุณากรอกจำนวนให้ถูกต้อง', 'warn');
     IS_PROCESSING = false;
     return;
@@ -1876,9 +1954,12 @@ async function doAct(action) {
   setPill('busy');
 
   try {
+    const stockItem = action === 'out' ? LAST.stockItem : null;
+    const submitAction = stockItem?._sheetRow ? 'out_by_id' : action;
     const payload = {
-      action,
+      action: submitAction,
       type,
+      ...(submitAction === 'out_by_id' ? { sheetRow: stockItem._sheetRow } : {}),
       name,
       brand,
       model,
