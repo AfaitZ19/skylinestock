@@ -1311,7 +1311,7 @@ function findStockItemForScan(d) {
     const rowSn = String(x['Serial Number (SN)'] || '').trim().toUpperCase();
     const rowLot = _gs1NormLot(x['LOT Number'] || '');
     const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
-    if (sn && rowSn && rowSn === sn) return true;
+    if (x._type === 'device') return !!(sn && rowSn && rowSn === sn);
     if (lot && rowLot && rowLot === lot) return true;
     if (gtin && rowGtin && rowGtin === gtin) return true;
     return false;
