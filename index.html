@@ -513,6 +513,9 @@ let LAST_SCAN_TIME = 0;
 const DUP_MS = 8000;
 let HIST_OFFSET = 0;
 const HIST_PAGE = 50;
+let LAST_OUT_RECIPIENT = localStorage.getItem('skl_last_out_recipient') || '';
+let LAST_OUT_PURPOSE = localStorage.getItem('skl_last_out_purpose') || '';
+let LAST_OUT_PURPOSE_OTHER = localStorage.getItem('skl_last_out_purpose_other') || '';
 
 let HID_ENABLED = false;
 let hidBufferTimer = null;
@@ -675,10 +678,6 @@ function processScannerText(text) {
     return;
   }
 
-  if (MODE === 'out') {
-    // 鉊?鉊耜腺鉊冢葉鉊?鉆葉鉊?鉊徇?鉊號鉆?鉊?鉊?鉊Ｒ虞鉊腺鉊晤?鉆鉊冢?鉆鉊芹腹鉊?(鉆腹鉆?auto-out)
-    toast('สแกนแล้ว — ตรวจสอบข้อมูลแล้วกดจ่ายออก', 'warn');
-  }
 }
 
 function flushHidBuffer() {
@@ -1229,6 +1228,7 @@ function parseCode(raw) {
     document.getElementById('rkv').innerHTML = '';
     document.getElementById('rbox').classList.remove('on');
     document.getElementById('sf').style.display = 'none';
+    showManualProductPanel(true);
     return;
   }
   if (stockHit) {
@@ -1256,11 +1256,7 @@ function parseCode(raw) {
     document.getElementById('rkv').innerHTML = '';
     document.getElementById('rbox').classList.remove('on');
     document.getElementById('sf').style.display = 'none';
-    const manualProductPanel = document.getElementById('manualProductPanel');
-    if (manualProductPanel) manualProductPanel.style.display = 'block';
-    renderManualProducts();
-    const manualSearch = document.getElementById('manualSearch');
-    if (manualSearch) manualSearch.focus();
+    showManualProductPanel(true);
     return;
   }
 
@@ -1273,7 +1269,8 @@ function parseCode(raw) {
     !((d.p.type === 'device' && !d.sn) || ((d.p.type === 'mask' || d.p.type === 'accessory') && !d.lot));
   if (!autoInCanContinue) stopScannerOnly();
   showResult(d);
-  toast('สแกนสำเร็จ', 'ok');
+  if (MODE === 'out') prepareOutFormAfterScan(d);
+  else toast('สแกนสำเร็จ', 'ok');
 }
 
 function activeStockItems() {
@@ -1320,9 +1317,7 @@ function findStockItemForScan(d) {
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) {
     toast('พบหลายล็อต/หลายแถวในสต็อก กรุณาเลือกจากรายการสต็อก', 'warn');
-    const manualProductPanel = document.getElementById('manualProductPanel');
-    if (manualProductPanel) manualProductPanel.style.display = 'block';
-    renderManualProducts();
+    showManualProductPanel(true);
     return { ambiguous: true };
   }
   return null;
@@ -1525,6 +1520,38 @@ function populateProductFilters() {
   });
 }
 
+function showManualProductPanel(focusSearch = false) {
+  const manualProductPanel = document.getElementById('manualProductPanel');
+  if (manualProductPanel) manualProductPanel.style.display = 'block';
+  renderManualProducts();
+  if (focusSearch) {
+    const manualSearch = document.getElementById('manualSearch');
+    if (manualSearch) manualSearch.focus();
+  }
+}
+
+function hideManualProductPanel() {
+  const manualProductPanel = document.getElementById('manualProductPanel');
+  if (manualProductPanel) manualProductPanel.style.display = 'none';
+}
+
+function pendingScanMatchesStockRow(x) {
+  if (!PENDING_SCAN || MODE !== 'out') return true;
+  const pendingLot = _gs1NormLot(PENDING_SCAN.lot || '');
+  const pendingGtin = String(PENDING_SCAN.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const pendingSn = String(PENDING_SCAN.sn || '').trim().toUpperCase();
+  if (!pendingLot && !pendingGtin && !pendingSn) return true;
+
+  const rowLot = _gs1NormLot(x['LOT Number'] || '');
+  const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
+  const rowSn = String(x['Serial Number (SN)'] || '').trim().toUpperCase();
+  return !!(
+    (pendingLot && rowLot && rowLot === pendingLot) ||
+    (pendingGtin && rowGtin && rowGtin === pendingGtin) ||
+    (pendingSn && rowSn && rowSn === pendingSn)
+  );
+}
+
 function filteredProducts(prefix) {
   const cat = document.getElementById(prefix + 'Category')?.value || '';
   const brand = document.getElementById(prefix + 'Brand')?.value || '';
@@ -1539,6 +1566,7 @@ function filteredProducts(prefix) {
       const status = String(x['Status'] || 'Active').trim().toLowerCase();
       if (status !== 'active') return false;
       if (x._type !== 'device' && Number(x['Qty'] || 0) <= 0) return false;
+      if (!pendingScanMatchesStockRow(x)) return false;
       if (cat && ['device','mask','accessory'].includes(cat) && x._type !== cat) return false;
       if (brand && (x['Brand'] || '') !== brand) return false;
       const hay = [
@@ -1613,8 +1641,45 @@ function selectManualProduct(i) {
   if (snLot && snLot.offsetParent !== null) snLot.focus();
   else if (qty) qty.focus();
   updateActionButtons();
+  if (MODE === 'out') prepareOutFormAfterScan(LAST);
+}
+
+function applyLastOutDefaults() {
+  const loc = document.getElementById('locI');
+  const purpose = document.getElementById('purposeI');
+  const purposeOther = document.getElementById('purposeOtherI');
+  if (loc && !loc.value.trim() && LAST_OUT_RECIPIENT) loc.value = LAST_OUT_RECIPIENT;
+  if (purpose && !purpose.value && LAST_OUT_PURPOSE) purpose.value = LAST_OUT_PURPOSE;
+  if (purposeOther && !purposeOther.value.trim() && LAST_OUT_PURPOSE_OTHER) purposeOther.value = LAST_OUT_PURPOSE_OTHER;
+}
+
+function rememberOutDefaults(recipient, purpose, purposeOther) {
+  LAST_OUT_RECIPIENT = recipient || '';
+  LAST_OUT_PURPOSE = purpose || '';
+  LAST_OUT_PURPOSE_OTHER = purposeOther || '';
+  localStorage.setItem('skl_last_out_recipient', LAST_OUT_RECIPIENT);
+  localStorage.setItem('skl_last_out_purpose', LAST_OUT_PURPOSE);
+  localStorage.setItem('skl_last_out_purpose_other', LAST_OUT_PURPOSE_OTHER);
+}
+
+function prepareOutFormAfterScan(item = LAST) {
+  if (MODE !== 'out' || !item) return;
+  applyLastOutDefaults();
+  const qty = document.getElementById('qtyI');
+  if (qty && transactionNeedsQty('out', item.stockItem?._type || item.p?.type || '')) qty.value = qty.value || '1';
+  updateActionButtons();
+
+  const loc = document.getElementById('locI');
+  const purpose = document.getElementById('purposeI');
+  const purposeOther = document.getElementById('purposeOtherI');
   const outBtn = document.getElementById('bOut');
-  if (outBtn) outBtn.disabled = false;
+  setTimeout(() => {
+    if (loc && !loc.value.trim()) loc.focus();
+    else if (purpose && !purpose.value) purpose.focus();
+    else if (purpose?.value === 'อื่นๆ' && purposeOther && !purposeOther.value.trim()) purposeOther.focus();
+    else if (outBtn && !outBtn.disabled) outBtn.focus();
+  }, 80);
+  toast(outBtn && !outBtn.disabled ? 'เจอสินค้าแล้ว — ตรวจสอบแล้วกดจ่ายออก' : 'เจอสินค้าแล้ว — เติมข้อมูลจ่ายออกให้ครบ', outBtn && !outBtn.disabled ? 'ok' : 'warn');
 }
 
 function requiredTrackingValue(type) {
@@ -1691,7 +1756,7 @@ function updateActionButtons() {
   const invalidQty = needsQty && (!qtyVal || qtyVal <= 0);
   const invalidOut = isOut && (!recipient || !purpose || (purpose === 'อื่นๆ' && !purposeOther));
   bIn.disabled = !!(invalidQty || missingTracking);
-  bOut.disabled = false;
+  bOut.disabled = !!(invalidQty || missingTracking || invalidOut);
   bOut.title = invalidQty ? 'กรุณากรอกจำนวนให้ถูกต้อง'
     : missingTracking ? 'กรุณากรอก SN/LOT'
     : invalidOut ? 'กรุณาระบุผู้รับและวัตถุประสงค์'
@@ -1819,8 +1884,7 @@ function procM() {
 }
 
 function showResult(d) {
-  const manualProductPanel = document.getElementById('manualProductPanel');
-  if (manualProductPanel) manualProductPanel.style.display = 'none';
+  hideManualProductPanel();
 
   const rows = [];
 
@@ -1864,8 +1928,7 @@ function resetScan(opts = {}) {
   document.getElementById('rkv').innerHTML = '';
   document.getElementById('rbox').classList.remove('on');
   document.getElementById('sf').style.display = 'none';
-  const manualProductPanel = document.getElementById('manualProductPanel');
-  if (manualProductPanel) manualProductPanel.style.display = 'none';
+  hideManualProductPanel();
   document.getElementById('mc').value = '';
   document.getElementById('qtyI').value = '1';
   const snLot = document.getElementById('snLotI');
@@ -2054,7 +2117,7 @@ async function doAct(action) {
   }
 
   document.getElementById('bIn').disabled = true;
-  document.getElementById('bOut').disabled = false;
+  document.getElementById('bOut').disabled = true;
   setPill('busy');
 
   try {
@@ -2113,6 +2176,9 @@ async function doAct(action) {
     }
     
     const keepLoc = loc;
+    const keepPurpose = purpose;
+    const keepPurposeOther = purposeOther;
+    if (action === 'out') rememberOutDefaults(keepLoc, keepPurpose, keepPurposeOther);
     _patchCache(action, payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
     learnMappingIntoCache(payload);
     renderStock();
@@ -2126,6 +2192,14 @@ async function doAct(action) {
 
     if (action === 'out') {
       document.getElementById('locI').value = keepLoc;
+      const purposeEl = document.getElementById('purposeI');
+      const purposeOtherEl = document.getElementById('purposeOtherI');
+      if (purposeEl) purposeEl.value = keepPurpose;
+      if (purposeOtherEl) {
+        purposeOtherEl.value = keepPurposeOther;
+        purposeOtherEl.style.display = keepPurpose === 'อื่นๆ' ? 'block' : 'none';
+      }
+      updateActionButtons();
       focusScanInput(80);
       toast('✅ จ่ายออกสำเร็จ', 'ok');
     } else if (res.merged) {
