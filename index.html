@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -1316,11 +1316,56 @@ function findStockItemForScan(d) {
 
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) {
+    const resolved = resolveAmbiguousStockMatch(matches, d);
+    if (resolved) return resolved;
     toast('พบหลายล็อต/หลายแถวในสต็อก กรุณาเลือกจากรายการสต็อก', 'warn');
     showManualProductPanel(true);
     return { ambiguous: true };
   }
   return null;
+}
+
+function resolveAmbiguousStockMatch(matches, d) {
+  const hint = lookup(d) || {};
+  let narrowed = matches;
+
+  if (hint.type) narrowed = narrowed.filter(x => x._type === hint.type);
+  if (hint.model) narrowed = narrowed.filter(x => sameText(x['Model'], hint.model));
+  if (hint.size) narrowed = narrowed.filter(x => sameText(x['Size'], hint.size));
+  if (hint.ref) narrowed = narrowed.filter(x => sameText(x['REF'], hint.ref));
+  if (hint.name) narrowed = narrowed.filter(x => sameText(x['Product Name'], hint.name));
+
+  if (narrowed.length === 1) return narrowed[0];
+  if (narrowed.length > 1 && allSameMaskIdentity(narrowed)) return pickFefoRow(narrowed);
+  return null;
+}
+
+function sameText(a, b) {
+  return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
+}
+
+function allSameMaskIdentity(rows) {
+  if (!rows.length || rows.some(x => x._type !== 'mask')) return false;
+  const first = rows[0];
+  return rows.every(x =>
+    sameText(x['Product Name'], first['Product Name']) &&
+    sameText(x['Brand'], first['Brand']) &&
+    sameText(x['Model'], first['Model']) &&
+    sameText(x['Size'], first['Size']) &&
+    sameText(x['REF'], first['REF']) &&
+    _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(first['LOT Number'] || '')
+  );
+}
+
+function pickFefoRow(rows) {
+  return [...rows].sort((a, b) => {
+    const ea = _expDaysOf(a);
+    const eb = _expDaysOf(b);
+    if (ea !== null && eb !== null && ea !== eb) return ea - eb;
+    if (ea !== null) return -1;
+    if (eb !== null) return 1;
+    return Number(a._sheetRow || 0) - Number(b._sheetRow || 0);
+  })[0];
 }
 
 function lookup(d) {
