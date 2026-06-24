@@ -2749,13 +2749,18 @@ function renderPurposeSummary(items) {
     if (!isHistoryInCurrentMonth(it, now)) return;
     const rawPurpose = historyPurpose(it);
     const p = rawPurpose.startsWith('อื่นๆ') ? 'อื่นๆ' : (rawPurpose || 'อื่นๆ');
-    sums[p] = (sums[p] || 0) + Number(it['Qty'] || 1);
+    sums[p] = (sums[p] || 0) + historyQty(it);
   });
   el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
 }
 
 function isHistoryInCurrentMonth(it, now = new Date()) {
   const raw = String(it?.['Date'] || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return false;
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
   const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return false;
   const month = Number(m[2]) - 1;
@@ -2776,6 +2781,12 @@ function historyRecordedBy(it) {
   return it['Recorded By'] || it['Record by'] || it['Record By'] || it['record by'] || it['User'] || '';
 }
 
+function historyQty(it) {
+  const q = Number(it?.['Qty']);
+  if (Number.isFinite(q) && q > 0) return q;
+  return String(it?.['Action'] || '') === 'Stock Out' ? 1 : 0;
+}
+
 function renderHist(append, items) {
   const list = document.getElementById('hiList');
   items = items || CACHE.history || [];
@@ -2791,13 +2802,14 @@ function renderHist(append, items) {
     const action = String(it['Action'] || '');
     const isIn = action === 'Stock In';
     const purpose = historyPurpose(it);
+    const qty = historyQty(it);
     return `
       <div class="hi">
         <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇' : '⬆'}</div>
         <div class="hi-body">
           <div class="hi-top">
             <div class="hn">${escapeHtml(it['Product Name'] || '-')}</div>
-            ${(it['Qty'] !== undefined && it['Qty'] !== null && it['Qty'] !== '') ? `<div class="hi-qty ${isIn ? 'in' : 'out'}">${isIn ? '+' : '-'}${escapeHtml(String(it['Qty']))}</div>` : ''}
+            ${qty ? `<div class="hi-qty ${isIn ? 'in' : 'out'}">${isIn ? '+' : '-'}${escapeHtml(String(qty))}</div>` : ''}
           </div>
           <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(historyRecipient(it) || '-')} · ${escapeHtml(historyRecordedBy(it) || '-')}</div>
           ${!isIn ? `<div class="hm">วัตถุประสงค์: ${escapeHtml(purpose || '-')}</div>` : ''}
