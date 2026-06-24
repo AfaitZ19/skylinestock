@@ -144,6 +144,17 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .scrd{background:#fff;border-radius:var(--ra);padding:14px;box-shadow:var(--sh);margin-bottom:10px}
 .scrd h3{font-size:13px;font-weight:700;color:#333;margin-bottom:9px}
 .scrd p{font-size:12px;color:#555;line-height:1.6;margin-bottom:7px}
+.manual-alert{display:none;margin:8px 0 10px;padding:9px 11px;border-radius:8px;background:#fff7e6;border:1px solid #f1c27d;color:#7a4b00;font-size:12px;line-height:1.45}
+.manual-alert.err{background:#fde8e8;border-color:#f0a0a0;color:#9b1c1c}
+.manual-alert.ok{background:#eaf7ee;border-color:#9bd4ad;color:#1a6b38}
+.manual-alert button{margin-top:7px;padding:7px 10px;border-radius:7px;border:1px solid currentColor;background:#fff;color:inherit;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.name-list{max-height:230px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:#fff;margin-bottom:10px}
+.name-row{padding:9px 10px;border-bottom:1px solid var(--bd);cursor:pointer;font-size:12px}
+.name-row:last-child{border-bottom:none}
+.name-row.on{background:var(--BL);color:var(--B)}
+.name-row b{display:block;font-size:13px;color:inherit}
+.name-row span{color:var(--mu);line-height:1.45}
+.name-grid{display:grid;grid-template-columns:1fr;gap:8px}
 .bfull{width:100%;padding:10px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:6px}
 .bout2{background:#fff;color:var(--B);border:1.5px solid var(--B)}
 .steps{list-style:none;counter-reset:s}
@@ -330,6 +341,7 @@ body.admin .admin-only{display:inline-flex}
       <div class="scan-secondary">
       <div class="scrd" id="manualProductPanel" style="display:none">
         <h3>เลือกสินค้าจากรายการ</h3>
+        <div id="manualScanNotice" class="manual-alert"></div>
         <div class="chips" style="margin-top:6px">
           <select class="fsel" id="manualCategory" onchange="renderManualProducts()"><option value="">ทุกหมวดหมู่</option></select>
           <select class="fsel" id="manualBrand" onchange="renderManualProducts()"><option value="">ทุกแบรนด์</option></select>
@@ -456,6 +468,24 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="scrd">
+        <h3>จัดการชื่อสินค้า</h3>
+        <p>แก้ได้เฉพาะชื่อที่ใช้แสดง/ค้นหา ไม่แตะรหัสสินค้า จำนวนสต็อก หรือ barcode mapping</p>
+        <input class="finp" id="nameSearch" type="search" placeholder="ค้นหาสินค้า, รหัส, แบรนด์, alias" oninput="renderProductNameManager()">
+        <div id="nameProductList" class="name-list"></div>
+        <div id="nameEditForm" style="display:none">
+          <label class="flbl">รหัสสินค้า</label>
+          <input class="finp" id="nameProductCode" type="text" disabled>
+          <label class="flbl">ชื่อที่ใช้ในสต็อก</label>
+          <input class="finp" id="stockNameI" type="text" placeholder="ชื่อสั้นที่พนักงานเห็นในระบบ">
+          <label class="flbl">ชื่อที่พิมพ์ในใบสั่งซื้อ</label>
+          <input class="finp" id="poNameI" type="text" placeholder="ชื่อเต็มตามเอกสาร/ซัพพลายเออร์">
+          <label class="flbl">ชื่ออื่น / คำค้นหา</label>
+          <input class="finp" id="aliasNameI" type="text" placeholder="เช่น R25V, R-25V, Beyond BPAP">
+          <button class="bfull bout2" onclick="saveProductNames()">บันทึกชื่อสินค้า</button>
+        </div>
+      </div>
+
+      <div class="scrd">
         <h3>เครื่องมือผู้ดูแล</h3>
         <button class="bfull bout2 admin-only" onclick="exportCSV()">ดาวน์โหลดประวัติ CSV</button>
         <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">เรียง Device Sheet A-Z</button>
@@ -517,6 +547,7 @@ const HIST_PAGE = 50;
 let LAST_OUT_RECIPIENT = localStorage.getItem('skl_last_out_recipient') || '';
 let LAST_OUT_PURPOSE = localStorage.getItem('skl_last_out_purpose') || '';
 let LAST_OUT_PURPOSE_OTHER = localStorage.getItem('skl_last_out_purpose_other') || '';
+let SELECTED_NAME_PRODUCT_CODE = '';
 
 let HID_ENABLED = false;
 let hidBufferTimer = null;
@@ -646,16 +677,16 @@ function normalizeScannerLayout(text) {
 
 
 function processScannerText(text) {
-  // trim 鉆?鉆?whitespace 鉊?鉊耜?鉊葉鉊?鉆?鉆?鉊?GS (0x1D) 鉆葷鉆?鉊晤?鉊葦鉊﹤?
+  
   let code = normalizeScannerLayout(text).replace(/^[\s]+|[\s]+$/g, '');
   if (!code) return;
 
-  // 鉆?鉊丞? layout 鉆艇鉆葷鉊?鉊冢腺鉊冢?鉊耜?鉊?鉊?鉆鉊虞鉆葉鉊萵鉊?Windows 鉊?鉊耜?鉊冢腺鉊嫩?鉊葭鉊Ｒ?鉊葉鉊??鉊?鉊腺
+  
 
   parseCode(code);
 
-  // Capture LAST 鉊萵鉊?鉊菽葦鉊丞萵鉊?parseCode 鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?race condition
-  // 鉊腦鉊葭鉊芹?鉊?鉊徇艇鉊耜腺鉊葩鉆?鉆鉊??鉊抉? 鉊萵鉊?doAct 鉊萼鉊董鉊葡鉊?鉊晤?鉊芹葩鉊?鉆葡鉊葩鉆?鉊葭鉆?鉊芹腹鉊?
+  
+  
   const scannedItem = LAST;
   if (!scannedItem) return;
 
@@ -673,7 +704,7 @@ function processScannerText(text) {
       if (snLot) setTimeout(() => snLot.focus(), 80);
       return;
     }
-    // 鉊芹?鉊?鉊?萵鉊?鉊?鉊?= 鉊萵鉊?鉊嗣?鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉊晤?鉊葭
+    
     setTimeout(() => {
       if (LAST === scannedItem && !IS_PROCESSING) doAct('in');
     }, 120);
@@ -721,8 +752,8 @@ function setupHidScanner() {
       return;
     }
 
-    // 鉊葡鉊?browser 鉊?葡鉊Ｒ?鉊耜? keyCode 鉆鉊葭鉆腺鉊?鉊? 鉊葆鉊?鉊﹤?鉆?鉆?keyCode===29 鉆艇鉆葷
-    // 鉊?萵鉊?GS 鉆鉊?鉊耜萼鉊腦鉊葭鉊葭鉆腦鉊啤?鉊詮?鉊?鉊萵鉊?鉊?鉆鉊?鉊耜?鉊晤?鉊?
+    
+    
     if (e.key === 'GS' || (e.ctrlKey && e.key === ']')) {
       e.preventDefault();
       HID_BUFFER += el.value + '\x1D';
@@ -758,8 +789,13 @@ function setupHidScanner() {
     const tag = (t.tagName || '').toLowerCase();
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
+    HID_AUTO_RESUME = true;
     disableHIDMode(false);
     toast('พักเครื่องสแกนชั่วคราว เพื่อให้กรอกข้อมูลได้', 'warn');
+  });
+
+  document.addEventListener('focusout', () => {
+    if (HID_AUTO_RESUME) setTimeout(tryAutoResumeHID, 0);
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -815,7 +851,7 @@ async function doSetup() {
     localStorage.setItem('skl_token', AUTH_TOKEN);
     localStorage.setItem('skl_staff', CUR_STAFF);
 
-    // 鉊萵鉆? class body 鉊葡鉊?role
+    
     document.body.classList.toggle('admin', CUR_ROLE === 'admin');
 
     document.getElementById('scSetup').classList.remove('on');
@@ -831,7 +867,7 @@ async function doSetup() {
     if (rn) rn.textContent = CUR_ROLE === 'admin'
       ? 'Admin - ใช้งานเครื่องมือผู้ดูแลได้'
       : 'Stock User - รับเข้าและจ่ายออกได้';
-    enableHIDMode(false); // 鉆鉊葩鉊?HID 鉊冢萵鉊?鉊腹鉊晤?鉊毯葦鉊丞萵鉊?login
+    enableHIDMode(false); 
   } catch(e) {
     showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + e.message);
     setPill('err');
@@ -859,6 +895,8 @@ function signOut() {
   LAST = null;
   PENDING_SCAN = null;
   HID_AUTO_RESUME = false;
+  localStorage.removeItem('skl_token');
+  localStorage.removeItem('skl_staff');
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = null;
   stopScannerOnly();
@@ -886,7 +924,7 @@ async function apiFetch(url) {
   try {
     r = await fetchWithTimeout(url, { redirect:'follow', mode:'cors' });
   } catch {
-    // Network/CORS error 鉊? attempt 鉆腦鉊???retry 鉆?鉊Ｒ?鉊﹤?鉆?鉆?credentials
+    
     r = await fetchWithTimeout(url, { redirect:'follow', credentials:'omit' });
   }
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -975,6 +1013,7 @@ async function loadAll() {
     populateProductFilters();
     renderManualProducts();
     renderStocktake();
+    renderProductNameManager();
 
     renderStock();
     renderHist(false);
@@ -994,44 +1033,28 @@ function sumQty(arr, key) {
   return (arr || []).reduce((sum, x) => sum + Number(x[key] || 0), 0);
 }
 
-/* ??????????????????????????????????????????????????????????
- *  GS1 PARSER  ?? 鉊?葉鉊腦鉊晤? 3 format:
- *
- *  Format 1 繚 Parenthesized  (鉊艇鉆葉鉊?/ 鉊葡鉊??鉆?鉆?鉊虜鉊?鉊耜?鉊葭)
- *             (01)06958??21)CADL001(10)BY-C2506(11)260101
- *
- *  Format 2 繚 GS-separated   (鉆鉊腦鉊獅?鉊冢?鉊芹?鉊? HID 鉊葭鉆?鉊晤?鉊?鉆葡 suffix=GS)
- *             01069589?吒x1D21CADL001\x1D10BY-C2506\x1D11260101
- *
- *  Format 3 繚 Plain concat    (鉆鉊腦鉊獅?鉊冢?鉊芹?鉊?鉊萵鉆葷鉆? 鉆腹鉆腹鉊?GS)
- *             010695894992731921CADL00110BY-C250611260101
- *             ??鉆?鉆?positional parse + heuristic boundary detection
- *
- *  GS = ASCII 29 (0x1D) = Group Separator 鉊葡鉊?GS1-128 standard
- * ??????????????????????????????????????????????????????????*/
 
-// AI value lengths 鉊葭鉆?鉊喪葦鉊?鉊葷鉊耜腹鉊Ｒ葡鉊抉?鉊耜腺鉊萵鉊?(GS1 General Specification)
 const _GS1F = {
   '00':18,'01':14,'02':14,
   '11':6,'12':6,'13':6,'15':6,'16':6,'17':6,'18':6,'19':6,
   '20':2
 };
-// Variable-length AIs 鉊葭鉆?鉊?葡鉊芹?鉆?
+
 const _GS1V = new Set(['10','21','22','30','37',
   '240','241','250','251','400','401','410','411','412','413','414','415','416',
   '420','421','422','7001','8002','8003','8004','8005','8006','8007','8008',
   '8010','8011','8012','8013','8020',
-  // GS1 company-specific (91-99) ??鉊?鉊冢? consume 鉊葩鉆?鉆鉊虞鉆葉鉆腹鉆?鉊徇? content 鉆? AI 91 (鉆鉊?鉊?C.03.05.01...)
-  // 鉊號鉊葉鉆葡鉊?鉊毯?鉊抉?鉊耜?鉊?鉊?AI 01 (GTIN) 鉊?鉊喪葉鉊菽?鉊?葉鉊?
+  
+  
   '91','92','93','94','95','96','97','98','99']);
 
-/* ?? 鉊萵鉊?鉆?鉊晤?鉊徇艇鉊晤? ???????????????????????????????????????? */
+
 function gs1Decode(raw) {
   if (!raw) return _emptyGS1();
 
-  // 鉊?鉊?鉊?GS 鉆葷鉆?鉆葉鉊?strip 鉊萵鉊抉葉鉊獅?鉊?
+  
   let s = String(raw)
-    .replace(/[^\x1D\x20-\x7E]/g, '')  // 鉊丞? non-printable 鉊Ｒ?鉆鉊抉?鉊?GS
+    .replace(/[^\x1D\x20-\x7E]/g, '')  
     .replace(/\s/g, '')
     .toUpperCase();
 
@@ -1051,14 +1074,14 @@ function gs1Decode(raw) {
   const fields = {};
 
   if (/\(\d{2,4}\)/.test(s)) {
-    /* ?? Format 1: Parenthesized ?????????????????????????*/
+
     const re = /\((\d{2,4})\)([^(\x1D]*)/g;
     let m;
     while ((m = re.exec(s)) !== null) {
       fields[m[1]] = m[2].replace(/\x1D/g, '').trim();
     }
   } else {
-    /* ?? Format 2 & 3: Positional (with/without GS) ?????*/
+
     _gs1Scan(s, fields);
   }
 
@@ -1076,14 +1099,14 @@ function _emptyGS1() {
   return { gtin:'', sn:'', lot:'', mfgDate:'', expiry:'', ref:'' };
 }
 
-/* ?? Positional scanner: 鉆鉊葩鉊?鉊?鉊丞葉鉊?string ???????????????? */
+
 function _gs1Scan(s, out) {
   const GS = '\x1D';
   let i = 0;
   while (i < s.length) {
-    if (s.charCodeAt(i) === 29) { i++; continue; }   // 鉊?鉊耜腹 GS
+    if (s.charCodeAt(i) === 29) { i++; continue; }   
 
-    // 鉊丞葉鉊?match AI: 4 ??3 ??2 鉊徇艇鉊晤?
+    
     let ai = null, fl = null;
     for (const n of [4, 3, 2]) {
       const c = s.substr(i, n);
@@ -1094,18 +1117,18 @@ function _gs1Scan(s, out) {
     i += ai.length;
 
     if (fl > 0) {
-      // ?? Fixed length ?????????????????????????????????
+
       out[ai] = s.substr(i, fl);
       i += fl;
     } else {
-      // ?? Variable length ???????????????????????????????
+
       const gsPos = s.indexOf(GS, i);
       if (gsPos !== -1) {
-        // 鉊﹤葭 GS ??鉆?鉆?鉊?鉊?delimiter 鉆?鉆?鉊丞腺 (Format 2)
+        
         out[ai] = s.substr(i, gsPos - i);
-        i = gsPos;   // GS 鉊萼鉊號鉊?鉆葡鉊﹤?鉊腦鉊冢?鉊萵鉊?鉊?
+        i = gsPos;   
       } else {
-        // 鉆腹鉆腹鉊?GS ??鉆?鉆?heuristic 鉊徇葡 boundary (Format 3)
+        
         const end = _gs1VarEnd(s, i);
         out[ai] = s.substr(i, end - i);
         i = end;
@@ -1114,28 +1137,19 @@ function _gs1Scan(s, out) {
   }
 }
 
-/* ?? 鉊徇葡鉊虜鉊葵鉊毯?鉊葵鉊詮?鉊葉鉊?variable field 鉆鉊﹤虞鉆葉鉆腹鉆腹鉊?GS ???????????
- *  鉊董鉊萵鉊?鉊徇?鉊﹤葉鉊葦鉊耜?鉊?鉊耜萼 AI 鉊葭鉆葵鉊﹤?鉊徇?鉊詮葵鉊﹤?鉊丞葦鉊丞萵鉊?variable field:
- *  10 (LOT)  ??鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊??鉆葉鉊?(e.g. BY-, C-) 鉆腹鉆?鉊?鉊萵鉊抉?鉊丞?
- *  11 (MFG)  ??鉊葡鉊﹤?鉆葷鉊?\d{6} 鉆鉊?鉊耜?鉊晤?鉊?
- *  17 (EXP)  ??鉊葡鉊﹤?鉆葷鉊?\d{6} 鉆鉊?鉊耜?鉊晤?鉊?
- *  21 (SN)   ??鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊??鉆葉鉊?鉆腹鉆?鉊?鉊萵鉊抉?鉊丞?
- *  鉆腹鉆腦鉊抉腹 00/01 鉆鉊腦鉊耜萼鉊冢葡鉊?鉊?葡鉊?鉆鉊?鉊葵鉆葷鉊葦鉊葆鉆?鉊葉鉊?鉆葉鉊﹤號鉊?field 鉆?鉆?
- *  NOTE: AI 10/21 鉊?鉊冢?鉊葆鉆?鉊?鉊?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊?鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?"10" 鉊葭鉆葉鉊Ｒ號鉆?鉊?
- *        lot value 鉆鉊?鉊?"R20I1099" 鉊號鉊?鉊菽?鉊抉葡鉊﹤?鉊毯?鉊抉?鉊耜?鉊?鉊?AI boundary
- * ??????????????????????????????????????????????????????????*/
+
 function _gs1VarEnd(s, from) {
   const MIN_VAL = 2;
   const NEXT = [
-    // ?? AI 10 (LOT) / AI 21 (SN): 鉊?鉊耜?鉆葉鉊?鉊嗣?鉊?鉆?鉊?鉊抉腺鉊萵鉊抉葉鉊晤?鉊拈腦鉆鉊?鉊耜?鉊晤?鉊???????????????
-    // 鉆鉊徇?鉊詮?鉊? lot 鉊葉鉊?Beyond 鉆鉊?鉊?"BY-C2603R20I109" 鉊﹤葭鉊丞董鉊萵鉊?"10" 鉊萵鉊葉鉊Ｒ號鉆?
-    // 鉊?鉊?ok 鉊?萵鉊?鉊晤葷鉆鉊丞?鉆?鉆?鉆葷鉊???parser 鉊萼鉊萵鉊?lot 鉊葩鉊?鉊?? "10" 鉆? "R20I109"
+    
+    
+    
     { ai:'10', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
     { ai:'11', ok: a => /^\d{6}/.test(a) },
     { ai:'17', ok: a => /^\d{6}/.test(a) },
     { ai:'21', ok: a => /^[A-Z][A-Z0-9\-]/.test(a) },
-    // ?? AI 91/92 (GS1 company-specific) ??鉆?鉆?鉊?鉊?boundary 鉊?鉊耜腺 label ???????????
-    // AI 91/92 鉊?鉊冢?鉊葡鉊﹤?鉆葷鉊Ｒ?鉊晤葷鉊冢萵鉊萱鉊?(鉊?鉊冢?鉊萵鉊?"91" 鉆? SN 鉆鉊?鉊?"CEEC3C00419" 鉊號鉊葉鉆葡鉊?鉊毯?)
+    
+    
     { ai:'91', ok: a => /^[A-Z]/.test(a) },
     { ai:'92', ok: a => /^[A-Z]/.test(a) },
   ];
@@ -1148,14 +1162,14 @@ function _gs1VarEnd(s, from) {
   return s.length;
 }
 
-/* ?? Helpers ??????????????????????????????????????????????? */
+
 function _gs1NormLot(lot) {
   if (!lot) return '';
   lot = String(lot).toUpperCase().replace(/\s/g,'');
   const idx = lot.indexOf('BY-');
   if (idx !== -1) {
-    // 鉊萵鉊?catalog suffix 鉆鉊?鉊?"1C.03.05.01.03.000002" 鉊葭鉆?鉆葉鉊?鉊耜腺 lot
-    // 鉆?鉆?\dC(?:\.\d+){4,} 鉆鉊虞鉆葉 match 鉊?號鉊?鉊? "1C.03.05.01.03.000002" (?? groups)
+    
+    
     return lot.substring(idx).replace(/\dC(?:\.\d+){4,}.*$/, '').trim();
   }
   return lot.replace(/^\d{10,}/, '').replace(/C\.\d+(?:\.\d+)+/g,'').trim();
@@ -1164,22 +1178,19 @@ function _gs1NormLot(lot) {
 function _gs1Fmt6(s) {
   if (!s || !/^\d{6}$/.test(s)) return s || '';
   const day = s.slice(4,6);
-  if (day === '00') return '20' + s.slice(0,2) + '-' + s.slice(2,4);  // Beyond 鉆葵鉆?00 = 鉆腹鉆腦鉊啤?鉊詮葷鉊晤?
+  if (day === '00') return '20' + s.slice(0,2) + '-' + s.slice(2,4);  
   return '20' + s.slice(0,2) + '-' + s.slice(2,4) + '-' + day;
 }
 
-// 鉆?鉆?鉊耜?鉆?鉆?鉊晤?鉊?鉊耜? lookup() 鉆艇鉊啤?鉊耜腺鉊葉鉊?
+
 function normalizeLot(lot) { return _gs1NormLot(lot); }
 
-/* ?? parseCode: entry point 鉊葡鉊?scan ???????????????????????
- *  鉊?萵鉊?raw string 鉊葡鉊?鉊丞?鉊冢? / HID scanner / 鉊葩鉊﹤?鉆腹鉊獅葉
- *  ??decode ??lookup ??鉆葵鉊?鉊艇
- * ??????????????????????????????????????????????????????????*/
+
 function parseCode(raw) {
   if (!raw) return;
   raw = normalizeScannerLayout(raw);
 
-  // dedup key: 鉆?鉆?string 鉊葭鉆?鉊?鉆葡 GS 鉆葷鉆?鉊虞鉆葉鉆鉊腦鉊菽腺鉊?鉊葭鉊Ｒ?鉊葭鉆?鉊﹤?鉊腺鉊?
+  
   const key = String(raw).replace(/[^\x1D\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
   if (!key) return;
 
@@ -1191,7 +1202,7 @@ function parseCode(raw) {
     return;
   }
 
-  // ?? Decode ??????????????????????????????????????????????
+
   const g = gs1Decode(raw);
 
   const d = {
@@ -1204,14 +1215,14 @@ function parseCode(raw) {
     ref:     g.ref,
   };
 
-  // ?? Fallback 鉊芹董鉊徇腦鉊晤? barcode 鉊葭鉆?鉊﹤?鉆?鉆?GS1 ??????????????
-  // (鉆鉊?鉊?SN 鉆鉊艇鉆葡鉆?鉊葭鉆?鉊﹤?鉊﹤葭 AI prefix)
+  
+  
   if (!d.gtin && !d.sn && !d.lot) {
     const plain = key.replace(/\x1D/g,'');
     if (plain.startsWith('BY-') || /^[A-Z]{2}-/.test(plain)) {
       d.lot = _gs1NormLot(plain);
     } else if (/^\d{12,14}$/.test(plain)) {
-      // EAN-8/12/13/14 ??鉊葭鉊葷鉊耜腹鉆鉊?鉊?GTIN (鉆腹鉆?鉊? SN)
+      
       d.gtin = plain.replace(/^0+/,'');
     } else {
       d.sn = plain;
@@ -1222,7 +1233,7 @@ function parseCode(raw) {
   // a product catalog and is not enough to decide which stock row to consume.
   const stockHit = MODE === 'out' ? findStockItemForScan(d) : null;
   if (stockHit && stockHit.ambiguous) {
-    PENDING_SCAN = { raw: key, gtin: d.gtin || '', sn: d.sn || '', lot: d.lot || '' };
+    PENDING_SCAN = { raw: key, gtin: d.gtin || '', sn: d.sn || '', lot: d.lot || '', reason: 'ambiguous_stock', allowAllStock: true };
     LAST = null;
     LAST_SCAN_TEXT = key;
     LAST_SCAN_TIME = now;
@@ -1240,8 +1251,29 @@ function parseCode(raw) {
     d.lot = stockHit['LOT Number'] || d.lot || '';
     d.gtin = stockHit['GTIN / Barcode'] || d.gtin || '';
   } else {
-    // ?? Lookup ??????????????????????????????????????????????
+
     d.p = lookup(d);
+  }
+
+  if (MODE === 'out' && !stockHit) {
+    PENDING_SCAN = {
+      raw: key,
+      gtin: d.gtin || '',
+      sn: d.sn || '',
+      lot: d.lot || '',
+      reason: 'stock_not_found',
+      allowAllStock: false
+    };
+    LAST = null;
+    LAST_SCAN_TEXT = key;
+    LAST_SCAN_TIME = now;
+    stopScannerOnly();
+    document.getElementById('rkv').innerHTML = '';
+    document.getElementById('rbox').classList.remove('on');
+    document.getElementById('sf').style.display = 'none';
+    showManualProductPanel(true);
+    toast('ไม่พบ SN/LOT นี้ในสต็อก จ่ายออกอัตโนมัติไม่ได้', 'warn');
+    return;
   }
 
   if (!d.p && (d.gtin || d.sn || d.lot)) {
@@ -1249,7 +1281,9 @@ function parseCode(raw) {
       raw: key,
       gtin: d.gtin || '',
       sn: d.sn || '',
-      lot: d.lot || ''
+      lot: d.lot || '',
+      reason: 'unknown_product',
+      allowAllStock: false
     };
     LAST = null;
     LAST_SCAN_TEXT = key;
@@ -1396,7 +1430,7 @@ function lookup(d) {
   const lot = _gs1NormLot(d.lot);
   const sn  = String(d.sn||'').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
 
-  // 鉆?鉆?CACHE.products 鉊葭鉆?鉊徇艇鉊?鉊耜? Sheet (鉊?鉊耜腺鉊晤?鉆腹鉆腹鉊菽?鉊徇?鉊?鉊耜腹鉆? inferFromLot)
+  
   const db = CACHE.products || [];
   let wildcardLotHit = null;
 
@@ -1416,7 +1450,7 @@ function lookup(d) {
 
   if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
 
-  // ?? APEX GTIN-based lookup (before generic inferFromLot) ?????????????????
+
   if (gtinRaw) {
     const apexMatch = _apexGtinLookup(gtinRaw);
     if (apexMatch) return apexMatch;
@@ -1499,10 +1533,7 @@ function learnMappingIntoCache(payload) {
   }
 }
 
-/* ?? APEX GTIN prefix map ??????????????????????????????????????????????????
- * GTIN-13 鉊葉鉊?APEX SS series: 471302500 [3-digit product code] [check]
- * 鉊葡鉊?UDI Type 2 (shipped after 2023/6/1)
- * ??????????????????????????????????????????????????????????????????????? */
+
 const _APEX_GTIN_PRODUCTS = {
   // XT / iX series
   '007': { name:'APEX XT Auto',                type:'device',     model:'XT Auto',            brand:'APEX Medical' },
@@ -1511,26 +1542,25 @@ const _APEX_GTIN_PRODUCTS = {
   // Domus 1 G2 series (SS ??Airway Clearance)
   '100': { name:'APEX Domus 1 G2 Pump',        type:'device',     model:'Domus 1 G2 Pump',    brand:'APEX Medical' },
   '101': { name:'APEX Domus 1 G2 Mattress',    type:'accessory',  model:'Domus 1 G2 Mattress',brand:'APEX Medical' },
-  // 鉆鉊葩鉆腹鉆鉊葩鉊﹤?鉊耜腹 product code 鉊葭鉆?鉊?鉊葉鉊葡鉊? (鉊號鉊葡鉊?3 鉊徇艇鉊晤?鉊徇艇鉊晤? 4713025 鉆? GTIN-13)
+  
 };
 
 function _apexGtinLookup(gtinRaw) {
-  // APEX SS: GTIN 鉊葆鉆?鉊?鉊?鉆葷鉊?4713025 (13 鉊徇艇鉊晤?) 鉊徇腦鉊獅葉 14713025 (14 鉊徇艇鉊晤?)
+  
   const g = gtinRaw.replace(/^1(?=4713025)/, '');  // normalize 14-digit ??13-digit
   if (!g.startsWith('4713025') || g.length !== 13) return null;
-  const code = g.slice(7, 10);  // 3-digit product code 鉊董鉆葦鉊?鉊?7-9
+  const code = g.slice(7, 10);  
   return _APEX_GTIN_PRODUCTS[code] || { name:'APEX Device ('+code+')', type:'device', model:'', brand:'APEX Medical' };
 }
 
-// ?? Lookup tables 鉊芹董鉊徇腦鉊晤? inferFromLot (maintainable 鉆?鉊?if-else chain) ??????
-// 鉊丞董鉊萵鉊葵鉊喪?鉊晤?: match 鉊葭鉆?鉊喪?鉊葡鉊啤?鉊抉?鉊耜?鉆葉鉊腹鉊耜?鉆葉鉊?(NM6A 鉊?鉊冢? NM6, NM5A 鉊?鉊冢? NM5)
+
 const _LOT_RULES = [
   { test: l => l.includes('NM6A'), type:'mask',      model:'EaseFit NM6A', name:'Beyond EaseFit NM6A', brand:'Hunan Beyond' },
   { test: l => l.includes('NM6'),  type:'mask',      model:'EaseFit NM6',  name:'Beyond EaseFit NM6',  brand:'Hunan Beyond' },
   { test: l => l.includes('NM5A'), type:'mask',      model:'EaseFit NM5A', name:'Beyond EaseFit NM5A', brand:'Hunan Beyond' },
   { test: l => l.includes('NM5'),  type:'mask',      model:'EaseFit NM5',  name:'Beyond EaseFit NM5',  brand:'Hunan Beyond' },
   { test: l => l.includes('PMI'),  type:'mask',      model:'EaseFit PMI',  name:'Beyond EaseFit PMI',  brand:'Hunan Beyond' },
-  // Breathing Tube HP1 ??鉊腦鉊抉?鉊葡鉊?lot 鉊葭鉆腹鉊?HP (BY-C????HP 鉊徇腦鉊獅葉 HP1) ??鉊?鉊冢?鉊﹤葡鉊?鉊冢? R20 鉆鉊腦鉊耜萼 R20I 鉊冢葡鉊腹鉊?HP
+  
   { test: l => /HP\d*$/.test(l) || l.includes('HP1'), type:'accessory', model:'HP1', name:'Breathing Tube HP1', brand:'Hunan Beyond' },
   { test: l => l.includes('R30F107') || l.includes('R30F'), type:'device', model:'R-30F', name:'Beyond R-30F BPAP',   brand:'Hunan Beyond' },
   { test: l => l.includes('R25V'),  type:'device',    model:'R-25V',        name:'Beyond R-25V BPAP',   brand:'Hunan Beyond' },
@@ -1576,6 +1606,21 @@ function productLabel(p) {
   return [p.product_code || '-', p.name || '-', p.brand || ''].join(' | ');
 }
 
+function stockDisplayName(p) {
+  return p?.stock_name || p?.name || p?.product_name || '';
+}
+
+function poPrintName(p) {
+  return p?.po_name || p?.product_name || p?.name || '';
+}
+
+function productSearchText(p) {
+  return [
+    p?.name, p?.product_name, p?.stock_name, p?.po_name, p?.aliases,
+    p?.brand, p?.product_code, p?.category, p?.model, p?.ref
+  ].join(' ').toLowerCase();
+}
+
 function populateProductFilters() {
   const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
   const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
@@ -1591,6 +1636,7 @@ function populateProductFilters() {
 function showManualProductPanel(focusSearch = false) {
   const manualProductPanel = document.getElementById('manualProductPanel');
   if (manualProductPanel) manualProductPanel.style.display = 'block';
+  renderManualScanNotice();
   renderManualProducts();
   if (focusSearch) {
     const manualSearch = document.getElementById('manualSearch');
@@ -1601,10 +1647,66 @@ function showManualProductPanel(focusSearch = false) {
 function hideManualProductPanel() {
   const manualProductPanel = document.getElementById('manualProductPanel');
   if (manualProductPanel) manualProductPanel.style.display = 'none';
+  const notice = document.getElementById('manualScanNotice');
+  if (notice) {
+    notice.style.display = 'none';
+    notice.className = 'manual-alert';
+    notice.innerHTML = '';
+  }
+}
+
+function pendingScanSummary() {
+  if (!PENDING_SCAN) return '';
+  return [
+    PENDING_SCAN.sn ? 'SN ' + PENDING_SCAN.sn : '',
+    PENDING_SCAN.lot ? 'LOT ' + PENDING_SCAN.lot : '',
+    PENDING_SCAN.gtin ? 'GTIN ' + PENDING_SCAN.gtin : '',
+    !PENDING_SCAN.sn && !PENDING_SCAN.lot && !PENDING_SCAN.gtin ? PENDING_SCAN.raw : ''
+  ].filter(Boolean).join(' · ');
+}
+
+function renderManualScanNotice() {
+  const notice = document.getElementById('manualScanNotice');
+  if (!notice) return;
+  if (!PENDING_SCAN) {
+    notice.style.display = 'none';
+    notice.className = 'manual-alert';
+    notice.innerHTML = '';
+    return;
+  }
+
+  const scan = escapeHtml(pendingScanSummary() || 'ไม่พบข้อมูลจากบาร์โค้ด');
+  notice.style.display = 'block';
+  notice.className = 'manual-alert';
+
+  if (MODE === 'out') {
+    notice.classList.add('err');
+    if (PENDING_SCAN.reason === 'ambiguous_stock') {
+      notice.innerHTML = `พบหลายแถวในสต็อกสำหรับ ${scan}<br>กรุณาเลือกแถวที่ต้องการจ่ายออกจากรายการด้านล่าง`;
+      return;
+    }
+    const btn = PENDING_SCAN.allowAllStock
+      ? ''
+      : '<br><button type="button" onclick="allowPendingStockSearch()">ค้นหาทั้งสต็อกเอง</button>';
+    notice.innerHTML = `ไม่พบ SN/LOT นี้ในสต็อก: ${scan}<br>ระบบยังไม่จ่ายออกให้ เพื่อกันจ่ายผิดรายการ${btn}`;
+    return;
+  }
+
+  notice.innerHTML = `ไม่รู้จักบาร์โค้ดนี้: ${scan}<br>เลือกสินค้าด้านล่างเพื่อผูกบาร์โค้ด/SN/LOT ครั้งแรก แล้วระบบจะจำไว้รอบถัดไป`;
+}
+
+function allowPendingStockSearch() {
+  if (!PENDING_SCAN || MODE !== 'out') return;
+  PENDING_SCAN.allowAllStock = true;
+  renderManualScanNotice();
+  renderManualProducts();
+  const manualSearch = document.getElementById('manualSearch');
+  if (manualSearch) manualSearch.focus();
 }
 
 function pendingScanMatchesStockRow(x) {
   if (!PENDING_SCAN || MODE !== 'out') return true;
+  if (PENDING_SCAN.allowAllStock) return true;
   const pendingLot = _gs1NormLot(PENDING_SCAN.lot || '');
   const pendingGtin = String(PENDING_SCAN.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
   const pendingSn = String(PENDING_SCAN.sn || '').trim().toUpperCase();
@@ -1665,7 +1767,7 @@ function filteredProducts(prefix) {
     if (brand && p.brand !== brand) return false;
     if (prefix === 'take' && p.type === 'device') return false;
     if (prefix === 'take' && p.has_barcode && !/filter|hose|ท่อ|circuit|cushion|humidifier|chamber|chin strap|accessor/i.test((p.category || '') + ' ' + (p.name || ''))) return false;
-    const hay = [p.name, p.brand, p.product_code, p.category, p.model, p.ref].join(' ').toLowerCase();
+    const hay = productSearchText(p);
     return !q || hay.includes(q);
   });
 }
@@ -1676,9 +1778,12 @@ function renderManualProducts() {
   const rows = filteredProducts('manual').slice(0, 80);
   el.innerHTML = rows.length ? rows.map((p, i) => `
     <div class="manual-row selectable" onclick="selectManualProduct(${i})">
-      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
+      <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
       <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
     </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
+  if (!rows.length && MODE === 'out' && PENDING_SCAN && !PENDING_SCAN.allowAllStock) {
+    el.innerHTML = `<div class="empty">ไม่พบ SN/LOT นี้ในสต็อก<br><button type="button" class="manual-select-btn" style="margin-top:8px" onclick="allowPendingStockSearch()">ค้นหาทั้งสต็อกเอง</button></div>`;
+  }
   window.__manualRows = rows;
 }
 
@@ -1853,7 +1958,8 @@ document.addEventListener('change', e => {
 
 function currentStockQtyForProduct(p) {
   const arr = p.type === 'mask' ? CACHE.mask : CACHE.accessory;
-  const hit = (arr || []).find(x => (x['Product Name'] || '') === (p.name || '') && (x['Brand'] || '') === (p.brand || '') && (p.type !== 'mask' || (x['Size'] || '') === (p.size || '')) && (x['Status'] || 'Active') === 'Active');
+  const names = [p.name, p.product_name, p.stock_name].filter(Boolean).map(x => String(x).trim());
+  const hit = (arr || []).find(x => names.includes(String(x['Product Name'] || '').trim()) && (x['Brand'] || '') === (p.brand || '') && (p.type !== 'mask' || (x['Size'] || '') === (p.size || '')) && (x['Status'] || 'Active') === 'Active');
   return hit ? Number(hit['Qty'] || 0) : 0;
 }
 
@@ -1863,7 +1969,7 @@ function renderStocktake() {
   const rows = filteredProducts('take').slice(0, 120);
   el.innerHTML = rows.map(p => `
     <div class="manual-row">
-      <div><b>${escapeHtml(p.name)}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
+      <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
       <input class="takeQty" data-code="${escapeHtml(p.product_code || '')}" type="number" min="0" placeholder="จำนวน" oninput="validateStocktakeSubmit()">
     </div>`).join('') || '<div class="empty">ไม่พบสินค้า</div>';
   validateStocktakeSubmit();
@@ -1934,14 +2040,13 @@ function updateModeUI() {
   document.getElementById('mOut').classList.toggle('on', !isIn);
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
-  document.getElementById('bOut').disabled = false;
   document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
   document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>รับเข้า: สแกนแล้วบันทึกอัตโนมัติ'
     : '<span class="dot"></span>สแกนจ่ายออก แล้วตรวจสอบก่อนกดจ่ายออก';
 
-  // 鉆葵鉊?鉊?鉊冢? Qty 鉆鉊?鉊耜萼鉆葦鉊﹤? Stock In + 鉊腦鉊啤?鉊?鉊葭鉆?鉊﹤?鉆?鉆?device
+  
   const curType = document.getElementById('iType')?.value || '';
   updateSnLotField();
   const showQty = LAST && transactionNeedsQty(MODE, curType);
@@ -2026,16 +2131,10 @@ function resetScan(opts = {}) {
     stopScannerOnly();
     document.getElementById('reader').innerHTML = '';
   }
-  if (HID_ENABLED) {
-    focusScanInput(100);
-  } else {
-    focusScanInput(100);
-  }
+  focusScanInput(100);
 }
 
-/* ??????????????????????????????????????????????????????????
- *  OPTIMISTIC CACHE PATCH ??鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?鉆腹鉆腦鉊?loadAll()
- * ??????????????????????????????????????????????????????????*/
+
 function _patchCache(action, b) {
   const type = b.type;
   const qty  = Number(b.qty || 1);
@@ -2106,7 +2205,7 @@ function _patchCache(action, b) {
     }
   }
 
-  // prepend history (鉆鉊?鉊?鉊? 200 鉊?葡鉊Ｒ?鉊耜腦鉆? cache)
+  
   const now = new Date();
   CACHE.history.unshift({
     'Date':                now.toLocaleDateString('th-TH'),
@@ -2134,7 +2233,7 @@ function _scheduleBgSync() {
         try { await loadAll(); _lastSyncTime = Date.now(); } catch(e2) {}
       }, 5_000);
     }
-  }, 8_000);  // sync 鉊腦鉊毯?鉆?  8 鉊抉葩鉊葡鉊葭鉊徇艇鉊晤?鉊葡鉊??鉊?萼鉊董鉊芹虜鉊?鉆葡鉊?
+  }, 8_000);  
 }
 
 async function doAct(action) {
@@ -2259,7 +2358,7 @@ async function doAct(action) {
     const keepPurpose = purpose;
     const keepPurposeOther = purposeOther;
     if (action === 'out') rememberOutDefaults(keepLoc, keepPurpose, keepPurposeOther);
-    _patchCache(action, payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
+    _patchCache(action, payload);  
     learnMappingIntoCache(payload);
     renderStock();
     renderHist(false);
@@ -2288,7 +2387,7 @@ async function doAct(action) {
       toast('✅ รับเข้าสำเร็จ', 'ok');
     }
 
-    _scheduleBgSync();  // sync 鉊腦鉊毯?鉆? background 鉊徇艇鉊晤? 8 鉊抉葩
+    _scheduleBgSync();  
   } catch(e) {
     setPill('err');
     toast('❌ ' + e.message, 'err');
@@ -2311,7 +2410,7 @@ function quickOut(item) {
   document.getElementById('modalPurpose').value = '';
   document.getElementById('modalPurposeOther').value = '';
   document.getElementById('modalPurposeOther').style.display = 'none';
-  // 鉆葵鉊?鉊?鉊冢? qty 鉆鉊?鉊耜萼 mask/accessory (device 鉊冢葉鉊?鉊?鉆?鉆?鉊菽艇鉊?1 鉆鉊腦鉊獅?鉊冢?)
+  
   const isAgg = item._type === 'mask' || item._type === 'accessory';
   const qtyEl = document.getElementById('modalQty');
   qtyEl.style.display = isAgg ? 'block' : 'none';
@@ -2371,7 +2470,7 @@ function confirmQuickOut() {
   apiPost(payload).then(res => {
     if (!res.ok) throw new Error(res.error || 'API error');
     toast('จ่ายออกให้ ' + who + ' สำเร็จ', 'ok');
-    _patchCache('out', payload);  // 鉊冢萵鉊?鉊? UI 鉊萵鉊?鉊?
+    _patchCache('out', payload);  
     renderStock();
     renderHist(false);
     updateStats();
@@ -2383,7 +2482,7 @@ function confirmQuickOut() {
   });
 }
 
-// 鉊葩鉊?modal 鉊?鉊耜?鉊?鉊獅?鉊葦鉊丞萵鉊?
+
 document.addEventListener('click', e => {
   const modal = document.getElementById('quickOutModal');
   if (e.target === modal) closeModal();
@@ -2642,15 +2741,27 @@ function renderStock() {
 function renderPurposeSummary(items) {
   const el = document.getElementById('purposeSummary');
   if (!el) return;
-  const month = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long' });
+  const now = new Date();
+  const month = now.toLocaleDateString('th-TH', { year:'numeric', month:'long' });
   const sums = {'ขาย':0,'ของแถม':0,'เดโม':0,'อื่นๆ':0};
   (items || CACHE.history || []).forEach(it => {
     if (String(it['Action'] || '') !== 'Stock Out') return;
+    if (!isHistoryInCurrentMonth(it, now)) return;
     const rawPurpose = historyPurpose(it);
     const p = rawPurpose.startsWith('อื่นๆ') ? 'อื่นๆ' : (rawPurpose || 'อื่นๆ');
     sums[p] = (sums[p] || 0) + Number(it['Qty'] || 1);
   });
   el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
+}
+
+function isHistoryInCurrentMonth(it, now = new Date()) {
+  const raw = String(it?.['Date'] || '').trim();
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return false;
+  const month = Number(m[2]) - 1;
+  let year = Number(m[3]);
+  if (year > 2400) year -= 543;
+  return month === now.getMonth() && year === now.getFullYear();
 }
 
 function historyPurpose(it) {
@@ -2703,7 +2814,7 @@ function renderHist(append, items) {
     list.innerHTML = html;
   }
 
-  // 鉆葵鉊?鉊虜鉆腹鉆葦鉊丞?鉆鉊葩鉆腹鉊?鉊耜?鉊?鉊腦鉊?page
+  
   document.getElementById('hiMore').style.display =
     items.length >= HIST_PAGE ? 'block' : 'none';
 }
@@ -2724,7 +2835,7 @@ async function loadMoreHist() {
       return true;
     });
 
-    // concat 鉊?鉊冢?鉆艇鉆葷鉊?鉊冢腺 render 鉆鉊?鉊耜萼鉊?葡鉊Ｒ?鉊耜腦鉆葦鉊﹤? 鉊?鉊冢?鉊萵鉊?cache 鉊葩鉊?鉊晤?鉊抉?鉊?葡鉊?
+    
     CACHE.history = CACHE.history.concat(fresh);
     renderHist(true, fresh);
 
@@ -2735,15 +2846,98 @@ async function loadMoreHist() {
   }
 }
 
+function productNameRows() {
+  const q = (document.getElementById('nameSearch')?.value || '').toLowerCase().trim();
+  return (CACHE.products || [])
+    .filter(p => p.product_code)
+    .filter(p => !q || productSearchText(p).includes(q))
+    .slice(0, 80);
+}
+
+function renderProductNameManager() {
+  const list = document.getElementById('nameProductList');
+  if (!list) return;
+  const rows = productNameRows();
+  list.innerHTML = rows.length ? rows.map(p => {
+    const code = escapeHtml(p.product_code || '');
+    const active = p.product_code === SELECTED_NAME_PRODUCT_CODE ? ' on' : '';
+    const po = poPrintName(p);
+    return `
+      <div class="name-row${active}" onclick="selectProductName('${code}')">
+        <b>${escapeHtml(stockDisplayName(p) || '-')}</b>
+        <span>${code} · ${escapeHtml(p.brand || '-')} · PO: ${escapeHtml(po || '-')}</span>
+      </div>
+    `;
+  }).join('') : '<div class="empty">ไม่พบสินค้า</div>';
+}
+
+function selectProductName(code) {
+  const p = (CACHE.products || []).find(x => String(x.product_code || '') === String(code || ''));
+  if (!p) return;
+  SELECTED_NAME_PRODUCT_CODE = p.product_code || '';
+  document.getElementById('nameEditForm').style.display = 'block';
+  document.getElementById('nameProductCode').value = p.product_code || '';
+  document.getElementById('stockNameI').value = p.stock_name || p.name || '';
+  document.getElementById('poNameI').value = p.po_name || p.product_name || p.name || '';
+  document.getElementById('aliasNameI').value = p.aliases || '';
+  renderProductNameManager();
+}
+
+async function saveProductNames() {
+  if (!SELECTED_NAME_PRODUCT_CODE) {
+    toast('กรุณาเลือกสินค้าก่อน', 'warn');
+    return;
+  }
+  const stockName = document.getElementById('stockNameI')?.value.trim() || '';
+  const poName = document.getElementById('poNameI')?.value.trim() || '';
+  const aliases = document.getElementById('aliasNameI')?.value.trim() || '';
+  if (!stockName && !poName && !aliases) {
+    toast('กรุณากรอกอย่างน้อย 1 ช่อง', 'warn');
+    return;
+  }
+
+  setPill('busy');
+  try {
+    const res = await apiPost({
+      action: 'update_product_names',
+      productCode: SELECTED_NAME_PRODUCT_CODE,
+      stockName,
+      poName,
+      aliases,
+      user: CUR_USER,
+      staffName: CUR_STAFF
+    });
+    if (!res.ok) throw new Error(res.error || 'API error');
+
+    const p = (CACHE.products || []).find(x => String(x.product_code || '') === SELECTED_NAME_PRODUCT_CODE);
+    if (p) {
+      p.stock_name = stockName;
+      p.po_name = poName;
+      p.aliases = aliases;
+      p.name = stockName || p.product_name || p.name;
+    }
+    renderProductNameManager();
+    renderManualProducts();
+    renderStocktake();
+    setPill('ok');
+    toast('บันทึกชื่อสินค้าแล้ว', 'ok');
+    await loadAll();
+  } catch(e) {
+    setPill('err');
+    toast('บันทึกชื่อสินค้าไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
 function goTab(tab) {
   ['scan','stock','hist','take','cfg'].forEach(k => {
     document.getElementById('t-' + k).classList.toggle('on', k === tab);
     document.getElementById('v-' + k).style.display = (k === tab ? (k === 'cfg' ? 'grid' : 'block') : 'none');
   });
-  // sync 鉊冢萵鉊?鉊腹鉊晤?鉊毯?鉆葡鉆鉊葩鉊?鉊?鉊?Stock/History 鉆艇鉊啤?鉊﹤?鉆?鉆?sync 鉊﹤葡鉊葡鉊?鉊葩鉊?60 鉊抉葩
+  
   if ((tab === 'stock' || tab === 'hist') && Date.now() - _lastSyncTime > 60_000) {
     loadAll().then(() => { _lastSyncTime = Date.now(); }).catch(() => {});
   }
+  if (tab === 'cfg') renderProductNameManager();
 }
 
 function setPill(mode) {
@@ -2778,7 +2972,7 @@ async function sortDeviceSheetNow() {
     if (!res.ok) throw new Error(res.error || 'API error');
     toast('เรียง Device Sheet A-Z สำเร็จ', 'ok');
     setPill('ok');
-    await loadAll();  // 鉊?葭鉆葦鉊丞? cache 鉆葦鉆?鉊??鉊萵鉊?Sheet
+    await loadAll();
   } catch(e) {
     setPill('err');
     toast('เรียง Device Sheet ไม่สำเร็จ: ' + e.message, 'err');
@@ -2789,7 +2983,7 @@ async function exportCSV() {
   if (!API_URL) { toast('ยังไม่ได้ตั้งค่า API URL', 'warn'); return; }
   toast('กำลัง export ประวัติ...', 'ok');
   try {
-    // 鉊葆鉊?鉊?萼鉊抉萵鉊葩鉊萵鉆?鉊徇腹鉊?(鉊芹號鉊葵鉊詮? 9999 鉊?葡鉊Ｒ?鉊耜腦) 鉆腹鉆?鉊?鉆?鉆?cache 鉊徇?鉆葡鉊萵鉊?鉊詮?鉊晤?
+
     const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:9999, offset:0 }));
     if (!res.ok) throw new Error(res.error);
     const items = res.history || [];
@@ -2801,7 +2995,7 @@ async function exportCSV() {
       ...items.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    // 鉆鉊葩鉆腹 BOM 鉆鉊虞鉆葉鉆葦鉆?Excel 鉆鉊葩鉊?鉊耜萱鉊耜?鉊腺鉆?鉆?鉊嫩?鉊?鉊冢?
+
     const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
