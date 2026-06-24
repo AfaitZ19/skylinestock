@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -117,11 +117,11 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .ic{background:#fff;border-radius:var(--ra);padding:10px 12px;box-shadow:var(--sh);margin-bottom:8px;border-left:4px solid var(--bd)}
 .ic.device{border-left-color:var(--B)}.ic.mask{border-left-color:var(--G)}.ic.accessory{border-left-color:var(--A)}
 .ic-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;margin-bottom:2px}
-.ic-nm{font-size:15px;font-weight:700;flex:1;line-height:1.35;min-width:0;word-break:break-word}
+.ic-nm{font-size:15px;font-weight:700;flex:1;line-height:1.35}
 .bg{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .bd2{background:var(--BL);color:var(--B)}.bm{background:var(--GL);color:var(--G)}.ba{background:var(--AL);color:var(--A)}
-.ic-sub{font-size:12.5px;color:var(--mu);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ic-id{font-size:13px;color:var(--tx);font-weight:700;margin-bottom:5px;word-break:break-word}
+.ic-sub{font-size:12.5px;color:var(--mu);margin-bottom:1px}
+.ic-id{font-size:13px;color:var(--tx);font-weight:700;margin-bottom:5px}
 .ic-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)}
 .ic-meta{font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;row-gap:4px}
 .ic-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
@@ -204,6 +204,7 @@ body.admin .admin-only{display:inline-flex}
 .attn-tag.low{background:#fdf3d0;color:var(--A)}
 .attn-more{font-size:11px;color:var(--mu);text-align:center;padding-top:6px}
 
+/* Desktop layout */
 @media(max-width:380px){
   .main{padding:10px}
   .bar-title{font-size:13px}
@@ -389,6 +390,8 @@ body.admin .admin-only{display:inline-flex}
     </div>
 
     <div id="v-stock" style="display:none">
+      <div class="attn" id="attnBox" style="display:none"></div>
+
       <div class="sg">
         <div class="sc2"><div class="sl">Device</div><div class="sv" id="sDv">0</div></div>
         <div class="sc2"><div class="sl">Mask</div><div class="sv" id="sMk">0</div></div>
@@ -396,8 +399,6 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="bdash" id="stockBreakdown"></div>
-
-      <div class="attn" id="attnBox" style="display:none"></div>
 
       <div class="search-wrap">
         <span class="search-ico">🔎</span>
@@ -524,6 +525,7 @@ let HID_AUTO_RESUME = false;
 let HID_LAST_TEXT = '';
 let HID_LAST_TIME = 0;
 const AUTO_SAVE_ON_SCAN_IN = true;
+const AUTO_STOCK_OUT_ON_SCAN_OUT = true;
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -1062,7 +1064,7 @@ function gs1Decode(raw) {
 
   return {
     gtin:    String(fields['01'] || fields['02'] || '').replace(/^0+/, ''),
-    sn:      fields['21'] || '',
+    sn:      fields['21'] || fields['91'] || fields['92'] || '',
     lot:     _gs1NormLot(fields['10'] || ''),
     mfgDate: _gs1Fmt6(fields['11'] || ''),
     expiry:  _gs1Fmt6(fields['17'] || ''),
@@ -1269,8 +1271,10 @@ function parseCode(raw) {
     !((d.p.type === 'device' && !d.sn) || ((d.p.type === 'mask' || d.p.type === 'accessory') && !d.lot));
   if (!autoInCanContinue) stopScannerOnly();
   showResult(d);
-  if (MODE === 'out') prepareOutFormAfterScan(d);
-  else toast('สแกนสำเร็จ', 'ok');
+  if (MODE === 'out') {
+    prepareOutFormAfterScan(d);
+    maybeAutoStockOutAfterScan(d);
+  } else toast('สแกนสำเร็จ', 'ok');
 }
 
 function activeStockItems() {
@@ -1299,16 +1303,22 @@ function productFromStockItem(x) {
 }
 
 function findStockItemForScan(d) {
-  const sn = String(d.sn || '').trim().toUpperCase();
+  const sn = normalizeSerialForMatch(d.sn || (!d.gtin && !d.lot ? d.raw : ''));
   const lot = _gs1NormLot(d.lot || '');
   const gtin = String(d.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
   const rows = activeStockItems();
+  const hint = lookup(d) || {};
 
   const matches = rows.filter(x => {
-    const rowSn = String(x['Serial Number (SN)'] || '').trim().toUpperCase();
+    const rowSn = normalizeSerialForMatch(x['Serial Number (SN)'] || '');
     const rowLot = _gs1NormLot(x['LOT Number'] || '');
     const rowGtin = String(x['GTIN / Barcode'] || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
-    if (x._type === 'device') return !!(sn && rowSn && rowSn === sn);
+    if (x._type === 'device') {
+      if (sn && rowSn && rowSn === sn) return true;
+      if (hint.type === 'device' && lot && rowLot && rowLot === lot) return true;
+      if (hint.type === 'device' && gtin && rowGtin && rowGtin === gtin) return true;
+      return false;
+    }
     if (lot && rowLot && rowLot === lot) return true;
     if (gtin && rowGtin && rowGtin === gtin) return true;
     return false;
@@ -1336,8 +1346,21 @@ function resolveAmbiguousStockMatch(matches, d) {
   if (hint.name) narrowed = narrowed.filter(x => sameText(x['Product Name'], hint.name));
 
   if (narrowed.length === 1) return narrowed[0];
+  const sn = normalizeSerialForMatch(d.sn || (!d.gtin && !d.lot ? d.raw : ''));
+  if (sn) {
+    const bySn = narrowed.filter(x => normalizeSerialForMatch(x['Serial Number (SN)'] || '') === sn);
+    if (bySn.length === 1) return bySn[0];
+  }
   if (narrowed.length > 1 && allSameMaskIdentity(narrowed)) return pickFefoRow(narrowed);
   return null;
+}
+
+function normalizeSerialForMatch(v) {
+  return String(v || '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/^(SN|S\/N|SERIAL|SERIALNO|SERIALNUMBER)[:\-\s]*/i, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
 }
 
 function sameText(a, b) {
@@ -1725,6 +1748,18 @@ function prepareOutFormAfterScan(item = LAST) {
     else if (outBtn && !outBtn.disabled) outBtn.focus();
   }, 80);
   toast(outBtn && !outBtn.disabled ? 'เจอสินค้าแล้ว — ตรวจสอบแล้วกดจ่ายออก' : 'เจอสินค้าแล้ว — เติมข้อมูลจ่ายออกให้ครบ', outBtn && !outBtn.disabled ? 'ok' : 'warn');
+}
+
+function maybeAutoStockOutAfterScan(item = LAST) {
+  if (!AUTO_STOCK_OUT_ON_SCAN_OUT || MODE !== 'out' || !item?.stockItem) return;
+  setTimeout(() => {
+    if (IS_PROCESSING || LAST !== item || MODE !== 'out') return;
+    updateActionButtons();
+    const outBtn = document.getElementById('bOut');
+    if (!outBtn || outBtn.disabled) return;
+    toast('เจอแถวสต็อกแล้ว — จ่ายออกอัตโนมัติ', 'ok');
+    doAct('out');
+  }, 160);
 }
 
 function requiredTrackingValue(type) {
