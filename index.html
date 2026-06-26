@@ -4046,6 +4046,7 @@ function xmlEscape(v) {
 .gmenu-btn.gin{background:#d4f7d4}
 .gmenu-btn.gout{background:#ffe0e0}
 .gmenu-btn.gstk{background:#e0eeff}
+.gmenu-btn.gadd{background:#fff3cc}
 
 /* ── Overlay ── */
 #guideOverlay{
@@ -4174,13 +4175,58 @@ function xmlEscape(v) {
 </style>
 
 <!-- Launcher -->
-<button id="guideBtn" onclick="toggleGuideMenu()" title="คู่มือ" aria-label="คู่มือการใช้งาน">🐱</button>
+<div id="guideBtnWrap" style="position:fixed;left:16px;bottom:20px;z-index:1000;display:flex;flex-direction:column;align-items:center;gap:6px">
+  <div id="guideBubble" style="
+    position:relative;
+    background:#fff;border:2.5px solid #111;border-radius:12px;
+    padding:7px 10px;font-size:11px;font-weight:900;color:#111;
+    line-height:1.4;text-align:center;white-space:nowrap;
+    box-shadow:3px 3px 0 #111;
+    animation:gbounce2 3s ease-in-out infinite;
+    cursor:pointer;
+  " onclick="toggleGuideMenu()">
+    📖 คู่มือการใช้งาน<br>มาอ่านกันนะจ๊ะ ✨
+    <span id="guideBubbleClose" onclick="event.stopPropagation();document.getElementById('guideBubble').style.display='none'" style="
+      position:absolute;top:-8px;right:-8px;
+      background:#ffe600;border:2px solid #111;border-radius:50%;
+      width:18px;height:18px;font-size:10px;font-weight:900;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;
+      line-height:1;
+    ">✕</span>
+    <span style="
+      position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+      width:0;height:0;
+      border-left:8px solid transparent;
+      border-right:8px solid transparent;
+      border-top:9px solid #111;
+    "></span>
+    <span style="
+      position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+      width:0;height:0;
+      border-left:7px solid transparent;
+      border-right:7px solid transparent;
+      border-top:8px solid #fff;
+      z-index:1;
+    "></span>
+  </div>
+  <button id="guideBtn" onclick="toggleGuideMenu()" title="คู่มือ" aria-label="คู่มือการใช้งาน">🐱</button>
+</div>
+<style>
+@keyframes gbounce2{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+#guideBtn{position:static!important;left:unset!important;bottom:unset!important}
+#guideBtnWrap #guideMenu{position:absolute;bottom:calc(100% + 8px);left:0;bottom:unset;top:unset}
+</style>
 
 <div id="guideMenu">
   <h4>✦ คู่มือการใช้งาน</h4>
   <button class="gmenu-btn gin" onclick="startGuide('in')">📥 รับสินค้าเข้าคลัง</button>
   <button class="gmenu-btn gout" onclick="startGuide('out')">📤 เบิก / จ่ายสินค้า</button>
   <button class="gmenu-btn gstk" onclick="startGuide('stock')">🔍 เช็คสต็อกสินค้า</button>
+  <button class="gmenu-btn gadd" onclick="startGuide('add')">➕ เพิ่มสินค้าใหม่</button>
+  <button class="gmenu-btn gtake" onclick="startGuide('take')">📋 นับสต็อก</button>
+  <button class="gmenu-btn gsales" onclick="startGuide('sales')">💰 ข้อมูลขาย</button>
+  <button class="gmenu-btn ganal" onclick="startGuide('anal')">📊 วิเคราะห์</button>
+  <button class="gmenu-btn gcfg" onclick="startGuide('cfg')">⚙️ ตั้งค่า</button>
 </div>
 
 <!-- Overlay -->
@@ -4262,6 +4308,7 @@ const GUIDES={
   in:{name:'รับสินค้าเข้าคลัง',steps:[
     {sel:'#t-scan',   sfx:'GO!',  title:'แท็บ "ทำรายการ"',       body:'คลิกแท็บนี้ก่อนเลยนะ! ทุก transaction เริ่มที่นี่จ้า 👆'},
     {sel:'#mIn',      sfx:'YES!', title:'กดปุ่ม "รับเข้า" 💚',   body:'เลือกโหมด รับเข้า (สีเขียว) ปุ่มจะเปลี่ยนสีให้รู้ว่าเลือกอยู่นะ'},
+    {sel:'#hidToggleBtn', sfx:'HID!', title:'มีเครื่องสแกน? กดตรงนี้! 🔫', body:'กดปุ่มนี้เพื่อเปิด HID Mode — เสียบเครื่องสแกนแล้วยิงได้เลย ไม่ต้องกดอะไรเพิ่ม (ต้องตั้ง suffix = Enter ในเครื่องสแกนด้วยนะ)'},
     {sel:'.scan-btn', sfx:'SCAN!',title:'สแกน QR / Barcode 📷',  body:'กด "ใช้กล้อง" แล้วชี้ไปที่บาร์โค้ดบนกล่อง — ระบบดึงข้อมูลให้เองเลย ไม่ต้องพิมพ์!'},
     {sel:'#mf',       sfx:'OK!',  title:'หรือกรอกเองก็ได้!',     body:'ถ้าสแกนไม่ได้ พิมพ์รหัสสินค้าตรงนี้ แล้วกด "ตรวจสอบ" ได้เลย'},
     {sel:null,        sfx:'WOW!', title:'ระบบดึงข้อมูลให้ ✨',   body:'ชื่อสินค้า, ประเภท และจำนวนคงเหลือจะโผล่ขึ้นมาเอง — ตรวจดูให้ถูกต้องด้วยนะ'},
@@ -4271,11 +4318,44 @@ const GUIDES={
   out:{name:'เบิก / จ่ายสินค้า',steps:[
     {sel:'#t-scan',   sfx:'GO!',  title:'แท็บ "ทำรายการ"',       body:'เริ่มต้นที่แท็บนี้ก่อนเลยนะ! 👆'},
     {sel:'#mOut',     sfx:'YES!', title:'กดปุ่ม "จ่ายออก" ❤️',  body:'เลือกโหมด จ่ายออก (สีแดง) เพื่อบันทึกการเบิกหรือจ่ายสินค้าออกนะจ้า'},
+    {sel:'#hidToggleBtn', sfx:'HID!', title:'มีเครื่องสแกน? กดตรงนี้! 🔫', body:'กดปุ่มนี้เพื่อเปิด HID Mode — เสียบเครื่องสแกนแล้วยิงได้เลย ไม่ต้องกดอะไรเพิ่ม (ต้องตั้ง suffix = Enter ในเครื่องสแกนด้วยนะ)'},
     {sel:'.scan-btn', sfx:'SCAN!',title:'สแกนสินค้า 📷',         body:'กด "ใช้กล้อง" แล้วสแกนบาร์โค้ดสินค้าที่ต้องการเบิก — ง่ายมาก!'},
     {sel:'#mf',       sfx:'OK!',  title:'หรือกรอกเองก็ได้!',     body:'พิมพ์รหัสสินค้าในช่องนี้ แล้วกด "ตรวจสอบ" ได้เลยจ้า'},
     {sel:null,        sfx:'WOW!', title:'ตรวจสอบข้อมูล ✨',      body:'ระบบแสดงชื่อสินค้าและสต็อกคงเหลือ — ตรวจให้แน่ใจก่อนจ่ายออกนะ'},
     {sel:null,        sfx:'NICE!',title:'ระบุผู้รับและจำนวน 📝', body:'กรอกชื่อผู้รับและจำนวนที่จ่ายออก — อย่าลืมตรวจสอบให้ถูกต้องด้วยนะ'},
     {sel:'#bOut',     sfx:'DONE!',title:'กด "จ่ายออก" เพื่อบันทึก!',body:'กดปุ่มสีแดงนี้เพื่อยืนยัน — สต็อกลดลงและบันทึกใน Sheet ทันที ✅ เก่งมาก!'},
+  ]},
+  take:{name:'นับสต็อก',steps:[
+    {sel:'#t-take',          sfx:'GO!',  title:'แท็บ "นับสต็อก"',           body:'คลิกแท็บนี้เพื่อเข้าสู่หน้านับสต็อก — ใช้ตรวจสอบของจริงกับในระบบนะจ๊ะ'},
+    {sel:'#takeCategory',    sfx:'PICK!',title:'กรองหมวดหมู่ / แบรนด์ 🗂',  body:'เลือกหมวดสินค้าหรือแบรนด์เพื่อกรองรายการ — ช่วยให้นับทีละกลุ่มง่ายขึ้นมาก!'},
+    {sel:'#takeSearch',      sfx:'FIND!',title:'ค้นหาสินค้า 🔍',            body:'พิมพ์ชื่อหรือรหัสสินค้าเพื่อกรองรายการได้เลย'},
+    {sel:'#stocktakeList',   sfx:'COUNT!',title:'กรอกจำนวนที่นับได้ 🔢',   body:'กรอกจำนวนที่นับได้จริงในช่องแต่ละรายการ — ระบบจะเปรียบเทียบกับที่มีในระบบให้เอง'},
+    {sel:'#stocktakeSubmit', sfx:'DONE!',title:'กด "บันทึกการนับสต็อก" ✅', body:'กดปุ่มนี้เมื่อนับครบทุกรายการ — ระบบอัปเดตจำนวนคงเหลือใน Google Sheets ทันที!'},
+  ]},
+  sales:{name:'ข้อมูลขาย',steps:[
+    {sel:'#t-sales',   sfx:'GO!',  title:'แท็บ "ข้อมูลขาย"',        body:'คลิกแท็บนี้เพื่อดูและแก้ไขข้อมูลการขายย้อนหลังทั้งหมด'},
+    {sel:'#histSearch',sfx:'FIND!',title:'ค้นหารายการ 🔍',           body:'พิมพ์ชื่อเซลล์, ผู้รับ, SN, LOT, ชื่อสินค้า, โรงพยาบาล หรือ PO — ค้นได้กว้างมากเลย!'},
+    {sel:'#hiList',    sfx:'TAP!', title:'กดรายการเพื่อแก้ไข 📋',    body:'กดที่รายการไหนก็ได้เพื่อกรอกหรือแก้ไขข้อมูลขาย เช่น ราคาขาย, ผู้ซื้อ, เลข PO'},
+    {sel:null,         sfx:'SAVE!',title:'บันทึกข้อมูลขาย 💾',       body:'กรอกข้อมูลให้ครบ (ราคาขาย, ราคาส่ง, ผู้ซื้อ, โรงพยาบาล, PO) แล้วกด "บันทึกข้อมูลขาย" ✅'},
+  ]},
+  anal:{name:'วิเคราะห์',steps:[
+    {sel:'#t-analysis',         sfx:'GO!',   title:'แท็บ "วิเคราะห์"',               body:'คลิกแท็บนี้เพื่อดูสรุปและวิเคราะห์ข้อมูลการจ่ายออก'},
+    {sel:'#purposeSummary',     sfx:'STATS!',title:'สรุปจ่ายออกตามวัตถุประสงค์ 📊', body:'ตรงนี้แสดงภาพรวมว่าจ่ายออกไปเพื่ออะไรบ้าง เช่น ขาย, ทดลอง, คืน'},
+    {sel:'#outMonthI',          sfx:'PICK!', title:'เลือกเดือนที่ต้องการ 📅',       body:'เลือกเดือนที่ต้องการวิเคราะห์ แล้วกด "วิเคราะห์เดือนที่เลือก" เพื่อดูข้อมูล'},
+    {sel:'#monthlyOutSummary',  sfx:'WOW!',  title:'ดูสรุปรายเดือน 📈',            body:'ระบบแสดงสรุปการจ่ายออกแยกตามสินค้า — ใช้วางแผนสั่งของได้เลย ✅'},
+  ]},
+  cfg:{name:'ตั้งค่า',steps:[
+    {sel:'#t-cfg',         sfx:'GO!',  title:'แท็บ "ตั้งค่า"',               body:'คลิกแท็บนี้เพื่อตั้งค่าระบบ ดูสถานะเชื่อมต่อ และจัดการชื่อสินค้า'},
+    {sel:'#connTxt',       sfx:'WIFI!',title:'สถานะ Google Sheets 🔌',       body:'ตรงนี้แสดงว่าเชื่อมต่อกับ Google Sheets อยู่ไหม — กด "ซิงก์ข้อมูล" เพื่อโหลดข้อมูลใหม่'},
+    {sel:'#nameSearch',    sfx:'EDIT!',title:'จัดการชื่อสินค้า ✏️',         body:'ค้นหาสินค้าและแก้ไขชื่อที่ใช้แสดง, ชื่อตามเอกสาร PO หรือคำค้นหาเพิ่มเติมได้ที่นี่'},
+    {sel:null,             sfx:'TIP!', title:'เครื่องมือ Admin 🔧',          body:'Admin สามารถ export ประวัติ CSV, ดูข้อมูลขั้นสูง และจัดการระบบได้จากส่วนนี้'},
+  ]},
+  add:{name:'เพิ่มสินค้าใหม่',steps:[
+    {sel:'.fab-add',         sfx:'NEW!', title:'กดปุ่ม "เพิ่มสินค้า" ➕',    body:'ปุ่มสีน้ำเงินมุมล่างขวา กดได้เลย! (เห็นเฉพาะตอนอยู่หน้าสต็อกนะ)'},
+    {sel:null,               sfx:'PIN!', title:'กรอก PIN ปลดล็อก 🔒',       body:'ฟีเจอร์นี้สงวนไว้สำหรับ Admin เท่านั้น — กรอก PIN ที่ได้รับจาก Admin ก่อนนะจ๊ะ'},
+    {sel:null,               sfx:'FILL!',title:'กรอกข้อมูลสินค้า 📝',       body:'ใส่ชื่อสินค้า*, GTIN (บาร์โค้ด), REF, Model, Size และหมวดหมู่ — ช่องที่มี * จำเป็นต้องกรอก'},
+    {sel:null,               sfx:'TIP!', title:'สแกน barcode ได้เลย! 📷',   body:'ช่อง GTIN — กดสแกนหรือเสียบเครื่องสแกนแล้วยิงบาร์โค้ดสินค้าได้เลย ระบบจะดึงข้อมูลให้อัตโนมัติ'},
+    {sel:null,               sfx:'DONE!',title:'กด "บันทึก" เพื่อเพิ่ม ✅', body:'กดบันทึกเพื่อเพิ่มสินค้าเข้าระบบ — หลังจากนั้นสินค้าจะพร้อมให้รับเข้า/จ่ายออกได้ทันที!'},
   ]},
   stock:{name:'เช็คสต็อกสินค้า',steps:[
     {sel:'#t-stock',        sfx:'GO!',  title:'แท็บ "สต็อก"',       body:'คลิกที่นี่เพื่อดูรายการสินค้าทั้งหมดในคลัง ง่ายมากเลย! 👆'},
