@@ -295,8 +295,9 @@ body.admin .admin-only{display:inline-flex}
     <p class="hint">วาง URL จาก Google Apps Script → Deploy → Web App → Copy URL</p>
     <label class="lbl">ชื่อผู้ใช้ (เช่น stock หรือ admin)</label>
     <input class="inp" id="setupUser" placeholder="เช่น stock หรือ admin">
-    <label class="lbl">ชื่อพนักงานผู้ทำรายการ</label>
-    <input class="inp" id="setupStaff" placeholder="เช่น Benz, Mint, Stock ทีม">
+    <label class="lbl">ชื่อคนที่กำลังกดบันทึก</label>
+    <input class="inp" id="setupStaff" placeholder="เช่น ฝ้าย, แอดมิน, ทีมสต็อก">
+    <p class="hint">ใช้เป็นชื่อผู้บันทึกรายการในระบบ ไม่ใช่ชื่อลูกค้า/เซลล์</p>
     <div style="margin-bottom:9px">
       <label class="lbl">รหัสผ่าน</label>
       <input class="inp" id="setupPass" type="password" placeholder="รหัสผ่าน" style="margin-bottom:0">
@@ -395,7 +396,7 @@ body.admin .admin-only{display:inline-flex}
         </div>
 
         <label class="flbl" id="locLabel">รับเข้าโดย</label>
-        <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
+        <input type="text" class="finp" id="locI" placeholder="รับเข้า: ใส่คนรับของ / จ่ายออก: ใส่ชื่อเซลล์หรือผู้รับ">
         <datalist id="recipientChoices">
           <option value="สุโข รักษาการ (สุโข)"></option>
           <option value="สุพิชชา รักษาการ (ฝ้าย)"></option>
@@ -485,6 +486,11 @@ body.admin .admin-only{display:inline-flex}
         <button class="bfull bout2" onclick="loadMonthlyOutSummaryForSelected()">วิเคราะห์เดือนที่เลือก</button>
       </div>
       <div class="scrd" id="monthlyOutSummary"></div>
+      <div class="scrd">
+        <h3>ค้นหารายการย้อนหลัง</h3>
+        <input class="finp" id="histSearch" type="search" placeholder="ค้นชื่อเซลล์/ผู้รับ, SN, LOT, ชื่อสินค้า, รุ่น, ไซส์, โรงพยาบาล, PO" oninput="renderHist(false)">
+        <p class="hint" style="margin:-5px 0 0">ตัวอย่าง: กัญญ์ดา, CAED3C02683, NM6, R-20i, โรงพยาบาล, PO</p>
+      </div>
       <div id="hiList"></div>
       <div id="hiMore" style="display:none;text-align:center;padding:10px 0">
         <button class="bfull bout2" style="max-width:200px;display:inline-block" onclick="loadMoreHist()">โหลดเพิ่มเติม</button>
@@ -2347,8 +2353,8 @@ function updateModeUI() {
   document.getElementById('bIn').style.display  = isIn ? 'block' : 'none';
   document.getElementById('bOut').style.display = isIn ? 'none' : 'block';
   document.getElementById('bOut').disabled = false;
-  document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
-  document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
+  document.getElementById('locLabel').textContent = isIn ? 'คนรับเข้า/ผู้บันทึก' : 'เซลล์หรือผู้รับสินค้า';
+  document.getElementById('locI').placeholder = isIn ? 'เช่น ฝ้าย, แอดมิน, ทีมสต็อก' : 'เลือกหรือพิมพ์ชื่อเซลล์/ผู้รับสินค้า';
   document.getElementById('locI').setAttribute('list', isIn ? '' : 'recipientChoices');
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>รับเข้า: สแกนแล้วบันทึกอัตโนมัติ'
@@ -3410,9 +3416,71 @@ function historyQty(it) {
   return String(it?.['Action'] || '') === 'Stock Out' ? 1 : 0;
 }
 
+function historySearchText(it) {
+  return [
+    it['Product Name'],
+    it['Brand'],
+    it['Type'],
+    it['Serial / LOT'],
+    it['Serial Number (SN)'],
+    it['SN'],
+    it['LOT Number'],
+    it['LOT'],
+    it['Model'],
+    it['Size'],
+    it['Reference'],
+    historyRecipient(it),
+    historyRecordedBy(it),
+    it['Operator'],
+    it['Buyer Name'],
+    it['Hospital'],
+    it['PO No'],
+    it['Purpose'],
+    it['Note'],
+    it['Date'],
+    it['Time']
+  ].filter(v => v !== null && v !== undefined).join(' ').toLowerCase();
+}
+
+function filteredHistoryItems(items) {
+  const q = (document.getElementById('histSearch')?.value || '').trim().toLowerCase();
+  if (!q) return items || [];
+  const terms = q.split(/\s+/).filter(Boolean);
+  return (items || []).filter(it => {
+    const hay = historySearchText(it);
+    return terms.every(term => hay.includes(term));
+  });
+}
+
+function inferHistoryModelSize(it) {
+  const current = {
+    model: String(it['Model'] || '').trim(),
+    size: String(it['Size'] || '').trim()
+  };
+  if (current.model && current.size) return current;
+
+  const serialLot = String(it['Serial / LOT'] || it['LOT Number'] || it['LOT'] || '').trim().toUpperCase();
+  const lotHit = inferFromLot(serialLot);
+  const productName = String(it['Product Name'] || '').trim().toLowerCase();
+  const brand = String(it['Brand'] || '').trim().toLowerCase();
+  const productHit = (CACHE.products || []).find(p => {
+    const names = [p.name, p.product_name, p.stock_name, p.po_name].filter(Boolean).map(x => String(x).trim().toLowerCase());
+    const sameName = names.includes(productName);
+    const sameBrand = !brand || String(p.brand || '').trim().toLowerCase() === brand;
+    const sameLotModel = lotHit && lotHit.model && String(p.model || '').trim().toLowerCase() === String(lotHit.model).trim().toLowerCase();
+    return sameBrand && (sameName || sameLotModel);
+  });
+
+  return {
+    model: current.model || lotHit?.model || productHit?.model || '',
+    size: current.size || lotHit?.size || productHit?.size || ''
+  };
+}
+
 function salesDetailForm(it) {
   if (String(it['Action'] || '') !== 'Stock Out' || !it._sheetRow) return '';
   const row = String(it._sheetRow);
+  const inferred = inferHistoryModelSize(it);
   return `
     <div class="mform" data-history-row="${escapeHtml(row)}" style="margin-top:8px">
       <input type="text" class="finp" data-sales-field="buyerName" value="${escapeHtml(it['Buyer Name'] || '')}" placeholder="ชื่อผู้ซื้อ">
@@ -3421,8 +3489,8 @@ function salesDetailForm(it) {
       <input type="date" class="finp" data-sales-field="saleDate" value="${escapeHtml(formatDateInputValue(it['Sale Date'] || ''))}">
       <input type="number" class="finp" data-sales-field="salePrice" value="${escapeHtml(it['Sale Price'] || '')}" placeholder="ราคาขาย" min="0" step="0.01">
       <input type="number" class="finp" data-sales-field="wholesalePrice" value="${escapeHtml(it['Wholesale Price'] || '')}" placeholder="ราคาส่ง" min="0" step="0.01">
-      <input type="text" class="finp" data-sales-field="model" value="${escapeHtml(it['Model'] || '')}" placeholder="รุ่น">
-      <input type="text" class="finp" data-sales-field="size" value="${escapeHtml(it['Size'] || '')}" placeholder="ไซส์">
+      <input type="text" class="finp" data-sales-field="model" value="${escapeHtml(inferred.model)}" placeholder="รุ่น">
+      <input type="text" class="finp" data-sales-field="size" value="${escapeHtml(inferred.size)}" placeholder="ไซส์">
       <button onclick="saveSalesDetails(${escapeHtml(row)})">บันทึกข้อมูลขาย</button>
     </div>
   `;
@@ -3476,9 +3544,19 @@ function renderHist(append, items) {
     renderPurposeSummary(items);
     renderMonthlyOutSummary();
   }
+  const q = (document.getElementById('histSearch')?.value || '').trim();
+  if (q) append = false;
+  const sourceItems = items;
+  items = filteredHistoryItems(items);
 
   if (!items.length && !append) {
-    list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>ยังไม่มีประวัติรายการ</div></div>`;
+    const msg = q
+      ? `ไม่พบรายการที่ตรงกับ "${escapeHtml(q)}"`
+      : 'ยังไม่มีประวัติรายการ';
+    const hint = q
+      ? 'ลองค้นด้วยชื่อเซลล์/ผู้รับ, SN เครื่อง, LOT, ชื่อสินค้า, รุ่น หรือไซส์'
+      : '';
+    list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>${msg}</div>${hint ? `<div class="hm">${hint}</div>` : ''}</div>`;
     document.getElementById('hiMore').style.display = 'none';
     return;
   }
@@ -3516,7 +3594,7 @@ function renderHist(append, items) {
 
   
   document.getElementById('hiMore').style.display =
-    items.length >= HIST_PAGE ? 'block' : 'none';
+    (!q && sourceItems.length >= HIST_PAGE) ? 'block' : 'none';
 }
 
 async function loadMoreHist() {
