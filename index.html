@@ -4003,5 +4003,405 @@ function xmlEscape(v) {
   return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 </script>
+<!-- ===== MANGA-STYLE IN-APP GUIDE ===== -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@700;900&display=swap');
+
+/* ── Launcher button ── */
+#guideBtn{
+  position:fixed;left:16px;bottom:20px;z-index:1000;
+  width:52px;height:52px;border-radius:50%;border:3px solid #111;
+  background:#ffe600;cursor:pointer;box-shadow:4px 4px 0 #111;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;transition:transform .1s;padding:0;
+  animation:gbounce 2s infinite;
+}
+#guideBtn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 #111}
+@keyframes gbounce{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+
+/* ── Menu ── */
+#guideMenu{
+  position:fixed;left:16px;bottom:80px;z-index:1000;
+  background:#fff;border:3px solid #111;border-radius:16px;
+  padding:14px 13px;box-shadow:5px 5px 0 #111;
+  display:none;width:210px;
+}
+#guideMenu.on{display:block;animation:popin .18s ease-out}
+@keyframes popin{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+#guideMenu h4{
+  font-size:11px;font-weight:900;color:#111;margin-bottom:10px;
+  letter-spacing:.5px;text-transform:uppercase;
+  border-bottom:2px solid #111;padding-bottom:6px;
+}
+.gmenu-btn{
+  display:flex;align-items:center;gap:8px;
+  width:100%;padding:9px 10px;border-radius:10px;
+  border:2.5px solid #111;background:#fff;
+  font-size:13px;font-weight:900;color:#111;
+  cursor:pointer;font-family:inherit;margin-bottom:6px;
+  box-shadow:3px 3px 0 #111;transition:transform .08s,box-shadow .08s;
+}
+.gmenu-btn:last-child{margin-bottom:0}
+.gmenu-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #111}
+.gmenu-btn.gin{background:#d4f7d4}
+.gmenu-btn.gout{background:#ffe0e0}
+.gmenu-btn.gstk{background:#e0eeff}
+
+/* ── Overlay ── */
+#guideOverlay{
+  position:fixed;inset:0;z-index:2000;display:none;pointer-events:none;
+  font-family:'Noto Sans Thai','Sarabun',sans-serif;
+}
+#guideOverlay.on{display:block;pointer-events:auto}
+#guideSvg{position:absolute;inset:0;width:100%;height:100%}
+
+/* ── Manga Panel (tooltip) ── */
+#mangaPanel{
+  position:absolute;
+  width:min(300px,92vw);
+  pointer-events:auto;
+  filter:drop-shadow(5px 5px 0 #111);
+}
+
+/* Character bubble wrapper */
+.manga-char-row{
+  display:flex;align-items:flex-end;gap:8px;margin-bottom:6px;
+}
+
+/* SVG mascot */
+#mascotSvg{width:70px;height:70px;flex-shrink:0}
+
+/* Speech bubble */
+.speech-bubble{
+  position:relative;flex:1;
+  background:#fff;border:3px solid #111;border-radius:16px;
+  padding:11px 12px 9px;
+}
+.speech-bubble::after{
+  content:'';position:absolute;
+  bottom:10px;left:-13px;
+  border:7px solid transparent;
+  border-right-color:#111;
+}
+.speech-bubble::before{
+  content:'';position:absolute;
+  bottom:11px;left:-9px;
+  border:6px solid transparent;
+  border-right-color:#fff;
+  z-index:1;
+}
+
+/* Halftone bg on bubble */
+.speech-bubble{
+  background-image:radial-gradient(circle,#eee 1px,transparent 1px);
+  background-size:8px 8px;
+  background-color:#fff;
+}
+
+.sbub-step{
+  font-size:9px;font-weight:900;color:#888;letter-spacing:.6px;
+  text-transform:uppercase;margin-bottom:2px;
+}
+.sbub-title{
+  font-size:15px;font-weight:900;color:#111;
+  line-height:1.25;margin-bottom:5px;
+  text-shadow:1px 1px 0 #ffe600;
+}
+.sbub-body{
+  font-size:12px;color:#333;line-height:1.6;
+  background:#fff;border-radius:8px;padding:4px 6px;
+}
+
+/* Dots */
+.manga-dots{display:flex;gap:5px;justify-content:center;margin:6px 0 8px}
+.manga-dot{
+  width:8px;height:8px;border-radius:50%;
+  border:2px solid #111;background:#fff;
+  transition:background .15s;
+}
+.manga-dot.on{background:#ffe600}
+
+/* Action bar */
+.manga-actions{
+  display:flex;gap:6px;
+  background:#fff;border:3px solid #111;border-radius:12px;
+  padding:9px 10px;box-shadow:4px 4px 0 #111;
+}
+.manga-prev{
+  padding:8px 13px;border-radius:8px;
+  border:2.5px solid #111;background:#fff;
+  font-size:12px;font-weight:900;color:#111;
+  cursor:pointer;font-family:inherit;
+  box-shadow:2px 2px 0 #111;
+}
+.manga-prev:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #111}
+.manga-next{
+  flex:1;padding:9px;border-radius:8px;
+  border:2.5px solid #111;
+  background:#ffe600;color:#111;
+  font-size:13px;font-weight:900;
+  cursor:pointer;font-family:inherit;
+  box-shadow:3px 3px 0 #111;letter-spacing:.3px;
+}
+.manga-next.finish{background:#7bde7b}
+.manga-next:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #111}
+.manga-close{
+  padding:8px 10px;border-radius:8px;
+  border:2.5px solid #111;background:#fff;
+  font-size:14px;color:#111;cursor:pointer;font-family:inherit;
+  box-shadow:2px 2px 0 #111;
+}
+.manga-close:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #111}
+
+/* SFX floating text */
+.sfx{
+  position:absolute;top:-22px;right:-8px;
+  font-size:15px;font-weight:900;color:#e00;
+  transform:rotate(8deg);
+  text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff;
+  pointer-events:none;white-space:nowrap;
+}
+
+/* Spotlight border */
+#guideRing{
+  position:absolute;
+  border:4px solid #ffe600;
+  border-radius:14px;
+  box-shadow:0 0 0 2px #111,0 0 24px 4px rgba(255,230,0,.5);
+  pointer-events:none;
+  transition:all .25s ease;
+}
+</style>
+
+<!-- Launcher -->
+<button id="guideBtn" onclick="toggleGuideMenu()" title="คู่มือ" aria-label="คู่มือการใช้งาน">🐱</button>
+
+<div id="guideMenu">
+  <h4>✦ คู่มือการใช้งาน</h4>
+  <button class="gmenu-btn gin" onclick="startGuide('in')">📥 รับสินค้าเข้าคลัง</button>
+  <button class="gmenu-btn gout" onclick="startGuide('out')">📤 เบิก / จ่ายสินค้า</button>
+  <button class="gmenu-btn gstk" onclick="startGuide('stock')">🔍 เช็คสต็อกสินค้า</button>
+</div>
+
+<!-- Overlay -->
+<div id="guideOverlay">
+  <!-- Dark backdrop with hole -->
+  <svg id="guideSvg" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <mask id="guideMask">
+        <rect width="100%" height="100%" fill="white"/>
+        <rect id="guideHole" rx="10" fill="black" x="0" y="0" width="0" height="0"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#guideMask)"/>
+  </svg>
+  <!-- Spotlight ring -->
+  <div id="guideRing" style="display:none"></div>
+  <!-- Manga panel -->
+  <div id="mangaPanel">
+    <div class="manga-char-row">
+      <!-- Mascot SVG - chibi cat-nurse character -->
+      <svg id="mascotSvg" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+        <!-- Body -->
+        <ellipse cx="35" cy="54" rx="16" ry="13" fill="#fff" stroke="#111" stroke-width="2.5"/>
+        <!-- White coat details -->
+        <rect x="30" y="48" width="10" height="14" rx="3" fill="#e0eeff" stroke="#111" stroke-width="1.5"/>
+        <circle cx="35" cy="53" r="2" fill="#ffe600" stroke="#111" stroke-width="1"/>
+        <!-- Head -->
+        <circle cx="35" cy="30" r="16" fill="#ffd9b3" stroke="#111" stroke-width="2.5"/>
+        <!-- Cat ears -->
+        <polygon points="19,18 14,8 24,16" fill="#ffd9b3" stroke="#111" stroke-width="2"/>
+        <polygon points="51,18 56,8 46,16" fill="#ffd9b3" stroke="#111" stroke-width="2"/>
+        <polygon points="20,17 16,10 23,16" fill="#ffb3c1"/>
+        <polygon points="50,17 54,10 47,16" fill="#ffb3c1"/>
+        <!-- Eyes - big manga eyes -->
+        <ellipse cx="28" cy="30" rx="5.5" ry="6.5" fill="#fff" stroke="#111" stroke-width="1.5"/>
+        <ellipse cx="42" cy="30" rx="5.5" ry="6.5" fill="#fff" stroke="#111" stroke-width="1.5"/>
+        <ellipse cx="28" cy="31" rx="3.5" ry="4.5" fill="#3a3aff"/>
+        <ellipse cx="42" cy="31" rx="3.5" ry="4.5" fill="#3a3aff"/>
+        <ellipse cx="28.5" cy="30" rx="3" ry="4" fill="#111"/>
+        <ellipse cx="42.5" cy="30" rx="3" ry="4" fill="#111"/>
+        <!-- Eye shine -->
+        <circle cx="26.5" cy="28.5" r="1.5" fill="#fff"/>
+        <circle cx="40.5" cy="28.5" r="1.5" fill="#fff"/>
+        <!-- Nose & mouth -->
+        <ellipse cx="35" cy="36" rx="1.5" ry="1" fill="#e08080"/>
+        <path d="M31 38.5 Q35 41.5 39 38.5" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>
+        <!-- Cheeks -->
+        <ellipse cx="23" cy="36" rx="4" ry="2.5" fill="rgba(255,150,150,.35)"/>
+        <ellipse cx="47" cy="36" rx="4" ry="2.5" fill="rgba(255,150,150,.35)"/>
+        <!-- Hair -->
+        <path d="M20,24 Q19,12 35,12 Q51,12 50,24" fill="#8B5E3C" stroke="#111" stroke-width="2"/>
+        <ellipse cx="35" cy="14" rx="10" ry="4" fill="#8B5E3C" stroke="#111" stroke-width="1.5"/>
+        <!-- Hair clip -->
+        <rect x="42" y="15" width="7" height="4" rx="2" fill="#ffe600" stroke="#111" stroke-width="1"/>
+        <!-- Arms -->
+        <path d="M20,48 Q12,52 14,60" stroke="#ffd9b3" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <path d="M50,48 Q58,52 56,60" stroke="#ffd9b3" stroke-width="8" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="speech-bubble">
+        <div class="sbub-step" id="gtStep"></div>
+        <div class="sbub-title" id="gtTitle"></div>
+        <div class="sfx" id="gtSfx"></div>
+        <div class="sbub-body" id="gtBody"></div>
+      </div>
+    </div>
+    <div class="manga-dots" id="gtDots"></div>
+    <div class="manga-actions">
+      <button class="manga-prev" id="gtPrev" onclick="guideNav(-1)">‹ ก่อน</button>
+      <button class="manga-next" id="gtNext">ถัดไป ›</button>
+      <button class="manga-close" onclick="closeGuide()">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const SFX=['HA!','GO!','OK!','YAY!','WOW!','NICE!','DONE!','YES!'];
+const GUIDES={
+  in:{name:'รับสินค้าเข้าคลัง',steps:[
+    {sel:'#t-scan',   sfx:'GO!',  title:'แท็บ "ทำรายการ"',       body:'คลิกแท็บนี้ก่อนเลยนะ! ทุก transaction เริ่มที่นี่จ้า 👆'},
+    {sel:'#mIn',      sfx:'YES!', title:'กดปุ่ม "รับเข้า" 💚',   body:'เลือกโหมด รับเข้า (สีเขียว) ปุ่มจะเปลี่ยนสีให้รู้ว่าเลือกอยู่นะ'},
+    {sel:'.scan-btn', sfx:'SCAN!',title:'สแกน QR / Barcode 📷',  body:'กด "ใช้กล้อง" แล้วชี้ไปที่บาร์โค้ดบนกล่อง — ระบบดึงข้อมูลให้เองเลย ไม่ต้องพิมพ์!'},
+    {sel:'#mf',       sfx:'OK!',  title:'หรือกรอกเองก็ได้!',     body:'ถ้าสแกนไม่ได้ พิมพ์รหัสสินค้าตรงนี้ แล้วกด "ตรวจสอบ" ได้เลย'},
+    {sel:null,        sfx:'WOW!', title:'ระบบดึงข้อมูลให้ ✨',   body:'ชื่อสินค้า, ประเภท และจำนวนคงเหลือจะโผล่ขึ้นมาเอง — ตรวจดูให้ถูกต้องด้วยนะ'},
+    {sel:null,        sfx:'NICE!',title:'กรอกรายละเอียด 📝',     body:'ใส่ SN / LOT (ถ้ามี), จำนวนที่รับ และชื่อคนรับผิดชอบ — กรอกให้ครบนะจ๊ะ'},
+    {sel:'#bIn',      sfx:'DONE!',title:'กด "รับเข้า" เพื่อบันทึก!',body:'กดปุ่มสีเขียวนี้เพื่อยืนยัน — สต็อกเพิ่มขึ้นและบันทึกใน Sheet ทันที ✅ เยี่ยมมาก!'},
+  ]},
+  out:{name:'เบิก / จ่ายสินค้า',steps:[
+    {sel:'#t-scan',   sfx:'GO!',  title:'แท็บ "ทำรายการ"',       body:'เริ่มต้นที่แท็บนี้ก่อนเลยนะ! 👆'},
+    {sel:'#mOut',     sfx:'YES!', title:'กดปุ่ม "จ่ายออก" ❤️',  body:'เลือกโหมด จ่ายออก (สีแดง) เพื่อบันทึกการเบิกหรือจ่ายสินค้าออกนะจ้า'},
+    {sel:'.scan-btn', sfx:'SCAN!',title:'สแกนสินค้า 📷',         body:'กด "ใช้กล้อง" แล้วสแกนบาร์โค้ดสินค้าที่ต้องการเบิก — ง่ายมาก!'},
+    {sel:'#mf',       sfx:'OK!',  title:'หรือกรอกเองก็ได้!',     body:'พิมพ์รหัสสินค้าในช่องนี้ แล้วกด "ตรวจสอบ" ได้เลยจ้า'},
+    {sel:null,        sfx:'WOW!', title:'ตรวจสอบข้อมูล ✨',      body:'ระบบแสดงชื่อสินค้าและสต็อกคงเหลือ — ตรวจให้แน่ใจก่อนจ่ายออกนะ'},
+    {sel:null,        sfx:'NICE!',title:'ระบุผู้รับและจำนวน 📝', body:'กรอกชื่อผู้รับและจำนวนที่จ่ายออก — อย่าลืมตรวจสอบให้ถูกต้องด้วยนะ'},
+    {sel:'#bOut',     sfx:'DONE!',title:'กด "จ่ายออก" เพื่อบันทึก!',body:'กดปุ่มสีแดงนี้เพื่อยืนยัน — สต็อกลดลงและบันทึกใน Sheet ทันที ✅ เก่งมาก!'},
+  ]},
+  stock:{name:'เช็คสต็อกสินค้า',steps:[
+    {sel:'#t-stock',        sfx:'GO!',  title:'แท็บ "สต็อก"',       body:'คลิกที่นี่เพื่อดูรายการสินค้าทั้งหมดในคลัง ง่ายมากเลย! 👆'},
+    {sel:'#stockBreakdown', sfx:'WOW!', title:'ภาพรวมสต็อก 📊',    body:'ตรงนี้แสดงจำนวนรวมแยกตามหมวด: Device, Mask และ Accessory — ดูได้ในแวบเดียว!'},
+    {sel:'#stockSearch',    sfx:'FIND!',title:'ค้นหาสินค้า 🔍',     body:'พิมพ์ชื่อ, Brand, SN หรือ LOT — กรองทันทีโดยไม่ต้องกด Enter เลย เร็วมาก!'},
+    {sel:'#stList',         sfx:'YES!', title:'รายการสินค้า 📦',    body:'🟡 สีเหลือง = ใกล้หมด  🔴 สีแดง = หมดแล้ว  ✅ สีปกติ = โอเคนะ เช็คเสร็จแล้ว!'},
+  ]},
+};
+
+let gType=null,gIdx=0;
+const overlay=document.getElementById('guideOverlay');
+const hole=document.getElementById('guideHole');
+const ring=document.getElementById('guideRing');
+const panel=document.getElementById('mangaPanel');
+
+window.toggleGuideMenu=function(){
+  document.getElementById('guideMenu').classList.toggle('on');
+};
+window.startGuide=function(type){
+  document.getElementById('guideMenu').classList.remove('on');
+  gType=type;gIdx=0;
+  overlay.classList.add('on');
+  renderStep();
+};
+window.guideNav=function(dir){
+  const steps=GUIDES[gType].steps;
+  gIdx=Math.max(0,Math.min(steps.length-1,gIdx+dir));
+  renderStep();
+};
+window.closeGuide=function(){
+  overlay.classList.remove('on');
+  ring.style.display='none';
+  hole.setAttribute('width',0);hole.setAttribute('height',0);
+  gType=null;
+};
+
+function renderStep(){
+  const steps=GUIDES[gType].steps;
+  const s=steps[gIdx];
+  const total=steps.length;
+  const isLast=gIdx===total-1;
+
+  document.getElementById('gtStep').textContent='STEP '+(gIdx+1)+' / '+total;
+  document.getElementById('gtTitle').textContent=s.title;
+  document.getElementById('gtBody').textContent=s.body;
+  document.getElementById('gtSfx').textContent=s.sfx||'';
+
+  // Dots
+  const dotsEl=document.getElementById('gtDots');
+  dotsEl.innerHTML='';
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div');
+    d.className='manga-dot'+(i===gIdx?' on':'');
+    dotsEl.appendChild(d);
+  }
+
+  const prevBtn=document.getElementById('gtPrev');
+  const nextBtn=document.getElementById('gtNext');
+  prevBtn.style.visibility=gIdx===0?'hidden':'visible';
+  nextBtn.textContent=isLast?'✓ เสร็จสิ้น!!':'ถัดไป ›';
+  nextBtn.className='manga-next'+(isLast?' finish':'');
+  nextBtn.onclick=isLast?closeGuide:()=>guideNav(1);
+
+  // Spotlight
+  const target=s.sel?document.querySelector(s.sel):null;
+  if(target&&isElVisible(target)){
+    const r=target.getBoundingClientRect();
+    const pad=10;
+    hole.setAttribute('x',r.left-pad);
+    hole.setAttribute('y',r.top-pad);
+    hole.setAttribute('width',r.width+pad*2);
+    hole.setAttribute('height',r.height+pad*2);
+    // Animated ring
+    ring.style.display='block';
+    ring.style.left=(r.left-pad)+'px';
+    ring.style.top=(r.top-pad)+'px';
+    ring.style.width=(r.width+pad*2)+'px';
+    ring.style.height=(r.height+pad*2)+'px';
+    positionPanel(r);
+  } else {
+    hole.setAttribute('width',0);hole.setAttribute('height',0);
+    ring.style.display='none';
+    centerPanel();
+  }
+}
+
+function isElVisible(el){
+  const r=el.getBoundingClientRect();
+  return r.width>0&&r.height>0&&r.top<window.innerHeight&&r.bottom>0;
+}
+function positionPanel(r){
+  const PW=Math.min(300,window.innerWidth*0.92);
+  const PH=200;
+  const vw=window.innerWidth,vh=window.innerHeight,pad=12;
+  let top=r.bottom+pad;
+  if(top+PH>vh-pad) top=r.top-PH-pad;
+  if(top<pad) top=pad;
+  let left=r.left+r.width/2-PW/2;
+  left=Math.max(pad,Math.min(vw-PW-pad,left));
+  panel.style.top=top+'px';
+  panel.style.left=left+'px';
+  panel.style.transform='';
+  panel.style.width=PW+'px';
+}
+function centerPanel(){
+  panel.style.top='50%';
+  panel.style.left='50%';
+  panel.style.transform='translate(-50%,-50%)';
+  panel.style.width=Math.min(300,window.innerWidth*0.92)+'px';
+}
+
+// Close menu on outside click
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('guideMenu');
+  const btn=document.getElementById('guideBtn');
+  if(menu.classList.contains('on')&&!menu.contains(e.target)&&e.target!==btn)
+    menu.classList.remove('on');
+},true);
+
+// Close overlay on backdrop click
+overlay.addEventListener('click',function(e){
+  if(e.target===overlay||e.target.tagName==='svg'||e.target.tagName==='rect')
+    closeGuide();
+});
+})();
+</script>
+
 </body>
 </html>
