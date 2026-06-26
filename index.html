@@ -177,6 +177,21 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .mbtn-cancel{padding:11px;border-radius:var(--ra);border:1.5px solid var(--bd);background:#fff;font-size:13px;font-family:inherit;font-weight:600;color:var(--mu);cursor:pointer}
 .mbtn-confirm{padding:11px;border-radius:var(--ra);border:none;background:var(--R);color:#fff;font-size:13px;font-family:inherit;font-weight:700;cursor:pointer}
+.fab-add{position:fixed;right:16px;bottom:18px;z-index:420;background:var(--B);color:#fff;border:none;border-radius:999px;padding:11px 15px;font:700 13px/1.2 inherit;box-shadow:0 8px 24px rgba(19,48,87,.28);cursor:pointer}
+.product-modal{align-items:center;padding:14px}
+.product-modal .modal{border-radius:16px;max-height:92vh;overflow:auto;padding-bottom:20px}
+.pform-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.pform-grid .full{grid-column:1/-1}
+.pform label{display:block;font-size:11px;color:var(--mu);font-weight:700;margin:2px 0 5px}
+.pform input,.pform select{width:100%;margin:0 0 9px}
+.pform-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pform-actions button{border:1px solid var(--bd);background:#fff;color:var(--B);border-radius:9px;padding:9px 12px;font:700 12px/1.2 inherit;cursor:pointer}
+.photo-preview{display:none;align-items:center;gap:9px;margin:1px 0 11px}
+.photo-preview.on{display:flex}
+.photo-preview img,.prod-thumb{width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--bd);background:#f7f8fa;flex-shrink:0}
+.manual-row-main{display:flex;align-items:center;gap:9px;min-width:0}
+.scan-photo{margin:0 0 10px}
+.scan-photo img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);background:#f7f8fa}
 
 /* Search box */
 .search-wrap{position:relative;margin-bottom:9px}
@@ -370,6 +385,21 @@ body.admin .admin-only{display:inline-flex}
 
         <label class="flbl" id="locLabel">รับเข้าโดย</label>
         <input type="text" class="finp" id="locI" placeholder="เช่น Benz, Stock, Admin">
+        <datalist id="recipientChoices">
+          <option value="สุโข รักษาการ (สุโข)"></option>
+          <option value="สุพิชชา รักษาการ (ฝ้าย)"></option>
+          <option value="วรยุทธ์ จันทร์ฉวี (โต)"></option>
+          <option value="ชนพัฒน์ บุญสร้าง (ภูมิ)"></option>
+          <option value="เจษฎา ศิริจันทร์ (ก๊อป)"></option>
+          <option value="พลอยธัญญา สินฐิติพงษ์ (แจง)"></option>
+          <option value="ปณภา อวยประเสริฐ (อ๊อฟ)"></option>
+          <option value="กัญญ์ดา วรุณโชติกุล (กุ้ง)"></option>
+          <option value="อดิเทพ พยาราช (บิล)"></option>
+          <option value="วดาวัลย์ โกมลเพลิน (ดีน่า)"></option>
+          <option value="ฐิฆัมพร โพธิ์น้อย (เฟิร์น)"></option>
+          <option value="ปรีณาพรรณ โชติกะสุภา (ฟ้า)"></option>
+          <option value="พัฒนพงษ์ พิชญวานิช (พัฒ)"></option>
+        </datalist>
 
         <div id="qtyRow" style="display:none">
           <label class="flbl">จำนวน (ชิ้น)</label>
@@ -386,6 +416,16 @@ body.admin .admin-only{display:inline-flex}
             <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
           </select>
           <input type="text" class="finp" id="purposeOtherI" placeholder="ระบุวัตถุประสงค์อื่นๆ" oninput="updateActionButtons()" style="display:none">
+        </div>
+
+        <div id="salesDetailFields" style="display:none">
+          <label class="flbl">ข้อมูลขาย (กรอกตอนนี้หรือกรอกย้อนหลังได้)</label>
+          <input type="text" class="finp" id="buyerNameI" placeholder="ชื่อผู้ซื้อ">
+          <input type="text" class="finp" id="hospitalI" placeholder="โรงพยาบาล">
+          <input type="text" class="finp" id="poNoI" placeholder="เลข PO">
+          <input type="date" class="finp" id="saleDateI" placeholder="วันที่ขาย">
+          <input type="number" class="finp" id="salePriceI" placeholder="ราคาขาย" min="0" step="0.01">
+          <input type="number" class="finp" id="wholesalePriceI" placeholder="ราคาส่ง" min="0" step="0.01">
         </div>
 
         <label class="flbl">หมายเหตุ</label>
@@ -428,6 +468,12 @@ body.admin .admin-only{display:inline-flex}
 
     <div id="v-hist" style="display:none">
       <div class="scrd" id="purposeSummary"></div>
+      <div class="scrd">
+        <h3>วิเคราะห์จ่ายออกเพื่อสั่งของ</h3>
+        <input class="finp" id="outMonthI" type="month" onchange="loadMonthlyOutSummaryForSelected()">
+        <button class="bfull bout2" onclick="loadMonthlyOutSummaryForSelected()">วิเคราะห์เดือนที่เลือก</button>
+      </div>
+      <div class="scrd" id="monthlyOutSummary"></div>
       <div id="hiList"></div>
       <div id="hiMore" style="display:none;text-align:center;padding:10px 0">
         <button class="bfull bout2" style="max-width:200px;display:inline-block" onclick="loadMoreHist()">โหลดเพิ่มเติม</button>
@@ -487,6 +533,7 @@ body.admin .admin-only{display:inline-flex}
       <div class="scrd">
         <h3>เครื่องมือผู้ดูแล</h3>
         <button class="bfull bout2 admin-only" onclick="exportCSV()">ดาวน์โหลดประวัติ CSV</button>
+        <button class="bfull bout2 admin-only" onclick="exportAllExcel()">ดาวน์โหลดข้อมูลทั้งหมด Excel</button>
         <button class="bfull bout2 admin-only" onclick="sortDeviceSheetNow()">เรียง Device Sheet A-Z</button>
         <button class="bfull bout2 admin-only" onclick="changeApiUrl()">เปลี่ยน API URL</button>
         <p id="roleNote" style="font-size:11px;color:var(--mu);margin-top:6px;text-align:center"></p>
@@ -505,13 +552,61 @@ body.admin .admin-only{display:inline-flex}
   style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"
 >
 
+<button class="fab-add" type="button" onclick="openAddProductModal()">เพิ่มสินค้า</button>
+<input id="labelPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handleLabelPhoto(this.files && this.files[0])">
+<input id="productPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handleProductPhoto(this.files && this.files[0])">
+
+<!-- Add Product Modal -->
+<div class="modal-bg product-modal" id="addProductModal">
+  <div class="modal">
+    <div class="modal-hd">เพิ่มสินค้าใหม่</div>
+    <div class="modal-sub" id="addProductSub">กรอก PIN เพื่อปลดล็อก</div>
+
+    <div id="addProductPin">
+      <input type="password" id="adminPinInput" inputmode="numeric" maxlength="4" placeholder="PIN 4 หลัก">
+      <div class="modal-row">
+        <button class="mbtn-cancel" onclick="closeAddProductModal()">ยกเลิก</button>
+        <button class="mbtn-confirm" onclick="unlockAddProduct()">ปลดล็อก</button>
+      </div>
+    </div>
+
+    <div id="addProductFormWrap" class="pform" style="display:none">
+      <div class="pform-actions">
+        <button type="button" onclick="pickLabelPhoto()">ถ่ายรูปป้าย</button>
+        <button type="button" onclick="pickProductPhoto()">ถ่ายรูปสินค้า</button>
+      </div>
+      <div class="photo-preview" id="productPhotoPreview">
+        <img id="productPhotoThumb" alt="">
+        <span id="productPhotoStatus" class="hint">อัปโหลดรูปสินค้าแล้ว</span>
+      </div>
+
+      <div class="pform-grid">
+        <div class="full"><label>GTIN</label><input id="newGtin" type="text" inputmode="numeric" placeholder="พิมพ์หรือสแกนบาร์โค้ด"></div>
+        <div class="full"><label>ชื่อสินค้า*</label><input id="newProductName" type="text" placeholder="ชื่อสินค้า"></div>
+        <div><label>Brand</label><select id="newBrand"><option>APEX</option><option>Wellell</option><option>Hunan Beyond</option><option>Philips</option><option>ResMed</option><option>อื่นๆ</option></select></div>
+        <div><label>ประเภท</label><select id="newType"><option value="device">device</option><option value="mask">mask</option><option value="accessory">accessory</option></select></div>
+        <div><label>Model</label><input id="newModel" type="text"></div>
+        <div><label>Size</label><input id="newSize" type="text"></div>
+        <div><label>REF</label><input id="newRef" type="text"></div>
+        <div><label>หมวดหมู่</label><select id="newCategory"></select></div>
+        <div class="full"><label>ชื่อเล่น (Aliases)</label><input id="newAliases" type="text" placeholder="คั่นด้วยจุลภาค"></div>
+      </div>
+      <input id="newPhotoUrl" type="hidden">
+      <div class="modal-row">
+        <button class="mbtn-cancel" onclick="closeAddProductModal()">ยกเลิก</button>
+        <button class="mbtn-confirm" onclick="saveNewProduct()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Quick Out Modal -->
 <div class="modal-bg" id="quickOutModal">
   <div class="modal">
 
     <div class="modal-hd">จ่ายออก</div>
     <div class="modal-sub" id="modalItemName">-</div>
-    <input type="text" id="modalWho" placeholder="ผู้เบิก/ผู้รับของ เช่น Mint, Ploy">
+    <input type="text" id="modalWho" list="recipientChoices" placeholder="เลือกหรือพิมพ์ชื่อเซลล์">
     <select id="modalPurpose" onchange="document.getElementById('modalPurposeOther').style.display=this.value==='อื่นๆ'?'block':'none'">
       <option value="">เลือกวัตถุประสงค์</option>
       <option value="ขาย">ขาย</option>
@@ -535,7 +630,9 @@ let API_URL  = localStorage.getItem('skl_api') || '';
 let AUTH_TOKEN = localStorage.getItem('skl_token') || '';
 let CUR_USER = '', CUR_ROLE = 'stock', CUR_STAFF = localStorage.getItem('skl_staff') || '';
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
-let CACHE = { device:[], mask:[], accessory:[], history:[], products:[] };
+let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
+const ADD_PRODUCT_PIN = '1234';
+const ADD_PRODUCT_UNLOCK_MS = 30 * 60 * 1000;
 let IS_PROCESSING = false;
 let PENDING_SCAN = null;
 let LAST_SCAN_TEXT = '';
@@ -543,9 +640,10 @@ let LAST_SCAN_TIME = 0;
 const DUP_MS = 8000;
 let HIST_OFFSET = 0;
 const HIST_PAGE = 50;
-let LAST_OUT_RECIPIENT = localStorage.getItem('skl_last_out_recipient') || '';
-let LAST_OUT_PURPOSE = localStorage.getItem('skl_last_out_purpose') || '';
-let LAST_OUT_PURPOSE_OTHER = localStorage.getItem('skl_last_out_purpose_other') || '';
+let SELECTED_OUT_MONTH = currentMonthValue();
+localStorage.removeItem('skl_last_out_recipient');
+localStorage.removeItem('skl_last_out_purpose');
+localStorage.removeItem('skl_last_out_purpose_other');
 let SELECTED_NAME_PRODUCT_CODE = '';
 
 let HID_ENABLED = false;
@@ -972,6 +1070,172 @@ async function apiPost(body, url) {
   catch(e) { throw new Error('Response not JSON: ' + txt.slice(0,120)); }
 }
 
+function isAddProductUnlocked() {
+  return Number(sessionStorage.getItem('skl_add_product_unlocked_until') || 0) > Date.now();
+}
+
+function openAddProductModal() {
+  if (!API_URL) { toast('ยังไม่ได้ตั้งค่า API URL', 'warn'); return; }
+  const modal = document.getElementById('addProductModal');
+  modal.classList.add('on');
+  populateAddProductCategories();
+  const unlocked = isAddProductUnlocked();
+  document.getElementById('addProductPin').style.display = unlocked ? 'none' : 'block';
+  document.getElementById('addProductFormWrap').style.display = unlocked ? 'block' : 'none';
+  document.getElementById('addProductSub').textContent = unlocked ? 'กรอกข้อมูลสินค้าใหม่' : 'กรอก PIN เพื่อปลดล็อก';
+  setTimeout(() => document.getElementById(unlocked ? 'newGtin' : 'adminPinInput')?.focus(), 80);
+}
+
+function closeAddProductModal() {
+  document.getElementById('addProductModal')?.classList.remove('on');
+}
+
+function unlockAddProduct() {
+  const pin = document.getElementById('adminPinInput')?.value.trim() || '';
+  if (pin !== ADD_PRODUCT_PIN) { toast('PIN ไม่ถูกต้อง', 'err'); return; }
+  sessionStorage.setItem('skl_add_product_unlocked_until', String(Date.now() + ADD_PRODUCT_UNLOCK_MS));
+  document.getElementById('adminPinInput').value = '';
+  openAddProductModal();
+}
+
+function populateAddProductCategories() {
+  const sel = document.getElementById('newCategory');
+  if (!sel) return;
+  const current = sel.value;
+  const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">เลือกหมวดหมู่</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if (current && cats.includes(current)) sel.value = current;
+}
+
+function pickLabelPhoto() {
+  document.getElementById('labelPhotoInput').click();
+}
+
+function pickProductPhoto() {
+  document.getElementById('productPhotoInput').click();
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('อ่านไฟล์ไม่สำเร็จ'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleLabelPhoto(file) {
+  if (!file) return;
+  try {
+    toast('กำลังอ่านป้ายสินค้า...', 'ok');
+    const image = await fileToDataUrl(file);
+    const res = await apiPost({ action:'ocr_label', image, filename:file.name || 'label.jpg' });
+    if (!res.ok) throw new Error(res.error || 'OCR error');
+    const parsed = parseOcrProductText(res.text || '');
+    applyOcrToForm(parsed);
+    toast('อ่านป้ายแล้ว กรุณาตรวจข้อมูลอีกครั้ง', 'ok');
+  } catch(e) {
+    toast('OCR ล้มเหลว: ' + e.message + ' — พิมพ์เองได้เลย', 'err');
+  } finally {
+    const input = document.getElementById('labelPhotoInput');
+    if (input) input.value = '';
+  }
+}
+
+async function handleProductPhoto(file) {
+  if (!file) return;
+  try {
+    toast('กำลังอัปโหลดรูปสินค้า...', 'ok');
+    const image = await fileToDataUrl(file);
+    const res = await apiPost({ action:'upload_product_photo', image, filename:file.name || 'product.jpg' });
+    if (!res.ok) throw new Error(res.error || 'Upload error');
+    document.getElementById('newPhotoUrl').value = res.url || '';
+    const thumb = document.getElementById('productPhotoThumb');
+    thumb.src = res.url || image;
+    document.getElementById('productPhotoPreview').classList.add('on');
+    document.getElementById('productPhotoStatus').textContent = 'อัปโหลดรูปสินค้าแล้ว';
+    toast('อัปโหลดรูปสินค้าแล้ว', 'ok');
+  } catch(e) {
+    toast('อัปโหลดรูปไม่สำเร็จ: ' + e.message, 'err');
+  } finally {
+    const input = document.getElementById('productPhotoInput');
+    if (input) input.value = '';
+  }
+}
+
+function parseOcrProductText(text) {
+  const raw = String(text || '');
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const ref = (raw.match(/\bREF\s*[:#-]?\s*([A-Z0-9._/-]+)/i) || [])[1] || '';
+  let gtin = ((raw.match(/\(01\)\s*(\d{13,14})/) || [])[1] || '');
+  if (!gtin) gtin = (raw.match(/\b(\d{13,14})\b/) || [])[1] || '';
+  const productName = (lines.find(line =>
+    !/^\d+$/.test(line) &&
+    !/\b(REF|LOT|GTIN|EXP|MFG|SN|UDI|\(01\))\b/i.test(line) &&
+    !/^\d{8,14}$/.test(line)
+  ) || '').trim();
+  return { gtin, ref, productName };
+}
+
+function applyOcrToForm(data) {
+  if (data.gtin && !document.getElementById('newGtin').value.trim()) document.getElementById('newGtin').value = data.gtin;
+  if (data.ref && !document.getElementById('newRef').value.trim()) document.getElementById('newRef').value = data.ref;
+  if (data.productName && !document.getElementById('newProductName').value.trim()) document.getElementById('newProductName').value = data.productName;
+}
+
+async function saveNewProduct() {
+  const productName = document.getElementById('newProductName').value.trim();
+  if (!productName) { toast('กรุณากรอกชื่อสินค้า', 'warn'); document.getElementById('newProductName').focus(); return; }
+  const payload = {
+    action:'add_product',
+    gtin: document.getElementById('newGtin').value.trim(),
+    productName,
+    brand: document.getElementById('newBrand').value,
+    type: document.getElementById('newType').value,
+    model: document.getElementById('newModel').value.trim(),
+    size: document.getElementById('newSize').value.trim(),
+    ref: document.getElementById('newRef').value.trim(),
+    category: document.getElementById('newCategory').value,
+    aliases: document.getElementById('newAliases').value.trim(),
+    hasBarcode: !!document.getElementById('newGtin').value.trim(),
+    photoUrl: document.getElementById('newPhotoUrl').value.trim()
+  };
+  try {
+    const res = await apiPost(payload);
+    if (!res.ok) throw new Error(res.error || 'API error');
+    toast('บันทึกสินค้าใหม่แล้ว', 'ok');
+    clearAddProductForm();
+    closeAddProductModal();
+    await refreshProductsOnly();
+  } catch(e) {
+    toast('บันทึกไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+function clearAddProductForm() {
+  ['newGtin','newProductName','newModel','newSize','newRef','newAliases','newPhotoUrl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('newBrand').value = 'APEX';
+  document.getElementById('newType').value = 'device';
+  document.getElementById('newCategory').value = '';
+  document.getElementById('productPhotoPreview').classList.remove('on');
+  document.getElementById('productPhotoThumb').removeAttribute('src');
+}
+
+async function refreshProductsOnly() {
+  const prods = await apiFetch(buildApiUrl(API_URL, { action:'products' }));
+  if (prods && prods.ok && prods.products) {
+    CACHE.products = prods.products;
+    populateProductFilters();
+    populateAddProductCategories();
+    renderManualProducts();
+    renderStocktake();
+    renderProductNameManager();
+  }
+}
+
 async function fetchWithTimeout(url, opts = {}, timeoutMs = 45000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -988,11 +1252,15 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = 45000) {
 async function loadAll() {
   setPill('busy');
   HIST_OFFSET = 0;
+  syncOutMonthInput();
+  const outMonth = selectedOutMonthParts();
   try {
-    const [stock, hist, prods] = await Promise.all([
+    const [stock, hist, prods, monthlyOut, salesAlerts] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'stock' })),
       apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
       apiFetch(buildApiUrl(API_URL, { action:'products' })),
+      apiFetch(buildApiUrl(API_URL, { action:'monthly_out_summary', year:outMonth.year, month:outMonth.month })),
+      apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' })),
     ]);
 
     if (!stock.ok) throw new Error(stock.error);
@@ -1001,6 +1269,8 @@ async function loadAll() {
     CACHE.mask      = stock.mask || [];
     CACHE.accessory = stock.accessory || [];
     CACHE.history   = (hist && hist.history) ? hist.history : [];
+    CACHE.monthlyOut = monthlyOut && monthlyOut.ok ? monthlyOut : null;
+    CACHE.salesAlerts = salesAlerts && salesAlerts.ok ? (salesAlerts.alerts || []) : [];
     if (prods && prods.ok && prods.products) CACHE.products = prods.products;
     populateProductFilters();
     renderManualProducts();
@@ -1637,6 +1907,25 @@ function productSearchText(p) {
   ].join(' ').toLowerCase();
 }
 
+function productPhotoUrl(p) {
+  return p?.photoUrl || p?.photo_url || p?.['Photo URL'] || '';
+}
+
+function photoUrlForStockItem(it) {
+  const gtin = normalizeGtinForMatch(it?.['GTIN / Barcode'] || '');
+  const name = String(it?.['Product Name'] || '').trim().toLowerCase();
+  const brand = String(it?.['Brand'] || '').trim().toLowerCase();
+  const hit = (CACHE.products || []).find(p => {
+    const pPhoto = productPhotoUrl(p);
+    if (!pPhoto) return false;
+    const pGtin = normalizeGtinForMatch(p.gtin || '');
+    if (gtin && pGtin && gtin === pGtin) return true;
+    return name && String(p.name || p.product_name || '').trim().toLowerCase() === name &&
+      (!brand || String(p.brand || '').trim().toLowerCase() === brand);
+  });
+  return productPhotoUrl(hit);
+}
+
 function populateProductFilters() {
   const cats = [...new Set((CACHE.products || []).map(p => p.category).filter(Boolean))].sort();
   const brands = [...new Set((CACHE.products || []).map(p => p.brand).filter(Boolean))].sort();
@@ -1789,7 +2078,10 @@ function renderManualProducts() {
   const rows = filteredProducts('manual').slice(0, 80);
   el.innerHTML = rows.length ? rows.map((p, i) => `
     <div class="manual-row selectable" onclick="selectManualProduct(${i})">
-      <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
+      <div class="manual-row-main">
+        ${productPhotoUrl(p) ? `<img class="prod-thumb" src="${escapeHtml(productPhotoUrl(p))}" alt="">` : ''}
+        <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
+      </div>
       <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
     </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
   if (!rows.length && MODE === 'out' && PENDING_SCAN && !PENDING_SCAN.allowAllStock) {
@@ -1828,27 +2120,8 @@ function selectManualProduct(i) {
   if (MODE === 'out') prepareOutFormAfterScan(LAST);
 }
 
-function applyLastOutDefaults() {
-  const loc = document.getElementById('locI');
-  const purpose = document.getElementById('purposeI');
-  const purposeOther = document.getElementById('purposeOtherI');
-  if (loc && !loc.value.trim() && LAST_OUT_RECIPIENT) loc.value = LAST_OUT_RECIPIENT;
-  if (purpose && !purpose.value && LAST_OUT_PURPOSE) purpose.value = LAST_OUT_PURPOSE;
-  if (purposeOther && !purposeOther.value.trim() && LAST_OUT_PURPOSE_OTHER) purposeOther.value = LAST_OUT_PURPOSE_OTHER;
-}
-
-function rememberOutDefaults(recipient, purpose, purposeOther) {
-  LAST_OUT_RECIPIENT = recipient || '';
-  LAST_OUT_PURPOSE = purpose || '';
-  LAST_OUT_PURPOSE_OTHER = purposeOther || '';
-  localStorage.setItem('skl_last_out_recipient', LAST_OUT_RECIPIENT);
-  localStorage.setItem('skl_last_out_purpose', LAST_OUT_PURPOSE);
-  localStorage.setItem('skl_last_out_purpose_other', LAST_OUT_PURPOSE_OTHER);
-}
-
 function prepareOutFormAfterScan(item = LAST) {
   if (MODE !== 'out' || !item) return;
-  applyLastOutDefaults();
   const qty = document.getElementById('qtyI');
   if (qty && transactionNeedsQty('out', item.stockItem?._type || item.p?.type || '')) qty.value = qty.value || '1';
   updateActionButtons();
@@ -1883,6 +2156,17 @@ function requiredTrackingValue(type) {
   if (type === 'device') return { key:'sn', value:v };
   if (type === 'mask' || type === 'accessory') return { key:'lot', value:v };
   return { key:'', value:'' };
+}
+
+function getSalesDetailInputs() {
+  return {
+    buyerName: document.getElementById('buyerNameI')?.value.trim() || '',
+    hospital: document.getElementById('hospitalI')?.value.trim() || '',
+    poNo: document.getElementById('poNoI')?.value.trim() || '',
+    saleDate: document.getElementById('saleDateI')?.value || '',
+    salePrice: document.getElementById('salePriceI')?.value.trim() || '',
+    wholesalePrice: document.getElementById('wholesalePriceI')?.value.trim() || ''
+  };
 }
 
 function syncSnLotInput() {
@@ -2054,6 +2338,7 @@ function updateModeUI() {
   document.getElementById('bOut').disabled = false;
   document.getElementById('locLabel').textContent = isIn ? 'รับเข้าโดย' : 'จ่ายออกให้ใคร';
   document.getElementById('locI').placeholder = isIn ? 'เช่น Benz, Stock, Admin' : 'เช่น Mint, Ploy, ชื่อลูกค้า';
+  document.getElementById('locI').setAttribute('list', isIn ? '' : 'recipientChoices');
   document.getElementById('scanHint').innerHTML = isIn
     ? '<span class="dot"></span>รับเข้า: สแกนแล้วบันทึกอัตโนมัติ'
     : '<span class="dot"></span>สแกนจ่ายออก แล้วตรวจสอบก่อนกดจ่ายออก';
@@ -2065,6 +2350,8 @@ function updateModeUI() {
   document.getElementById('qtyRow').style.display = showQty ? 'block' : 'none';
   const outFields = document.getElementById('outRequiredFields');
   if (outFields) outFields.style.display = isIn ? 'none' : 'block';
+  const salesFields = document.getElementById('salesDetailFields');
+  if (salesFields) salesFields.style.display = isIn ? 'none' : 'block';
   updateActionButtons();
 }
 
@@ -2102,7 +2389,10 @@ function showResult(d) {
 
   if (!rows.length) rows.push(['ข้อมูล', d.raw]);
 
-  document.getElementById('rkv').innerHTML = rows.map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
+  const photo = productPhotoUrl(d.p);
+  document.getElementById('rkv').innerHTML =
+    (photo ? `<dt>รูป</dt><dd class="scan-photo"><img src="${escapeHtml(photo)}" alt=""></dd>` : '') +
+    rows.map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
 
   if (d.p && d.p.type) {
     document.getElementById('iType').value = d.p.type;
@@ -2138,6 +2428,10 @@ function resetScan(opts = {}) {
   document.getElementById('noteI').value = '';
   const p = document.getElementById('purposeI'); if (p) p.value = '';
   const po = document.getElementById('purposeOtherI'); if (po) { po.value = ''; po.style.display = 'none'; }
+  ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   if (opts.clearLocation) document.getElementById('locI').value = '';
   if (!opts.keepScanner) {
     stopScannerOnly();
@@ -2234,9 +2528,20 @@ function _patchCache(action, b) {
     'Purpose':             b.purpose || '',
     'Location / Recipient':b.location || '',
     'Recorded By':         b.user     || CUR_USER || '',
+    'Qty':                 qty,
+    'Model':               b.model || '',
+    'Size':                b.size || '',
+    'Reference':           b.ref || '',
+    'Buyer Name':          b.buyerName || '',
+    'Hospital':            b.hospital || '',
+    'PO No':               b.poNo || '',
+    'Sale Date':           b.saleDate || '',
+    'Sale Price':          b.salePrice || '',
+    'Wholesale Price':     b.wholesalePrice || '',
     'Note':                b.note     || '',
   });
   if (CACHE.history.length > 200) CACHE.history.length = 200;
+  _patchMonthlyOutSummary(action, b);
 }
 
 function _scheduleBgSync() {
@@ -2271,6 +2576,7 @@ async function doAct(action) {
     : 1;
   const purpose = document.getElementById('purposeI')?.value || '';
   const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
+  const salesDetails = getSalesDetailInputs();
   const tracking = requiredTrackingValue(type);
   const sn = stockItem ? (stockItem['Serial Number (SN)'] || LAST.sn || '') : (tracking.key === 'sn' ? tracking.value : (LAST.sn || ''));
   const lot = stockItem ? (stockItem['LOT Number'] || LAST.lot || '') : (tracking.key === 'lot' ? tracking.value : (LAST.lot || ''));
@@ -2337,6 +2643,7 @@ async function doAct(action) {
       purposeOther,
       note,
       qty,
+      ...salesDetails,
       productCode: LAST.p?.product_code || '',
       user: CUR_USER,
       staffName: CUR_STAFF
@@ -2370,10 +2677,6 @@ async function doAct(action) {
       throw new Error(res.error || 'API error');
     }
     
-    const keepLoc = loc;
-    const keepPurpose = purpose;
-    const keepPurposeOther = purposeOther;
-    if (action === 'out') rememberOutDefaults(keepLoc, keepPurpose, keepPurposeOther);
     _patchCache(action, payload);  
     learnMappingIntoCache(payload);
     renderStock();
@@ -2386,14 +2689,18 @@ async function doAct(action) {
     });
 
     if (action === 'out') {
-      document.getElementById('locI').value = keepLoc;
+      document.getElementById('locI').value = '';
       const purposeEl = document.getElementById('purposeI');
       const purposeOtherEl = document.getElementById('purposeOtherI');
-      if (purposeEl) purposeEl.value = keepPurpose;
+      if (purposeEl) purposeEl.value = '';
       if (purposeOtherEl) {
-        purposeOtherEl.value = keepPurposeOther;
-        purposeOtherEl.style.display = keepPurpose === 'อื่นๆ' ? 'block' : 'none';
+        purposeOtherEl.value = '';
+        purposeOtherEl.style.display = 'none';
       }
+      ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       updateActionButtons();
       focusScanInput(80);
       toast('✅ จ่ายออกสำเร็จ', 'ok');
@@ -2469,6 +2776,7 @@ function confirmQuickOut() {
     brand: item['Brand'] || '',
     model: item['Model'] || '',
     size: item['Size'] || '',
+    ref: item['REF'] || '',
     sn: item['Serial Number (SN)'] || '',
     lot: item['LOT Number'] || '',
     gtin: item['GTIN / Barcode'] || '',
@@ -2478,6 +2786,12 @@ function confirmQuickOut() {
     purposeOther,
     note: 'quick out from stock card',
     qty: outQty,
+    buyerName: '',
+    hospital: '',
+    poNo: '',
+    saleDate: '',
+    salePrice: '',
+    wholesalePrice: '',
     user: CUR_USER,
     staffName: CUR_STAFF
   };
@@ -2614,8 +2928,9 @@ function renderAttention(items) {
     const exp = expDays !== null && expDays <= WARN_DAYS;
     return { it, qty, expDays, low, exp };
   }).filter(x => x.low || x.exp);
+  const salesAlerts = (CACHE.salesAlerts || []).map(a => ({ sales:a }));
 
-  if (!flagged.length) {
+  if (!flagged.length && !salesAlerts.length) {
     box.style.display = 'none';
     box.innerHTML = '';
     return;
@@ -2627,12 +2942,25 @@ function renderAttention(items) {
     return pa - pb;
   });
 
-  const top = flagged.slice(0, 6);
-  const more = flagged.length - top.length;
+  const combined = [...salesAlerts, ...flagged].slice(0, 8);
+  const total = salesAlerts.length + flagged.length;
+  const more = total - combined.length;
 
   box.innerHTML = `
-    <div class="attn-hd">⚠️ ต้องตรวจสอบ (${flagged.length} รายการ)</div>
-    ${top.map(x => {
+    <div class="attn-hd">⚠️ ต้องตรวจสอบ (${total} รายการ)</div>
+    ${combined.map(x => {
+      if (x.sales) {
+        const a = x.sales;
+        return `
+          <div class="attn-row" data-hrow="${escapeHtml(String(a.historyRow || ''))}">
+            <div>
+              <div class="attn-main">${escapeHtml(a.productName || '-')}</div>
+              <div class="attn-sub">${escapeHtml(a.message || '')}<br>${escapeHtml(a.recipient || '-')} · ${escapeHtml(a.serialLot || '-')}</div>
+            </div>
+            <span class="attn-tag exp">${escapeHtml(String(a.ageDays || 0))} วัน</span>
+          </div>
+        `;
+      }
       const name = x.it['Product Name'] || '-';
       const sub = x.it._type === 'device'
         ? ('SN ' + (x.it['Serial Number (SN)'] || '-'))
@@ -2661,6 +2989,15 @@ function renderAttention(items) {
 
   box.querySelectorAll('.attn-row').forEach(row => {
     row.onclick = () => {
+      const hrow = row.getAttribute('data-hrow');
+      if (hrow) {
+        goTab('hist');
+        setTimeout(() => {
+          const target = document.querySelector(`[data-history-row="${CSS.escape(hrow)}"]`);
+          if (target) target.scrollIntoView({behavior:'smooth', block:'center'});
+        }, 80);
+        return;
+      }
       const q = row.getAttribute('data-q') || '';
       const input = document.getElementById('stockSearch');
       if (input) { input.value = q; }
@@ -2714,6 +3051,7 @@ function renderStock() {
     const idLine = it._type === 'device'
       ? ('SN ' + (it['Serial Number (SN)'] || '-'))
       : ('LOT ' + (it['LOT Number'] || '-'));
+    const photo = photoUrlForStockItem(it);
 
     let expBadge = '';
     if (expDays !== null && expDays <= WARN_DAYS) {
@@ -2728,6 +3066,7 @@ function renderStock() {
     return `
       <div class="ic ${it._type}">
         <div class="ic-top">
+          ${photo ? `<img class="prod-thumb" src="${escapeHtml(photo)}" alt="">` : ''}
           <div class="ic-nm">${escapeHtml(it['Product Name'] || '-')}</div>
           <div class="bg ${badgeCls}">${escapeHtml(it._type)}</div>
         </div>
@@ -2770,6 +3109,156 @@ function renderPurposeSummary(items) {
   el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
 }
 
+function renderMonthlyOutSummary() {
+  const el = document.getElementById('monthlyOutSummary');
+  if (!el) return;
+  const data = CACHE.monthlyOut || monthlyOutSummaryFromHistory(CACHE.history || []);
+  const now = new Date();
+  const year = data.year || now.getFullYear();
+  const monthNum = data.month || (now.getMonth() + 1);
+  const month = new Date(year, monthNum - 1, 1).toLocaleDateString('th-TH', { year:'numeric', month:'long' });
+  const rows = (data.rows || []).slice(0, 20);
+
+  if (!rows.length) {
+    el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3><div class="empty"><div class="empty-ic">📊</div><div>ยังไม่มีรายการจ่ายออกในเดือนนี้</div></div>`;
+    return;
+  }
+
+  const totalQty = Number(data.totalQty || rows.reduce((n, r) => n + Number(r.qty || 0), 0));
+  el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3>` +
+    `<div class="bdash-row"><div>รวมจ่ายออกเดือนที่เลือก</div><div class="bdash-qty">${escapeHtml(String(totalQty))}</div></div>` +
+    rows.map(r => {
+      const currentQty = currentQtyForMonthlyRow(r);
+      const forecastQty = Number(r.forecastQty || r.qty || 0);
+      const suggested = Math.max(0, forecastQty - currentQty);
+      const sub = [
+        r.type || '',
+        r.brand || '',
+        r.reference ? 'REF ' + r.reference : ''
+      ].filter(Boolean).join(' · ');
+      const stats = `เดือนที่เลือก ${Number(r.qty || 0)} · เฉลี่ย 3 เดือนก่อน ${Number(r.prevAvg || 0)} · เดือนเดียวกันปีก่อน ${Number(r.sameMonthLastYearQty || 0)}`;
+      return `<div class="bdash-row">
+        <div>
+          <b>${escapeHtml(r.productName || '-')}</b>
+          <div class="hm">${escapeHtml(sub || '-')}</div>
+          <div class="hm">${escapeHtml(stats)}</div>
+          <div class="hm">Forecast ${escapeHtml(String(forecastQty))} · คงเหลือ ${escapeHtml(String(currentQty))}${suggested ? ` · แนะนำสั่งเพิ่ม ${escapeHtml(String(suggested))}` : ''}</div>
+        </div>
+        <div class="bdash-qty">${escapeHtml(String(forecastQty))}</div>
+      </div>`;
+    }).join('');
+}
+
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function syncOutMonthInput() {
+  const el = document.getElementById('outMonthI');
+  if (el && !el.value) el.value = SELECTED_OUT_MONTH;
+}
+
+function selectedOutMonthParts() {
+  const el = document.getElementById('outMonthI');
+  const value = (el && el.value) || SELECTED_OUT_MONTH || currentMonthValue();
+  SELECTED_OUT_MONTH = value;
+  const m = value.match(/^(\d{4})-(\d{2})$/);
+  if (!m) {
+    const now = new Date();
+    return {year: now.getFullYear(), month: now.getMonth() + 1};
+  }
+  return {year: Number(m[1]), month: Number(m[2])};
+}
+
+async function loadMonthlyOutSummaryForSelected() {
+  const outMonth = selectedOutMonthParts();
+  const el = document.getElementById('monthlyOutSummary');
+  if (el) el.innerHTML = '<h3>สรุปจ่ายออกรายสินค้า</h3><div class="hm">กำลังวิเคราะห์...</div>';
+  try {
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'monthly_out_summary', year:outMonth.year, month:outMonth.month }));
+    if (!res.ok) throw new Error(res.error || 'API error');
+    CACHE.monthlyOut = res;
+    renderMonthlyOutSummary();
+  } catch(e) {
+    if (el) el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า</h3><div class="hm">โหลดรายงานไม่สำเร็จ: ${escapeHtml(e.message)}</div>`;
+    toast('โหลดรายงาน forecast ไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+function monthlyOutSummaryFromHistory(items) {
+  const now = new Date();
+  const map = new Map();
+  (items || []).forEach(it => {
+    if (String(it['Action'] || '') !== 'Stock Out') return;
+    if (!isHistoryInCurrentMonth(it, now)) return;
+    const row = {
+      type: it['Type'] || '',
+      productName: it['Product Name'] || '-',
+      brand: it['Brand'] || '',
+      reference: it['Reference'] || '',
+    };
+    const key = [row.type, row.productName, row.brand, row.reference].join('|').toUpperCase();
+    const cur = map.get(key) || {...row, qty:0};
+    cur.qty += historyQty(it);
+    map.set(key, cur);
+  });
+  const rows = Array.from(map.values()).sort((a,b) => Number(b.qty || 0) - Number(a.qty || 0));
+  rows.forEach(r => {
+    r.prevAvg = 0;
+    r.sameMonthLastYearQty = 0;
+    r.forecastQty = Number(r.qty || 0);
+  });
+  return {year: now.getFullYear(), month: now.getMonth() + 1, totalQty: rows.reduce((n,r) => n + Number(r.qty || 0), 0), rows};
+}
+
+function currentQtyForMonthlyRow(row) {
+  const type = String(row.type || '').toLowerCase();
+  const name = String(row.productName || '').trim().toLowerCase();
+  const brand = String(row.brand || '').trim().toLowerCase();
+  const ref = String(row.reference || '').trim().toLowerCase();
+  const match = it =>
+    String(it['Product Name'] || '').trim().toLowerCase() === name &&
+    (!brand || String(it['Brand'] || '').trim().toLowerCase() === brand) &&
+    (!ref || String(it['REF'] || '').trim().toLowerCase() === ref);
+
+  if (type.includes('device')) return (CACHE.device || []).filter(match).length;
+  if (type.includes('mask')) return (CACHE.mask || []).filter(match).reduce((n, it) => n + Number(it['Qty'] || 0), 0);
+  if (type.includes('accessory')) return (CACHE.accessory || []).filter(match).reduce((n, it) => n + Number(it['Qty'] || 0), 0);
+  return [...(CACHE.device || []), ...(CACHE.mask || []), ...(CACHE.accessory || [])]
+    .filter(match)
+    .reduce((n, it) => n + (it._type === 'device' ? 1 : Number(it['Qty'] || 0)), 0);
+}
+
+function _patchMonthlyOutSummary(action, b) {
+  if (action !== 'out') return;
+  const now = new Date();
+  if (CACHE.monthlyOut && (CACHE.monthlyOut.year !== now.getFullYear() || CACHE.monthlyOut.month !== now.getMonth() + 1)) return;
+  if (!CACHE.monthlyOut) {
+    CACHE.monthlyOut = {ok:true, year:now.getFullYear(), month:now.getMonth() + 1, totalQty:0, rows:[]};
+  }
+  const type = b.type === 'device' ? 'Device' : b.type === 'mask' ? 'Mask' : b.type === 'accessory' ? 'Accessory' : b.type;
+  const row = {
+    type,
+    productName: b.name || '-',
+    brand: b.brand || '',
+    reference: b.ref || '',
+    qty: Number(b.qty || 1),
+    prevAvg: 0,
+    sameMonthLastYearQty: 0,
+    forecastQty: Number(b.qty || 1)
+  };
+  const key = [row.type, row.productName, row.brand, row.reference].join('|').toUpperCase();
+  const hit = CACHE.monthlyOut.rows.find(r => [r.type, r.productName, r.brand, r.reference].join('|').toUpperCase() === key);
+  if (hit) {
+    hit.qty = Number(hit.qty || 0) + row.qty;
+    hit.forecastQty = Math.ceil(Math.max(Number(hit.qty || 0), Number(hit.prevAvg || 0), Number(hit.sameMonthLastYearQty || 0)));
+  }
+  else CACHE.monthlyOut.rows.push(row);
+  CACHE.monthlyOut.totalQty = Number(CACHE.monthlyOut.totalQty || 0) + row.qty;
+  CACHE.monthlyOut.rows.sort((a,b) => Number(b.qty || 0) - Number(a.qty || 0));
+}
+
 function isHistoryInCurrentMonth(it, now = new Date()) {
   const raw = String(it?.['Date'] || '').trim();
   if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
@@ -2803,10 +3292,72 @@ function historyQty(it) {
   return String(it?.['Action'] || '') === 'Stock Out' ? 1 : 0;
 }
 
+function salesDetailForm(it) {
+  if (String(it['Action'] || '') !== 'Stock Out' || !it._sheetRow) return '';
+  const row = String(it._sheetRow);
+  return `
+    <div class="mform" data-history-row="${escapeHtml(row)}" style="margin-top:8px">
+      <input type="text" class="finp" data-sales-field="buyerName" value="${escapeHtml(it['Buyer Name'] || '')}" placeholder="ชื่อผู้ซื้อ">
+      <input type="text" class="finp" data-sales-field="hospital" value="${escapeHtml(it['Hospital'] || '')}" placeholder="โรงพยาบาล">
+      <input type="text" class="finp" data-sales-field="poNo" value="${escapeHtml(it['PO No'] || '')}" placeholder="เลข PO">
+      <input type="date" class="finp" data-sales-field="saleDate" value="${escapeHtml(formatDateInputValue(it['Sale Date'] || ''))}">
+      <input type="number" class="finp" data-sales-field="salePrice" value="${escapeHtml(it['Sale Price'] || '')}" placeholder="ราคาขาย" min="0" step="0.01">
+      <input type="number" class="finp" data-sales-field="wholesalePrice" value="${escapeHtml(it['Wholesale Price'] || '')}" placeholder="ราคาส่ง" min="0" step="0.01">
+      <input type="text" class="finp" data-sales-field="model" value="${escapeHtml(it['Model'] || '')}" placeholder="รุ่น">
+      <input type="text" class="finp" data-sales-field="size" value="${escapeHtml(it['Size'] || '')}" placeholder="ไซส์">
+      <button onclick="saveSalesDetails(${escapeHtml(row)})">บันทึกข้อมูลขาย</button>
+    </div>
+  `;
+}
+
+function formatDateInputValue(v) {
+  const raw = String(v || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return '';
+  let y = Number(m[3]);
+  if (y > 2400) y -= 543;
+  return `${y}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+}
+
+async function saveSalesDetails(historyRow) {
+  const form = document.querySelector(`[data-history-row="${CSS.escape(String(historyRow))}"]`);
+  if (!form) return;
+  const payload = { action:'update_sales_details', historyRow };
+  form.querySelectorAll('[data-sales-field]').forEach(el => {
+    payload[el.getAttribute('data-sales-field')] = el.value.trim();
+  });
+  try {
+    const res = await apiPost(payload);
+    if (!res.ok) throw new Error(res.error || 'API error');
+    const item = CACHE.history.find(h => Number(h._sheetRow) === Number(historyRow));
+    if (item) {
+      item['Buyer Name'] = payload.buyerName || '';
+      item['Hospital'] = payload.hospital || '';
+      item['PO No'] = payload.poNo || '';
+      item['Sale Date'] = payload.saleDate || '';
+      item['Sale Price'] = payload.salePrice || '';
+      item['Wholesale Price'] = payload.wholesalePrice || '';
+      item['Model'] = payload.model || '';
+      item['Size'] = payload.size || '';
+    }
+    const alerts = await apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' }));
+    CACHE.salesAlerts = alerts && alerts.ok ? (alerts.alerts || []) : CACHE.salesAlerts;
+    renderHist(false);
+    renderStock();
+    toast('บันทึกข้อมูลขายแล้ว', 'ok');
+  } catch(e) {
+    toast('บันทึกข้อมูลขายไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
 function renderHist(append, items) {
   const list = document.getElementById('hiList');
   items = items || CACHE.history || [];
-  if (!append) renderPurposeSummary(items);
+  if (!append) {
+    renderPurposeSummary(items);
+    renderMonthlyOutSummary();
+  }
 
   if (!items.length && !append) {
     list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>ยังไม่มีประวัติรายการ</div></div>`;
@@ -2820,7 +3371,7 @@ function renderHist(append, items) {
     const purpose = historyPurpose(it);
     const qty = historyQty(it);
     return `
-      <div class="hi">
+      <div class="hi" data-history-row="${escapeHtml(String(it._sheetRow || ''))}">
         <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇' : '⬆'}</div>
         <div class="hi-body">
           <div class="hi-top">
@@ -2829,7 +3380,10 @@ function renderHist(append, items) {
           </div>
           <div class="hm">${escapeHtml(it['Action'] || '-')} · ${escapeHtml(historyRecipient(it) || '-')} · ${escapeHtml(historyRecordedBy(it) || '-')}</div>
           ${!isIn ? `<div class="hm">วัตถุประสงค์: ${escapeHtml(purpose || '-')}</div>` : ''}
+          ${!isIn ? `<div class="hm">ผู้ซื้อ: ${escapeHtml(it['Buyer Name'] || '-')} · โรงพยาบาล: ${escapeHtml(it['Hospital'] || '-')} · PO: ${escapeHtml(it['PO No'] || '-')}</div>` : ''}
+          ${!isIn ? `<div class="hm">ราคาขาย: ${escapeHtml(it['Sale Price'] || '-')} · ราคาส่ง: ${escapeHtml(it['Wholesale Price'] || '-')}</div>` : ''}
           ${it['Serial / LOT'] ? `<div class="hm">${escapeHtml(it['Serial / LOT'])}</div>` : ''}
+          ${salesDetailForm(it)}
         </div>
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
       </div>
@@ -3038,6 +3592,83 @@ async function exportCSV() {
   } catch(e) {
     toast('Export ไม่สำเร็จ: ' + e.message, 'err');
   }
+}
+
+async function exportAllExcel() {
+  if (!API_URL) { toast('ยังไม่ได้ตั้งค่า API URL', 'warn'); return; }
+  toast('กำลังสร้างไฟล์ Excel...', 'ok');
+  try {
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'export_all_data' }));
+    if (!res.ok) throw new Error(res.error || 'API error');
+    const sheets = [
+      ['Stock_Device', res.device || []],
+      ['Stock_Mask', res.mask || []],
+      ['Stock_Accessory', res.accessory || []],
+      ['History', res.history || []],
+      ['ProductDB', res.productdb || []],
+      ['Dashboard', res.dashboard || []],
+    ];
+    const workbook = buildExcelWorkbookXml(sheets);
+    const blob = new Blob([workbook], {type:'application/vnd.ms-excel;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
+    a.download = `skyline-all-data-${dateStr}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    const total = sheets.reduce((n, [, rows]) => n + rows.length, 0);
+    toast(`ดาวน์โหลด Excel สำเร็จ (${total} แถว)`, 'ok');
+  } catch(e) {
+    toast('Export Excel ไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+function buildExcelWorkbookXml(sheets) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#D9EAF7" ss:Pattern="Solid"/></Style>
+ </Styles>
+ ${sheets.map(([name, rows]) => excelWorksheetXml(name, rows)).join('')}
+</Workbook>`;
+}
+
+function excelWorksheetXml(name, rows) {
+  const headers = excelHeaders(rows);
+  return `<Worksheet ss:Name="${xmlEscape(excelSheetName(name))}"><Table>
+    <Row>${headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${xmlEscape(h)}</Data></Cell>`).join('')}</Row>
+    ${(rows || []).map(row => `<Row>${headers.map(h => excelCellXml(row[h])).join('')}</Row>`).join('')}
+  </Table></Worksheet>`;
+}
+
+function excelHeaders(rows) {
+  const out = [];
+  (rows || []).forEach(row => Object.keys(row || {}).forEach(k => {
+    if (!out.includes(k)) out.push(k);
+  }));
+  return out.length ? out : ['No Data'];
+}
+
+function excelCellXml(value) {
+  if (value === null || value === undefined || value === '') return '<Cell><Data ss:Type="String"></Data></Cell>';
+  const n = Number(value);
+  if (typeof value !== 'string' && Number.isFinite(n)) return `<Cell><Data ss:Type="Number">${n}</Data></Cell>`;
+  return `<Cell><Data ss:Type="String">${xmlEscape(String(value))}</Data></Cell>`;
+}
+
+function excelSheetName(name) {
+  return String(name || 'Sheet').replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Sheet';
+}
+
+function xmlEscape(v) {
+  return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 </script>
 </body>
