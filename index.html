@@ -108,6 +108,17 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .bdash-main{font-weight:700;color:#222;min-width:0;word-break:break-word;font-size:13px}
 .bdash-sub{font-size:11.5px;color:var(--mu);font-weight:400;margin-top:1px}
 .bdash-qty{font-size:14px;font-weight:800;color:#111;background:#f7f8fa;border-radius:7px;padding:4px 9px;min-width:36px;text-align:center}
+.chart-grid{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0 12px}
+.chart-card{border:1px solid var(--bd);border-radius:var(--ra);background:#fafafa;padding:10px}
+.chart-title{font-size:12px;font-weight:800;color:#333;margin-bottom:8px}
+.chart-bars{display:grid;gap:8px}
+.chart-row{display:grid;grid-template-columns:minmax(86px,1fr) minmax(120px,2.4fr) auto;gap:8px;align-items:center;font-size:11.5px}
+.chart-label{font-weight:700;color:#333;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-track{height:16px;border-radius:999px;background:#e9edf3;overflow:hidden}
+.chart-fill{height:100%;min-width:3px;border-radius:999px;background:var(--B)}
+.chart-fill.mask{background:var(--G)}
+.chart-value{font-size:12px;font-weight:800;color:#111;min-width:28px;text-align:right}
+.chart-sub{font-size:11px;color:var(--mu);margin-top:7px;line-height:1.5}
 
 .chips{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
 .chips::-webkit-scrollbar{display:none}
@@ -3127,6 +3138,7 @@ function renderMonthlyOutSummary() {
   const totalQty = Number(data.totalQty || rows.reduce((n, r) => n + Number(r.qty || 0), 0));
   el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3>` +
     `<div class="bdash-row"><div>รวมจ่ายออกเดือนที่เลือก</div><div class="bdash-qty">${escapeHtml(String(totalQty))}</div></div>` +
+    renderMaskSalesCharts(data) +
     rows.map(r => {
       const currentQty = currentQtyForMonthlyRow(r);
       const forecastQty = Number(r.forecastQty || r.qty || 0);
@@ -3134,6 +3146,8 @@ function renderMonthlyOutSummary() {
       const sub = [
         r.type || '',
         r.brand || '',
+        r.model ? 'รุ่น ' + r.model : '',
+        r.size ? 'ไซส์ ' + r.size : '',
         r.reference ? 'REF ' + r.reference : ''
       ].filter(Boolean).join(' · ');
       const stats = `เดือนที่เลือก ${Number(r.qty || 0)} · เฉลี่ย 3 เดือนก่อน ${Number(r.prevAvg || 0)} · เดือนเดียวกันปีก่อน ${Number(r.sameMonthLastYearQty || 0)}`;
@@ -3147,6 +3161,90 @@ function renderMonthlyOutSummary() {
         <div class="bdash-qty">${escapeHtml(String(forecastQty))}</div>
       </div>`;
     }).join('');
+}
+
+function renderMaskSalesCharts(data) {
+  const maskRows = (data.rows || [])
+    .filter(r => isMaskSummaryRow(r))
+    .map(r => ({
+      ...r,
+      modelKey: maskModelLabel(r),
+      sizeKey: maskSizeLabel(r),
+      qty: Number(r.qty || 0),
+      forecastQty: Number(r.forecastQty || r.qty || 0)
+    }))
+    .filter(r => r.qty || r.forecastQty);
+  if (!maskRows.length) return '';
+
+  const byModel = sumRows(maskRows, r => r.modelKey, r => r.qty);
+  const modelBars = Object.entries(byModel)
+    .map(([label, qty]) => ({label, qty}))
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 10);
+
+  const byModelSize = {};
+  maskRows.forEach(r => {
+    if (!byModelSize[r.modelKey]) byModelSize[r.modelKey] = {};
+    byModelSize[r.modelKey][r.sizeKey] = (byModelSize[r.modelKey][r.sizeKey] || 0) + r.qty;
+  });
+  const sizeGroups = Object.entries(byModelSize)
+    .map(([model, sizes]) => ({
+      model,
+      total: Object.values(sizes).reduce((n, v) => n + Number(v || 0), 0),
+      bars: Object.entries(sizes)
+        .map(([label, qty]) => ({label, qty}))
+        .sort((a, b) => b.qty - a.qty)
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 4);
+
+  return `<div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">กราฟเทียบจำนวนจ่ายออกตามรุ่นหน้ากาก</div>
+      ${barChartHtml(modelBars, {fillClass:'mask'})}
+      <div class="chart-sub">ใช้ยอดจ่ายออกของเดือนที่เลือก เพื่อดูว่ารุ่นไหนขาย/เบิกมากที่สุด</div>
+    </div>
+    ${sizeGroups.map(g => `<div class="chart-card">
+      <div class="chart-title">แยกไซส์: ${escapeHtml(g.model)}</div>
+      ${barChartHtml(g.bars, {fillClass:'mask'})}
+    </div>`).join('')}
+  </div>`;
+}
+
+function barChartHtml(items, opts = {}) {
+  if (!items.length) return '<div class="hm">ยังไม่มีข้อมูลสำหรับกราฟ</div>';
+  const max = Math.max(...items.map(x => Number(x.qty || 0)), 1);
+  const fillClass = opts.fillClass ? ' ' + opts.fillClass : '';
+  return `<div class="chart-bars">${items.map(x => {
+    const qty = Number(x.qty || 0);
+    const width = Math.max(3, Math.round((qty / max) * 100));
+    return `<div class="chart-row">
+      <div class="chart-label" title="${escapeHtml(x.label)}">${escapeHtml(x.label)}</div>
+      <div class="chart-track"><div class="chart-fill${fillClass}" style="width:${width}%"></div></div>
+      <div class="chart-value">${escapeHtml(String(qty))}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function isMaskSummaryRow(r) {
+  const type = String(r.type || '').toLowerCase();
+  return type.includes('mask') || !!r.size;
+}
+
+function maskModelLabel(r) {
+  return String(r.model || r.productName || 'ไม่ระบุรุ่น').trim() || 'ไม่ระบุรุ่น';
+}
+
+function maskSizeLabel(r) {
+  return String(r.size || 'ไม่ระบุไซส์').trim() || 'ไม่ระบุไซส์';
+}
+
+function sumRows(rows, keyFn, valueFn) {
+  return rows.reduce((acc, row) => {
+    const key = keyFn(row);
+    acc[key] = (acc[key] || 0) + Number(valueFn(row) || 0);
+    return acc;
+  }, {});
 }
 
 function currentMonthValue() {
@@ -3197,8 +3295,10 @@ function monthlyOutSummaryFromHistory(items) {
       productName: it['Product Name'] || '-',
       brand: it['Brand'] || '',
       reference: it['Reference'] || '',
+      model: it['Model'] || '',
+      size: it['Size'] || '',
     };
-    const key = [row.type, row.productName, row.brand, row.reference].join('|').toUpperCase();
+    const key = monthlySummaryKey(row);
     const cur = map.get(key) || {...row, qty:0};
     cur.qty += historyQty(it);
     map.set(key, cur);
@@ -3215,12 +3315,16 @@ function monthlyOutSummaryFromHistory(items) {
 function currentQtyForMonthlyRow(row) {
   const type = String(row.type || '').toLowerCase();
   const name = String(row.productName || '').trim().toLowerCase();
-  const brand = String(row.brand || '').trim().toLowerCase();
-  const ref = String(row.reference || '').trim().toLowerCase();
+    const brand = String(row.brand || '').trim().toLowerCase();
+    const ref = String(row.reference || '').trim().toLowerCase();
+  const model = String(row.model || '').trim().toLowerCase();
+  const size = String(row.size || '').trim().toLowerCase();
   const match = it =>
     String(it['Product Name'] || '').trim().toLowerCase() === name &&
     (!brand || String(it['Brand'] || '').trim().toLowerCase() === brand) &&
-    (!ref || String(it['REF'] || '').trim().toLowerCase() === ref);
+    (!ref || String(it['REF'] || '').trim().toLowerCase() === ref) &&
+    (!type.includes('mask') || !model || String(it['Model'] || '').trim().toLowerCase() === model) &&
+    (!type.includes('mask') || !size || String(it['Size'] || '').trim().toLowerCase() === size);
 
   if (type.includes('device')) return (CACHE.device || []).filter(match).length;
   if (type.includes('mask')) return (CACHE.mask || []).filter(match).reduce((n, it) => n + Number(it['Qty'] || 0), 0);
@@ -3243,13 +3347,15 @@ function _patchMonthlyOutSummary(action, b) {
     productName: b.name || '-',
     brand: b.brand || '',
     reference: b.ref || '',
+    model: b.model || '',
+    size: b.size || '',
     qty: Number(b.qty || 1),
     prevAvg: 0,
     sameMonthLastYearQty: 0,
     forecastQty: Number(b.qty || 1)
   };
-  const key = [row.type, row.productName, row.brand, row.reference].join('|').toUpperCase();
-  const hit = CACHE.monthlyOut.rows.find(r => [r.type, r.productName, r.brand, r.reference].join('|').toUpperCase() === key);
+  const key = monthlySummaryKey(row);
+  const hit = CACHE.monthlyOut.rows.find(r => monthlySummaryKey(r) === key);
   if (hit) {
     hit.qty = Number(hit.qty || 0) + row.qty;
     hit.forecastQty = Math.ceil(Math.max(Number(hit.qty || 0), Number(hit.prevAvg || 0), Number(hit.sameMonthLastYearQty || 0)));
@@ -3257,6 +3363,18 @@ function _patchMonthlyOutSummary(action, b) {
   else CACHE.monthlyOut.rows.push(row);
   CACHE.monthlyOut.totalQty = Number(CACHE.monthlyOut.totalQty || 0) + row.qty;
   CACHE.monthlyOut.rows.sort((a,b) => Number(b.qty || 0) - Number(a.qty || 0));
+}
+
+function monthlySummaryKey(row) {
+  const type = String(row.type || '').toLowerCase();
+  return [
+    row.type || '',
+    row.productName || '',
+    row.brand || '',
+    row.reference || '',
+    type.includes('mask') ? (row.model || '') : '',
+    type.includes('mask') ? (row.size || '') : ''
+  ].join('|').toUpperCase();
 }
 
 function isHistoryInCurrentMonth(it, now = new Date()) {
