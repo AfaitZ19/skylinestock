@@ -396,7 +396,7 @@ body.admin .admin-only{display:inline-flex}
         </div>
 
         <label class="flbl" id="locLabel">รับเข้าโดย</label>
-        <input type="text" class="finp" id="locI" placeholder="รับเข้า: ใส่คนรับของ / จ่ายออก: ใส่ชื่อเซลล์หรือผู้รับ">
+        <input type="text" class="finp" id="locI" placeholder="รับเข้า: ใส่คนรับของ / จ่ายออก: ใส่ชื่อเซลล์หรือผู้รับ" oninput="updateHospitalChoicesForSales(this.value)" onchange="updateHospitalChoicesForSales(this.value)">
         <datalist id="recipientChoices">
           <option value="สุโข รักษาการ (สุโข)"></option>
           <option value="สุพิชชา รักษาการ (ฝ้าย)"></option>
@@ -412,6 +412,7 @@ body.admin .admin-only{display:inline-flex}
           <option value="ปรีณาพรรณ โชติกะสุภา (ฟ้า)"></option>
           <option value="พัฒนพงษ์ พิชญวานิช (พัฒ)"></option>
         </datalist>
+        <datalist id="hospitalChoices"></datalist>
 
         <div id="qtyRow" style="display:none">
           <label class="flbl">จำนวน (ชิ้น)</label>
@@ -433,11 +434,33 @@ body.admin .admin-only{display:inline-flex}
         <div id="salesDetailFields" style="display:none">
           <label class="flbl">ข้อมูลขาย (กรอกตอนนี้หรือกรอกย้อนหลังได้)</label>
           <input type="text" class="finp" id="buyerNameI" placeholder="ชื่อผู้ซื้อ">
-          <input type="text" class="finp" id="hospitalI" placeholder="โรงพยาบาล">
+          <input type="text" class="finp" id="hospitalI" list="hospitalChoices" placeholder="เลือกโรงพยาบาลจากเซลล์" onfocus="updateHospitalChoicesForSales(document.getElementById('locI')?.value || '')">
           <input type="text" class="finp" id="poNoI" placeholder="เลข PO">
           <input type="date" class="finp" id="saleDateI" placeholder="วันที่ขาย">
           <input type="number" class="finp" id="salePriceI" placeholder="ราคาขาย" min="0" step="0.01">
           <input type="number" class="finp" id="wholesalePriceI" placeholder="ราคาส่ง" min="0" step="0.01">
+          <select class="fsel" id="maskModelI">
+            <option value="">เลือกรุ่นหน้ากาก</option>
+            <option value="EaseFit NM6A">EaseFit NM6A</option>
+            <option value="EaseFit NM6">EaseFit NM6</option>
+            <option value="EaseFit NM5A">EaseFit NM5A</option>
+            <option value="EaseFit NM5">EaseFit NM5</option>
+            <option value="EaseFit PMI">EaseFit PMI</option>
+            <option value="WiZARD 310">WiZARD 310</option>
+            <option value="WiZARD 320">WiZARD 320</option>
+            <option value="WiZARD 510">WiZARD 510</option>
+            <option value="WiZARD 520">WiZARD 520</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+          <select class="fsel" id="maskSizeI">
+            <option value="">เลือกไซส์หน้ากาก</option>
+            <option value="XS">XS</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+            <option value="STD">STD</option>
+          </select>
         </div>
 
         <label class="flbl">หมายเหตุ</label>
@@ -671,6 +694,30 @@ let HID_LAST_TEXT = '';
 let HID_LAST_TIME = 0;
 const AUTO_SAVE_ON_SCAN_IN = true;
 const AUTO_STOCK_OUT_ON_SCAN_OUT = true;
+const DEFAULT_HOSPITAL_CHOICES = [
+  'สถาบันการแพทย์จักรีนฤบดินทร์',
+  'โรงพยาบาลบ้านแพ้ว (องค์การมหาชน)',
+  'โรงพยาบาลศิริราช',
+  'โรงพยาบาลศิริราชปิยมหาราชการุณย์',
+  'โรงพยาบาลศิริราช Chest',
+  'โรงพยาบาลธรรมศาสตร์',
+  'โรงพยาบาลภูมิพล',
+  'สถาบันโรคทรวงอก',
+  'โรงพยาบาลรามาธิบดี',
+  'โรงพยาบาลตากสิน',
+  'สถาบันประสาทวิทยา',
+  'โรงพยาบาลพระมงกุฎเกล้า',
+  'โรงพยาบาลตำรวจ',
+  'โรงพยาบาลวิชัยยุทธ',
+  'โรงพยาบาลจุฬาลงกรณ์',
+  'โรงพยาบาลบํารุงราษฎร์',
+  'โรงพยาบาลเมดพาร์ค',
+  'โรงพยาบาลมหาวิทยาลัยบูรพา',
+  'โรงพยาบาลนวเวช',
+  'โรงพยาบาลวชิระ',
+  'โรงพยาบาลพระราม9',
+  'โรงพยาบาลราชวิถี'
+];
 let _bgSyncTimer  = null;
 let _lastSyncTime = 0;
 
@@ -2182,7 +2229,9 @@ function getSalesDetailInputs() {
     poNo: document.getElementById('poNoI')?.value.trim() || '',
     saleDate: document.getElementById('saleDateI')?.value || '',
     salePrice: document.getElementById('salePriceI')?.value.trim() || '',
-    wholesalePrice: document.getElementById('wholesalePriceI')?.value.trim() || ''
+    wholesalePrice: document.getElementById('wholesalePriceI')?.value.trim() || '',
+    model: document.getElementById('maskModelI')?.value || '',
+    size: document.getElementById('maskSizeI')?.value || ''
   };
 }
 
@@ -2445,7 +2494,7 @@ function resetScan(opts = {}) {
   document.getElementById('noteI').value = '';
   const p = document.getElementById('purposeI'); if (p) p.value = '';
   const po = document.getElementById('purposeOtherI'); if (po) { po.value = ''; po.style.display = 'none'; }
-  ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI'].forEach(id => {
+  ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI','maskModelI','maskSizeI'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2714,7 +2763,7 @@ async function doAct(action) {
         purposeOtherEl.value = '';
         purposeOtherEl.style.display = 'none';
       }
-      ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI'].forEach(id => {
+      ['buyerNameI','hospitalI','poNoI','saleDateI','salePriceI','wholesalePriceI','maskModelI','maskSizeI'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
@@ -3406,6 +3455,31 @@ function historyRecipient(it) {
   return it['Location / Recipient'] || it['Recipient'] || it['Location'] || it['Location / Hospital'] || '';
 }
 
+function salesChoiceKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function updateHospitalChoicesForSales(salesName = '') {
+  const list = document.getElementById('hospitalChoices');
+  if (!list) return;
+  const salesKey = salesChoiceKey(salesName);
+  const all = [...DEFAULT_HOSPITAL_CHOICES];
+  const matched = [];
+  (CACHE.history || []).forEach(it => {
+    const hospital = String(it['Hospital'] || '').trim();
+    if (!hospital || hospital === '-') return;
+    all.push(hospital);
+    const ownerKey = salesChoiceKey(historyRecipient(it));
+    if (salesKey && ownerKey && (ownerKey.includes(salesKey) || salesKey.includes(ownerKey))) {
+      matched.push(hospital);
+    }
+  });
+  const values = [...new Set((matched.length ? matched : all).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'th'))
+    .slice(0, 80);
+  list.innerHTML = values.map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+}
+
 function historyRecordedBy(it) {
   return it['Recorded By'] || it['Record by'] || it['Record By'] || it['record by'] || it['User'] || '';
 }
@@ -3457,6 +3531,8 @@ function inferHistoryModelSize(it) {
     model: String(it['Model'] || '').trim(),
     size: String(it['Size'] || '').trim()
   };
+  const type = String(it['Type'] || '').toLowerCase();
+  if (type && !type.includes('mask')) return current;
   if (current.model && current.size) return current;
 
   const serialLot = String(it['Serial / LOT'] || it['LOT Number'] || it['LOT'] || '').trim().toUpperCase();
@@ -3482,18 +3558,34 @@ function salesDetailForm(it) {
   const row = String(it._sheetRow);
   const inferred = inferHistoryModelSize(it);
   return `
-    <div class="mform" data-history-row="${escapeHtml(row)}" style="margin-top:8px">
+    <div class="mform" data-history-row="${escapeHtml(row)}" data-sales-owner="${escapeHtml(historyRecipient(it))}" style="margin-top:8px">
       <input type="text" class="finp" data-sales-field="buyerName" value="${escapeHtml(it['Buyer Name'] || '')}" placeholder="ชื่อผู้ซื้อ">
-      <input type="text" class="finp" data-sales-field="hospital" value="${escapeHtml(it['Hospital'] || '')}" placeholder="โรงพยาบาล">
+      <input type="text" class="finp" data-sales-field="hospital" list="hospitalChoices" value="${escapeHtml(it['Hospital'] || '')}" placeholder="เลือกโรงพยาบาลจากเซลล์" onfocus="updateHospitalChoicesForSales(this.closest('.mform')?.dataset.salesOwner || '')">
       <input type="text" class="finp" data-sales-field="poNo" value="${escapeHtml(it['PO No'] || '')}" placeholder="เลข PO">
       <input type="date" class="finp" data-sales-field="saleDate" value="${escapeHtml(formatDateInputValue(it['Sale Date'] || ''))}">
       <input type="number" class="finp" data-sales-field="salePrice" value="${escapeHtml(it['Sale Price'] || '')}" placeholder="ราคาขาย" min="0" step="0.01">
       <input type="number" class="finp" data-sales-field="wholesalePrice" value="${escapeHtml(it['Wholesale Price'] || '')}" placeholder="ราคาส่ง" min="0" step="0.01">
-      <input type="text" class="finp" data-sales-field="model" value="${escapeHtml(inferred.model)}" placeholder="รุ่น">
-      <input type="text" class="finp" data-sales-field="size" value="${escapeHtml(inferred.size)}" placeholder="ไซส์">
+      ${maskModelSelectHtml(inferred.model, 'data-sales-field="model"')}
+      ${maskSizeSelectHtml(inferred.size, 'data-sales-field="size"')}
       <button onclick="saveSalesDetails(${escapeHtml(row)})">บันทึกข้อมูลขาย</button>
     </div>
   `;
+}
+
+function maskModelSelectHtml(value = '', attrs = '') {
+  const opts = ['', 'EaseFit NM6A', 'EaseFit NM6', 'EaseFit NM5A', 'EaseFit NM5', 'EaseFit PMI', 'WiZARD 310', 'WiZARD 320', 'WiZARD 510', 'WiZARD 520', 'อื่นๆ'];
+  return `<select class="fsel" ${attrs}>${opts.map(v => {
+    const label = v || 'เลือกรุ่นหน้ากาก';
+    return `<option value="${escapeHtml(v)}"${String(value) === v ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('')}</select>`;
+}
+
+function maskSizeSelectHtml(value = '', attrs = '') {
+  const opts = ['', 'XS', 'S', 'M', 'L', 'XL', 'STD'];
+  return `<select class="fsel" ${attrs}>${opts.map(v => {
+    const label = v || 'เลือกไซส์หน้ากาก';
+    return `<option value="${escapeHtml(v)}"${String(value) === v ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('')}</select>`;
 }
 
 function formatDateInputValue(v) {
