@@ -3376,13 +3376,14 @@ function monthlyOutSummaryFromHistory(items) {
   (items || []).forEach(it => {
     if (String(it['Action'] || '') !== 'Stock Out') return;
     if (!isHistoryInCurrentMonth(it, now)) return;
+    const inferred = inferHistoryModelSize(it);
     const row = {
       type: it['Type'] || '',
       productName: it['Product Name'] || '-',
       brand: it['Brand'] || '',
       reference: it['Reference'] || '',
-      model: it['Model'] || '',
-      size: it['Size'] || '',
+      model: it['Model'] || inferred.model || '',
+      size: it['Size'] || inferred.size || '',
     };
     const key = monthlySummaryKey(row);
     const cur = map.get(key) || {...row, qty:0};
