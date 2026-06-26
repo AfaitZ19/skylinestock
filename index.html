@@ -48,8 +48,9 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .main{flex:1;padding:13px;overflow-y:auto;width:100%;padding-bottom:calc(18px + env(safe-area-inset-bottom));scroll-padding-top:calc(52px + env(safe-area-inset-top))}
 @media(min-width:500px){.main{max-width:720px;margin:0 auto}}
 
-.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px;position:sticky;top:0;z-index:80}
-.tab{flex:1;min-width:0;padding:9px 3px;text-align:center;font-size:11px;border-radius:7px;cursor:pointer;color:var(--mu);font-weight:700;border:none;background:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;background:#fff;border-radius:var(--ra);padding:4px;box-shadow:var(--sh);margin-bottom:13px;gap:2px;position:sticky;top:0;z-index:80;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 76px;min-width:76px;padding:9px 3px;text-align:center;font-size:11px;border-radius:7px;cursor:pointer;color:var(--mu);font-weight:700;border:none;background:none;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.on{background:var(--B);color:#fff}
 
 .scan-shell{display:grid;gap:11px}
@@ -323,7 +324,8 @@ body.admin .admin-only{display:inline-flex}
     <div class="tabs">
       <button class="tab on" onclick="goTab('scan')" id="t-scan">ทำรายการ</button>
       <button class="tab" onclick="goTab('stock')" id="t-stock">สต็อก</button>
-      <button class="tab" onclick="goTab('hist')" id="t-hist">ประวัติ</button>
+      <button class="tab" onclick="goTab('analysis')" id="t-analysis">วิเคราะห์</button>
+      <button class="tab" onclick="goTab('sales')" id="t-sales">ข้อมูลขาย</button>
       <button class="tab" onclick="goTab('take')" id="t-take">นับสต็อก</button>
       <button class="tab" onclick="goTab('cfg')" id="t-cfg">ตั้งค่า</button>
     </div>
@@ -439,28 +441,8 @@ body.admin .admin-only{display:inline-flex}
           <input type="date" class="finp" id="saleDateI" placeholder="วันที่ขาย">
           <input type="number" class="finp" id="salePriceI" placeholder="ราคาขาย" min="0" step="0.01">
           <input type="number" class="finp" id="wholesalePriceI" placeholder="ราคาส่ง" min="0" step="0.01">
-          <select class="fsel" id="maskModelI">
-            <option value="">เลือกรุ่นหน้ากาก</option>
-            <option value="EaseFit NM6A">EaseFit NM6A</option>
-            <option value="EaseFit NM6">EaseFit NM6</option>
-            <option value="EaseFit NM5A">EaseFit NM5A</option>
-            <option value="EaseFit NM5">EaseFit NM5</option>
-            <option value="EaseFit PMI">EaseFit PMI</option>
-            <option value="WiZARD 310">WiZARD 310</option>
-            <option value="WiZARD 320">WiZARD 320</option>
-            <option value="WiZARD 510">WiZARD 510</option>
-            <option value="WiZARD 520">WiZARD 520</option>
-            <option value="อื่นๆ">อื่นๆ</option>
-          </select>
-          <select class="fsel" id="maskSizeI">
-            <option value="">เลือกไซส์หน้ากาก</option>
-            <option value="XS">XS</option>
-            <option value="S">S</option>
-            <option value="M">M</option>
-            <option value="L">L</option>
-            <option value="XL">XL</option>
-            <option value="STD">STD</option>
-          </select>
+          <select class="fsel" id="maskModelI" onchange="renderInlineMaskSizeOptions()"><option value="">เลือกรุ่นหน้ากากจาก ProductDB</option></select>
+          <select class="fsel" id="maskSizeI"><option value="">เลือกไซส์หน้ากากจาก ProductDB</option></select>
         </div>
 
         <label class="flbl">หมายเหตุ</label>
@@ -501,7 +483,7 @@ body.admin .admin-only{display:inline-flex}
       <div id="stList"></div>
     </div>
 
-    <div id="v-hist" style="display:none">
+    <div id="v-analysis" style="display:none">
       <div class="scrd" id="purposeSummary"></div>
       <div class="scrd">
         <h3>วิเคราะห์จ่ายออกเพื่อสั่งของ</h3>
@@ -509,6 +491,9 @@ body.admin .admin-only{display:inline-flex}
         <button class="bfull bout2" onclick="loadMonthlyOutSummaryForSelected()">วิเคราะห์เดือนที่เลือก</button>
       </div>
       <div class="scrd" id="monthlyOutSummary"></div>
+    </div>
+
+    <div id="v-sales" style="display:none">
       <div class="scrd">
         <h3>ค้นหารายการย้อนหลัง</h3>
         <input class="finp" id="histSearch" type="search" placeholder="ค้นชื่อเซลล์/ผู้รับ, SN, LOT, ชื่อสินค้า, รุ่น, ไซส์, โรงพยาบาล, PO" oninput="renderHist(false)">
@@ -2000,6 +1985,52 @@ function populateProductFilters() {
     el.innerHTML = `<option value="">${escapeHtml(first)}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
     if (values.includes(cur)) el.value = cur;
   });
+  renderInlineMaskModelOptions();
+}
+
+function maskProductsFromDB() {
+  return (CACHE.products || []).filter(p => String(p.type || '').toLowerCase() === 'mask');
+}
+
+function maskModelChoicesFromDB() {
+  return [...new Set(maskProductsFromDB().map(p => String(p.model || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function maskSizeChoicesFromDB(model = '') {
+  const wanted = String(model || '').trim().toLowerCase();
+  return [...new Set(maskProductsFromDB()
+    .filter(p => !wanted || String(p.model || '').trim().toLowerCase() === wanted)
+    .map(p => String(p.size || '').trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function optionHtml(value, selected, emptyLabel) {
+  const label = value || emptyLabel;
+  return `<option value="${escapeHtml(value)}"${String(selected || '') === String(value) ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+}
+
+function renderInlineMaskModelOptions(selected = '') {
+  const el = document.getElementById('maskModelI');
+  if (!el) return;
+  const current = selected || el.value || '';
+  const models = maskModelChoicesFromDB();
+  el.innerHTML = optionHtml('', current, models.length ? 'เลือกรุ่นหน้ากากจาก ProductDB' : 'ยังไม่มีรุ่นหน้ากากใน ProductDB')
+    + models.map(v => optionHtml(v, current, '')).join('');
+  if (current && models.includes(current)) el.value = current;
+  renderInlineMaskSizeOptions();
+}
+
+function renderInlineMaskSizeOptions(selected = '') {
+  const el = document.getElementById('maskSizeI');
+  if (!el) return;
+  const model = document.getElementById('maskModelI')?.value || '';
+  const current = selected || el.value || '';
+  const sizes = maskSizeChoicesFromDB(model);
+  el.innerHTML = optionHtml('', current, sizes.length ? 'เลือกไซส์หน้ากากจาก ProductDB' : 'ยังไม่มีไซส์ของรุ่นนี้ใน ProductDB')
+    + sizes.map(v => optionHtml(v, current, '')).join('');
+  if (current && sizes.includes(current)) el.value = current;
 }
 
 function showManualProductPanel(focusSearch = false) {
@@ -3057,7 +3088,7 @@ function renderAttention(items) {
     row.onclick = () => {
       const hrow = row.getAttribute('data-hrow');
       if (hrow) {
-        goTab('hist');
+        goTab('sales');
         setTimeout(() => {
           const target = document.querySelector(`[data-history-row="${CSS.escape(hrow)}"]`);
           if (target) target.scrollIntoView({behavior:'smooth', block:'center'});
@@ -3565,27 +3596,39 @@ function salesDetailForm(it) {
       <input type="date" class="finp" data-sales-field="saleDate" value="${escapeHtml(formatDateInputValue(it['Sale Date'] || ''))}">
       <input type="number" class="finp" data-sales-field="salePrice" value="${escapeHtml(it['Sale Price'] || '')}" placeholder="ราคาขาย" min="0" step="0.01">
       <input type="number" class="finp" data-sales-field="wholesalePrice" value="${escapeHtml(it['Wholesale Price'] || '')}" placeholder="ราคาส่ง" min="0" step="0.01">
-      ${maskModelSelectHtml(inferred.model, 'data-sales-field="model"')}
-      ${maskSizeSelectHtml(inferred.size, 'data-sales-field="size"')}
+      ${maskModelSelectHtml(inferred.model, 'data-sales-field="model" onchange="updateHistoryMaskSizeChoices(this)"')}
+      ${maskSizeSelectHtml(inferred.size, 'data-sales-field="size"', inferred.model)}
       <button onclick="saveSalesDetails(${escapeHtml(row)})">บันทึกข้อมูลขาย</button>
     </div>
   `;
 }
 
 function maskModelSelectHtml(value = '', attrs = '') {
-  const opts = ['', 'EaseFit NM6A', 'EaseFit NM6', 'EaseFit NM5A', 'EaseFit NM5', 'EaseFit PMI', 'WiZARD 310', 'WiZARD 320', 'WiZARD 510', 'WiZARD 520', 'อื่นๆ'];
+  const opts = ['', ...maskModelChoicesFromDB()];
   return `<select class="fsel" ${attrs}>${opts.map(v => {
-    const label = v || 'เลือกรุ่นหน้ากาก';
+    const label = v || (opts.length > 1 ? 'เลือกรุ่นหน้ากากจาก ProductDB' : 'ยังไม่มีรุ่นหน้ากากใน ProductDB');
     return `<option value="${escapeHtml(v)}"${String(value) === v ? ' selected' : ''}>${escapeHtml(label)}</option>`;
   }).join('')}</select>`;
 }
 
-function maskSizeSelectHtml(value = '', attrs = '') {
-  const opts = ['', 'XS', 'S', 'M', 'L', 'XL', 'STD'];
+function maskSizeSelectHtml(value = '', attrs = '', model = '') {
+  const opts = ['', ...maskSizeChoicesFromDB(model)];
   return `<select class="fsel" ${attrs}>${opts.map(v => {
-    const label = v || 'เลือกไซส์หน้ากาก';
+    const label = v || (opts.length > 1 ? 'เลือกไซส์หน้ากากจาก ProductDB' : 'ยังไม่มีไซส์ใน ProductDB');
     return `<option value="${escapeHtml(v)}"${String(value) === v ? ' selected' : ''}>${escapeHtml(label)}</option>`;
   }).join('')}</select>`;
+}
+
+function updateHistoryMaskSizeChoices(modelEl) {
+  const form = modelEl?.closest('.mform');
+  if (!form) return;
+  const sizeEl = form.querySelector('[data-sales-field="size"]');
+  if (!sizeEl) return;
+  const current = sizeEl.value || '';
+  const sizes = maskSizeChoicesFromDB(modelEl.value || '');
+  sizeEl.innerHTML = optionHtml('', current, sizes.length ? 'เลือกไซส์หน้ากากจาก ProductDB' : 'ยังไม่มีไซส์ของรุ่นนี้ใน ProductDB')
+    + sizes.map(v => optionHtml(v, current, '')).join('');
+  if (current && sizes.includes(current)) sizeEl.value = current;
 }
 
 function formatDateInputValue(v) {
@@ -3799,12 +3842,12 @@ async function saveProductNames() {
 }
 
 function goTab(tab) {
-  ['scan','stock','hist','take','cfg'].forEach(k => {
+  ['scan','stock','analysis','sales','take','cfg'].forEach(k => {
     document.getElementById('t-' + k).classList.toggle('on', k === tab);
     document.getElementById('v-' + k).style.display = (k === tab ? (k === 'cfg' ? 'grid' : 'block') : 'none');
   });
   
-  if ((tab === 'stock' || tab === 'hist') && Date.now() - _lastSyncTime > 60_000) {
+  if ((tab === 'stock' || tab === 'analysis' || tab === 'sales') && Date.now() - _lastSyncTime > 60_000) {
     loadAll().then(() => { _lastSyncTime = Date.now(); }).catch(() => {});
   }
   if (tab === 'cfg') renderProductNameManager();
