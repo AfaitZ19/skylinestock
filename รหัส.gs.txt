@@ -3416,14 +3416,23 @@ function lookupProductForBackfill_(products, d) {
   const gtin = String(d.gtin || '').replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
   const lot = normalizeLot(d.lot);
   const sn = String(d.sn || '').replace(/\s/g, '').toUpperCase();
+  const refTokens = extractRefTokens_([d.ref, d.productCode, d.raw, d.lot].join(' '));
+  const codeToken = normalizeSkuToken_(String(d.productCode || d.raw || ''));
+  const inferred = inferProductFromLot_(lot || d.raw || '');
+  const refCandidates = [];
+  const codeCandidates = [];
   let wildcardLotHit = null;
 
   for (const p of products || []) {
     if (p.type && d.type && p.type !== d.type) continue;
     const pGtin = String(p.gtin || '').replace(/^0+/, '').toUpperCase();
-    if (pGtin && gtin && pGtin === gtin) return mergeLotDetails_(p, lot);
+    const pRef = normalizeRefToken_(p.ref || '');
+    const pCode = normalizeSkuToken_(p.product_code || '');
+    if (pGtin && gtin && pGtin === gtin) return mergeLotDetails_(p, lot, {preferProductIdentity:true});
     if (p.sn_exact && sn && p.sn_exact === sn) return mergeLotDetails_(p, lot);
     if (p.sn_pfx && sn && sn.startsWith(p.sn_pfx)) return mergeLotDetails_(p, lot);
+    if (pRef && refTokens.indexOf(pRef) !== -1) refCandidates.push(p);
+    if (pCode && pCode !== '-' && codeToken === pCode) codeCandidates.push(p);
     if (p.lot_pfx && lot && matchProductPattern_(lot, p.lot_pfx)) {
       if (String(p.lot_pfx).indexOf('*') !== -1) {
         if (!wildcardLotHit) wildcardLotHit = p;
@@ -3433,8 +3442,22 @@ function lookupProductForBackfill_(products, d) {
     }
   }
 
+  const refHit = pickUniqueProductCandidate_(refCandidates, inferred);
+  if (refHit) return mergeLotDetails_(refHit, lot || d.raw || '');
+  const codeHit = pickUniqueProductCandidate_(codeCandidates, inferred);
+  if (codeHit) return mergeLotDetails_(codeHit, lot || d.raw || '');
   if (wildcardLotHit) return mergeLotDetails_(wildcardLotHit, lot);
-  return inferProductFromLot_(lot);
+  return inferred;
+}
+
+function pickUniqueProductCandidate_(rows, hint) {
+  rows = rows || [];
+  if (rows.length === 1) return rows[0];
+  if (!rows.length || !hint) return null;
+  let narrowed = rows;
+  if (hint.model) narrowed = narrowed.filter(p => normalizeText(p.model).toUpperCase() === normalizeText(hint.model).toUpperCase());
+  if (hint.size) narrowed = narrowed.filter(p => normalizeText(p.size).toUpperCase() === normalizeText(hint.size).toUpperCase());
+  return narrowed.length === 1 ? narrowed[0] : null;
 }
 
 function matchProductPattern_(value, pattern) {
@@ -3450,23 +3473,78 @@ function escapeRegExp_(s) {
   return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function mergeLotDetails_(product, lot) {
+function mergeLotDetails_(product, lot, opts) {
   const inferred = inferProductFromLot_(lot) || {};
-  const merged = {
-    name: product.name || inferred.name || '',
-    brand: product.brand || inferred.brand || '',
-    type: product.type || inferred.type || '',
-    model: product.model || inferred.model || '',
-    size: product.size || inferred.size || '',
-    ref: product.ref || inferred.ref || '',
-  };
+  opts = opts || {};
+  const merged = Object.assign({}, inferred || {});
+  Object.keys(product || {}).forEach(k => {
+    const v = product[k];
+    if (v !== undefined && v !== null && v !== '') merged[k] = v;
+  });
+  if (opts.preferProductIdentity) {
+    if (!merged.size && inferred.size) merged.size = inferred.size;
+    if (!merged.ref && inferred.ref) merged.ref = inferred.ref;
+    return merged;
+  }
   if (inferred.size) merged.size = inferred.size;
   if (inferred.ref) merged.ref = inferred.ref;
   return merged;
 }
 
+function enrichTransactionProduct_(ss, b) {
+  if (!b || !b.type) return b;
+  const products = readProductDB(ss);
+  const hit = lookupProductForBackfill_(products, {
+    type: b.type,
+    gtin: b.gtin,
+    lot: b.lot,
+    sn: b.sn,
+    ref: b.ref,
+    productCode: b.productCode,
+    raw: [b.name, b.ref, b.productCode, b.lot].join(' ')
+  }) || inferProductFromLot_([b.lot, b.ref, b.productCode, b.name].join(' '));
+
+  if (!hit) return b;
+  b.name = String(b.name || hit.name || '').trim();
+  b.brand = String(b.brand || hit.brand || '').trim();
+  b.model = String(b.model || hit.model || '').trim();
+  b.size = String(b.size || hit.size || '').trim();
+  b.ref = String(b.ref || hit.ref || '').trim();
+  return b;
+}
+
+function transactionIdentityError_(b, action) {
+  if (action !== 'in') return '';
+  if (b.type === 'device' && !String(b.model || '').trim()) return 'Missing device model mapping';
+  if (b.type === 'mask' && (!String(b.model || '').trim() || !String(b.size || '').trim())) return 'Missing mask model/size mapping';
+  return '';
+}
+
+function normalizeSkuToken_(v) {
+  return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeRefToken_(v) {
+  return String(v || '').toUpperCase().replace(/^REF/i, '').replace(/[^A-Z0-9]/g, '');
+}
+
+function extractRefTokens_(text) {
+  const raw = String(text || '').toUpperCase();
+  const out = [];
+  const add = v => {
+    v = normalizeRefToken_(v);
+    if (v && out.indexOf(v) === -1) out.push(v);
+  };
+  let m;
+  const refRe = /\bREF\s*[:#-]?\s*([A-Z0-9._/-]{3,})/g;
+  while ((m = refRe.exec(raw)) !== null) add(m[1]);
+  const looseRe = /\b(PT?\d{4,6}|\d{5})\b/g;
+  while ((m = looseRe.exec(raw)) !== null) add(m[1]);
+  return out;
+}
+
 function inferProductFromLot_(lot) {
-  lot = normalizeLot(lot);
+  lot = normalizeSkuToken_(normalizeLot(lot));
   if (!lot) return null;
   const rules = [
     { test: l => l.indexOf('NM6A') !== -1, type:'mask', model:'EaseFit NM6A', name:'Beyond EaseFit NM6A', brand:'Hunan Beyond' },
@@ -3483,24 +3561,33 @@ function inferProductFromLot_(lot) {
     { test: l => l.indexOf('R20') !== -1, type:'device', model:'R-20i', name:'Beyond R-20i CPAP', brand:'Hunan Beyond' },
   ];
   const matched = rules.find(r => r.test(lot));
-  if (!matched) return null;
+  const refRules = [
+    { model:'EaseFit NM5A', size:'L', ref:'78072' },
+    { model:'EaseFit NM5A', size:'M', ref:'PT78044' },
+    { model:'EaseFit NM6A', size:'M', ref:'78091' },
+    { model:'EaseFit NM6',  size:'L', ref:'78084' },
+    { model:'EaseFit NM6',  size:'M', ref:'78085' },
+    { model:'EaseFit NM6',  size:'S', ref:'78086' },
+    { model:'EaseFit NM5',  size:'M', ref:'78066' },
+    { model:'EaseFit NM5',  size:'L', ref:'78066' },
+    { model:'EaseFit NM5',  size:'S', ref:'78066' },
+  ];
+  const refRuleFromText = extractRefTokens_(lot).map(ref => {
+    const matches = refRules.filter(r => normalizeRefToken_(r.ref) === ref);
+    return matches.length === 1 ? matches[0] : null;
+  }).filter(Boolean)[0];
+  if (!matched && !refRuleFromText) return null;
   const sizeRules = [
     { test: l => l.indexOf('NM5AL') !== -1 || l.indexOf('NM6AL') !== -1 || l.indexOf('NM6L') !== -1 || l.indexOf('NM5L') !== -1 || (/L$/.test(l) && !/LOT$/.test(l)), size:'L' },
     { test: l => l.indexOf('NM5AM') !== -1 || l.indexOf('NM6AM') !== -1 || l.indexOf('NM6M') !== -1 || l.indexOf('NM5M') !== -1 || /M$/.test(l), size:'M' },
     { test: l => l.indexOf('NM5AS') !== -1 || l.indexOf('NM6AS') !== -1 || l.indexOf('NM6S') !== -1 || l.indexOf('NM5S') !== -1 || /S$/.test(l), size:'S' },
   ];
   const sizeRule = sizeRules.find(r => r.test(lot));
-  const size = sizeRule ? sizeRule.size : '';
-  const refRules = [
-    { model:'EaseFit NM5A', size:'L', ref:'78072' },
-    { model:'EaseFit NM5A', size:'M', ref:'PT78044' },
-    { model:'EaseFit NM6A', size:'M', ref:'78091' },
-    { model:'EaseFit NM6',  size:'L', ref:'78084' },
-    { model:'EaseFit NM5',  size:'M', ref:'78066' },
-    { model:'EaseFit NM5',  size:'L', ref:'78066' },
-  ];
-  const refRule = refRules.find(r => r.model === matched.model && r.size === size);
-  return Object.assign({}, matched, { size:size, ref: refRule ? refRule.ref : '' });
+  const model = matched ? matched.model : refRuleFromText.model;
+  const size = sizeRule ? sizeRule.size : (refRuleFromText ? refRuleFromText.size : '');
+  const refRule = refRules.find(r => r.model === model && r.size === size);
+  const base = matched || { type:'mask', model:model, name:'Beyond ' + model, brand:'Hunan Beyond' };
+  return Object.assign({}, base, { size:size, ref: refRule ? refRule.ref : (refRuleFromText ? refRuleFromText.ref : '') });
 }
 
 function styleHeaderRow(ws, row, headers, bgColor) {
@@ -3618,7 +3705,10 @@ function doPost(e) {
     applyAuthContext_(body, auth);
 
     if (body.action === 'in') {
+      try { enrichTransactionProduct_(ss, body); } catch(enrichErr) { Logger.log('Stock In enrich skipped: ' + (enrichErr.message || enrichErr.toString())); }
       try { validateTransaction_(body, 'in'); } catch(vErr) { return err(vErr.message); }
+      const identityErr = transactionIdentityError_(body, 'in');
+      if (identityErr) return err(identityErr);
       const duplicate = findDuplicate(ss, body.type, body.sn, body.lot, body.name, body.size || '');
       if (duplicate) return err('DUPLICATE', { duplicate: duplicate });
 
@@ -4385,7 +4475,7 @@ function doBatchStocktake(ss, items, date, time, ctx) {
   if (!Array.isArray(items) || !items.length) throw new Error('No stocktake items');
   if (!String(ctx.operator || ctx.staffName || '').trim()) throw new Error('Missing operator');
   const products = readProductDB(ss);
-  const byCode = new Map(products.map(p => [String(p.product_code || '').trim().toUpperCase(), p]));
+  const byCode = buildUniqueProductCodeMap_(products);
   let updated = 0;
 
   items.forEach(item => {
@@ -4407,6 +4497,25 @@ function doBatchStocktake(ss, items, date, time, ctx) {
     updated++;
   });
   return {updated:updated};
+}
+
+function buildUniqueProductCodeMap_(products) {
+  const buckets = {};
+  (products || []).forEach(p => {
+    const code = String(p.product_code || '').trim().toUpperCase();
+    if (!code) return;
+    if (!buckets[code]) buckets[code] = [];
+    buckets[code].push(p);
+  });
+  const out = new Map();
+  Object.keys(buckets).forEach(code => {
+    if (buckets[code].length === 1) {
+      out.set(code, buckets[code][0]);
+    } else {
+      Logger.log('Duplicate Product Code skipped for stocktake: ' + code + ' (' + buckets[code].length + ' rows)');
+    }
+  });
+  return out;
 }
 
 function setAggregateQty_(sheet, product, qty, date, ctx) {

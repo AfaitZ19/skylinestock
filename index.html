@@ -656,6 +656,7 @@ let AUTH_TOKEN = localStorage.getItem('skl_token') || '';
 let CUR_USER = '', CUR_ROLE = 'stock', CUR_STAFF = localStorage.getItem('skl_staff') || '';
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
+let PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
 const ADD_PRODUCT_PIN = '1234';
 const ADD_PRODUCT_UNLOCK_MS = 30 * 60 * 1000;
 let IS_PROCESSING = false;
@@ -1235,9 +1236,10 @@ function applyOcrToForm(data) {
 async function saveNewProduct() {
   const productName = document.getElementById('newProductName').value.trim();
   if (!productName) { toast('กรุณากรอกชื่อสินค้า', 'warn'); document.getElementById('newProductName').focus(); return; }
+  const gtin = normalizeNewGtinField();
   const payload = {
     action:'add_product',
-    gtin: document.getElementById('newGtin').value.trim(),
+    gtin,
     productName,
     brand: document.getElementById('newBrand').value,
     type: document.getElementById('newType').value,
@@ -1246,7 +1248,7 @@ async function saveNewProduct() {
     ref: document.getElementById('newRef').value.trim(),
     category: document.getElementById('newCategory').value,
     aliases: document.getElementById('newAliases').value.trim(),
-    hasBarcode: !!document.getElementById('newGtin').value.trim(),
+    hasBarcode: !!gtin,
     photoUrl: document.getElementById('newPhotoUrl').value.trim()
   };
   try {
@@ -1273,10 +1275,27 @@ function clearAddProductForm() {
   document.getElementById('productPhotoThumb').removeAttribute('src');
 }
 
+function normalizeNewGtinField() {
+  const el = document.getElementById('newGtin');
+  if (!el) return '';
+  const normalized = normalizeNewGtinInput(el.value);
+  if (normalized && el.value.trim() !== normalized) el.value = normalized;
+  return normalized || el.value.trim();
+}
+
+function normalizeNewGtinInput(raw) {
+  const decoded = gs1Decode(raw);
+  if (decoded.gtin && /^\d{8,14}$/.test(decoded.gtin)) return decoded.gtin;
+  const plain = String(raw || '').replace(/\D/g, '');
+  if (/^\d{8,14}$/.test(plain)) return plain;
+  return '';
+}
+
 async function refreshProductsOnly() {
   const prods = await apiFetch(buildApiUrl(API_URL, { action:'products' }));
   if (prods && prods.ok && prods.products) {
     CACHE.products = prods.products;
+    rebuildProductLookupIndex();
     populateProductFilters();
     populateAddProductCategories();
     renderManualProducts();
@@ -1321,6 +1340,7 @@ async function loadAll() {
     CACHE.monthlyOut = monthlyOut && monthlyOut.ok ? monthlyOut : null;
     CACHE.salesAlerts = salesAlerts && salesAlerts.ok ? (salesAlerts.alerts || []) : [];
     if (prods && prods.ok && prods.products) CACHE.products = prods.products;
+    rebuildProductLookupIndex();
     populateProductFilters();
     renderManualProducts();
     renderStocktake();
@@ -1763,14 +1783,25 @@ function lookup(d) {
   const gtinRaw = String(d.gtin||'').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase().replace(/^0+/,'');
   const lot = _gs1NormLot(d.lot);
   const sn  = String(d.sn||'').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
+  const scanText = [d.raw, d.lot, d.ref].join(' ');
 
-  
+  const gtinHit = lookupProductByGtin(gtinRaw);
+  if (gtinHit) return _mergeLotDetails(gtinHit, lot || d.raw || '', { preferProductIdentity:true });
+
+  const indexed = lookupProductFromIndex({ lot, ref:d.ref, raw:d.raw });
+  if (indexed) return _mergeLotDetails(indexed, lot || d.raw || '');
+
+  const inferred = inferFromLot(lot || scanText);
+  const refHit = lookupProductByEmbeddedRef(scanText, inferred);
+  if (refHit) return _mergeLotDetails(refHit, lot || scanText);
+
+
   const db = CACHE.products || [];
   let wildcardLotHit = null;
 
   for (const p of db) {
     const pGtin = String(p.gtin || '').replace(/^0+/, '');
-    if (pGtin && gtinRaw === pGtin) return _mergeLotDetails(p, lot);
+    if (pGtin && gtinRaw === pGtin) return _mergeLotDetails(p, lot, { preferProductIdentity:true });
     if (p.sn_exact && sn === p.sn_exact) return _mergeLotDetails(p, lot);
     if (p.sn_pfx && sn.startsWith(p.sn_pfx)) return _mergeLotDetails(p, lot);
     if (p.lot_pfx && _matchProductPattern(lot, p.lot_pfx)) {
@@ -1790,7 +1821,92 @@ function lookup(d) {
     if (apexMatch) return apexMatch;
   }
 
-  return inferFromLot(lot);
+  return inferred;
+}
+
+function rebuildProductLookupIndex() {
+  PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
+  (CACHE.products || []).forEach(p => {
+    const gtin = normalizeGtinForMatch(p.gtin || '');
+    if (gtin) PRODUCT_LOOKUP.byGtin.set(gtin, p);
+    const ref = normalizeRefToken(p.ref || p.reference || '');
+    if (ref) addLookupBucket(PRODUCT_LOOKUP.byRef, ref, p);
+    const code = normalizeSkuToken(p.product_code || p.productCode || '');
+    if (code && code !== '-') addLookupBucket(PRODUCT_LOOKUP.byCode, code, p);
+  });
+}
+
+function addLookupBucket(map, key, product) {
+  if (!key) return;
+  const cur = map.get(key);
+  if (!cur) map.set(key, [product]);
+  else cur.push(product);
+}
+
+function lookupProductByGtin(gtin) {
+  gtin = normalizeGtinForMatch(gtin || '');
+  return gtin && PRODUCT_LOOKUP.byGtin.has(gtin) ? PRODUCT_LOOKUP.byGtin.get(gtin) : null;
+}
+
+function lookupProductFromIndex(d) {
+  const scan = [d.raw, d.lot, d.ref].join(' ');
+  const refHit = lookupProductByEmbeddedRef(scan);
+  if (refHit) return refHit;
+
+  const sku = normalizeSkuToken(scan);
+  if (sku) {
+    const codeHit = lookupUniqueBucket(PRODUCT_LOOKUP.byCode, sku);
+    if (codeHit) return codeHit;
+  }
+  return null;
+}
+
+function lookupProductByEmbeddedRef(text, hint = null) {
+  const refs = extractRefTokens(text);
+  for (const ref of refs) {
+    const hit = lookupUniqueBucket(PRODUCT_LOOKUP.byRef, ref, hint);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function lookupUniqueBucket(map, key, hint = null) {
+  const rows = map.get(key) || [];
+  if (!rows.length) return null;
+  if (rows.length === 1) return rows[0];
+  if (hint?.model) {
+    const byModel = rows.filter(p => sameText(p.model, hint.model));
+    if (byModel.length === 1) return byModel[0];
+    if (hint.size) {
+      const bySize = byModel.filter(p => sameText(p.size, hint.size));
+      if (bySize.length === 1) return bySize[0];
+    }
+  }
+  return null;
+}
+
+function normalizeSkuToken(v) {
+  return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeRefToken(v) {
+  return String(v || '').toUpperCase().replace(/^REF/i, '').replace(/[^A-Z0-9]/g, '');
+}
+
+function extractRefTokens(text) {
+  const raw = String(text || '').toUpperCase();
+  const out = [];
+  raw.replace(/\bREF\s*[:#-]?\s*([A-Z0-9._/-]{3,})/g, (_, ref) => {
+    const v = normalizeRefToken(ref);
+    if (v) out.push(v);
+    return _;
+  });
+  raw.replace(/\b(PT?\d{4,6}|\d{5})\b/g, (_, ref) => {
+    const v = normalizeRefToken(ref);
+    if (v) out.push(v);
+    return _;
+  });
+  return [...new Set(out)];
 }
 
 function clearScanDedup() {
@@ -1816,19 +1932,24 @@ function _escapeRegExp(s) {
 }
 
 function _mergeProduct(base, override) {
-  return {
-    name:  override?.name  || base?.name  || '',
-    brand: override?.brand || base?.brand || '',
-    type:  override?.type  || base?.type  || '',
-    model: override?.model || base?.model || '',
-    size:  override?.size  || base?.size  || '',
-    ref:   override?.ref   || base?.ref   || '',
-  };
+  const merged = { ...(base || {}) };
+  Object.keys(override || {}).forEach(k => {
+    const v = override[k];
+    if (v !== undefined && v !== null && v !== '') merged[k] = v;
+  });
+  return merged;
 }
 
-function _mergeLotDetails(product, lot) {
+function _mergeLotDetails(product, lot, opts = {}) {
   const inferred = inferFromLot(lot);
   const merged = _mergeProduct(inferred, product);
+  if (opts.preferProductIdentity) {
+    return {
+      ...merged,
+      size: merged.size || inferred?.size || '',
+      ref:  merged.ref  || inferred?.ref  || '',
+    };
+  }
   return {
     ...merged,
     // Some products share GTIN across sizes; LOT suffix is more specific when present.
@@ -1863,6 +1984,7 @@ function learnMappingIntoCache(payload) {
   });
   if (!exists) {
     CACHE.products = (CACHE.products || []).concat([learned]);
+    rebuildProductLookupIndex();
     populateProductFilters();
   }
 }
@@ -1917,21 +2039,32 @@ const _REF_RULES = [
   { model:'EaseFit NM5A', size:'M', ref:'PT78044' },
   { model:'EaseFit NM6A', size:'M', ref:'78091'   },
   { model:'EaseFit NM6',  size:'L', ref:'78084'   },
+  { model:'EaseFit NM6',  size:'M', ref:'78085'   },
+  { model:'EaseFit NM6',  size:'S', ref:'78086'   },
   { model:'EaseFit NM5',  size:'M', ref:'78066'   },
   { model:'EaseFit NM5',  size:'L', ref:'78066'   },
+  { model:'EaseFit NM5',  size:'S', ref:'78066'   },
 ];
 
 function inferFromLot(lot) {
   if (!lot) return null;
+  lot = normalizeSkuToken(lot);
 
   const matched = _LOT_RULES.find(r => r.test(lot));
-  if (!matched) return null;
+  const refRuleFromText = extractRefTokens(lot).map(ref => {
+    const matches = _REF_RULES.filter(r => normalizeRefToken(r.ref) === ref);
+    return matches.length === 1 ? matches[0] : null;
+  }).find(Boolean);
+  if (!matched && !refRuleFromText) return null;
 
-  const { type, model, name, brand } = matched;
+  const model = matched?.model || refRuleFromText?.model || '';
+  const type = matched?.type || (model ? 'mask' : '');
+  const name = matched?.name || (model ? 'Beyond ' + model : '');
+  const brand = matched?.brand || (model ? 'Hunan Beyond' : '');
   const sizeRule = _SIZE_RULES.find(r => r.test(lot));
-  const size = sizeRule ? sizeRule.size : '';
+  const size = sizeRule ? sizeRule.size : (refRuleFromText?.size || '');
   const refRule = _REF_RULES.find(r => r.model === model && r.size === size);
-  const ref = refRule ? refRule.ref : '';
+  const ref = refRule ? refRule.ref : (refRuleFromText?.ref || '');
 
   return { name, brand, type, model, size, ref };
 }
@@ -2031,6 +2164,25 @@ function renderInlineMaskSizeOptions(selected = '') {
   el.innerHTML = optionHtml('', current, sizes.length ? 'เลือกไซส์หน้ากากจาก ProductDB' : 'ยังไม่มีไซส์ของรุ่นนี้ใน ProductDB')
     + sizes.map(v => optionHtml(v, current, '')).join('');
   if (current && sizes.includes(current)) el.value = current;
+}
+
+function completeProductFromScan(scan) {
+  if (!scan) return null;
+  const inferred = lookup({
+    raw: scan.raw || scan.learnRaw || '',
+    gtin: scan.gtin || scan.learnGtin || '',
+    sn: scan.sn || scan.learnSn || '',
+    lot: scan.lot || scan.learnLot || '',
+    ref: scan.p?.ref || ''
+  }) || inferFromLot([scan.raw, scan.lot, scan.learnRaw, scan.learnLot, scan.p?.ref].join(' '));
+  if (!inferred) return scan.p || null;
+  return _mergeProduct(inferred, scan.p || {});
+}
+
+function stockInIdentityError(type, p) {
+  if (type === 'device' && !String(p.model || '').trim()) return 'Missing device model mapping';
+  if (type === 'mask' && (!String(p.model || '').trim() || !String(p.size || '').trim())) return 'Missing mask model/size mapping';
+  return '';
 }
 
 function showManualProductPanel(focusSearch = false) {
@@ -2677,11 +2829,16 @@ async function doAct(action) {
   const tracking = requiredTrackingValue(type);
   const sn = stockItem ? (stockItem['Serial Number (SN)'] || LAST.sn || '') : (tracking.key === 'sn' ? tracking.value : (LAST.sn || ''));
   const lot = stockItem ? (stockItem['LOT Number'] || LAST.lot || '') : (tracking.key === 'lot' ? tracking.value : (LAST.lot || ''));
-  const name = stockItem ? (stockItem['Product Name'] || '') : (LAST.p?.name || sn || LAST.raw);
-  const brand = stockItem ? (stockItem['Brand'] || '') : (LAST.p?.brand || '');
-  const model = stockItem ? (stockItem['Model'] || '') : (LAST.p?.model || '');
-  const size = stockItem ? (stockItem['Size'] || '') : (LAST.p?.size || '');
-  const ref = stockItem ? (stockItem['REF'] || '') : (LAST.p?.ref || '');
+  if (action === 'in' && !stockItem) {
+    const completed = completeProductFromScan(LAST);
+    if (completed) LAST.p = completed;
+  }
+
+  let name = stockItem ? (stockItem['Product Name'] || '') : (LAST.p?.name || sn || LAST.raw);
+  let brand = stockItem ? (stockItem['Brand'] || '') : (LAST.p?.brand || '');
+  let model = stockItem ? (stockItem['Model'] || '') : (LAST.p?.model || '');
+  let size = stockItem ? (stockItem['Size'] || '') : (LAST.p?.size || '');
+  let ref = stockItem ? (stockItem['REF'] || '') : (LAST.p?.ref || '');
   const gtin = stockItem ? (stockItem['GTIN / Barcode'] || '') : LAST.gtin;
   const maxStockQty = stockItem && type !== 'device' ? Number(stockItem['Qty'] || 0) : 1;
 
@@ -2700,6 +2857,14 @@ async function doAct(action) {
   if (transactionNeedsQty(action, type) && (!qty || qty <= 0)) {
     toast('กรุณากรอกจำนวนให้ถูกต้อง', 'warn');
     IS_PROCESSING = false;
+    return;
+  }
+  const identityError = action === 'in' ? stockInIdentityError(type, { model, size }) : '';
+  if (identityError) {
+    toast(identityError, 'warn');
+    IS_PROCESSING = false;
+    updateActionButtons();
+    focusScanInput(120);
     return;
   }
   if (action === 'out' && stockItem && type !== 'device' && qty > maxStockQty) {
