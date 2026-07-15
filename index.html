@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -606,7 +606,7 @@ body.admin .admin-only{display:inline-flex}
       </div>
 
       <div class="pform-grid">
-        <div class="full"><label>GTIN</label><input id="newGtin" type="text" inputmode="numeric" placeholder="พิมพ์หรือสแกนบาร์โค้ด"></div>
+        <div class="full"><label>GTIN</label><input id="newGtin" type="text" inputmode="numeric" placeholder="พิมพ์หรือสแกนบาร์โค้ด" onblur="normalizeNewGtinField()" onchange="normalizeNewGtinField()"></div>
         <div class="full"><label>ชื่อสินค้า*</label><input id="newProductName" type="text" placeholder="ชื่อสินค้า"></div>
         <div><label>Brand</label><select id="newBrand"><option>APEX</option><option>Wellell</option><option>Hunan Beyond</option><option>Philips</option><option>ResMed</option><option>อื่นๆ</option></select></div>
         <div><label>ประเภท</label><select id="newType"><option value="device">device</option><option value="mask">mask</option><option value="accessory">accessory</option></select></div>
@@ -1263,18 +1263,6 @@ async function saveNewProduct() {
   }
 }
 
-function clearAddProductForm() {
-  ['newGtin','newProductName','newModel','newSize','newRef','newAliases','newPhotoUrl'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('newBrand').value = 'APEX';
-  document.getElementById('newType').value = 'device';
-  document.getElementById('newCategory').value = '';
-  document.getElementById('productPhotoPreview').classList.remove('on');
-  document.getElementById('productPhotoThumb').removeAttribute('src');
-}
-
 function normalizeNewGtinField() {
   const el = document.getElementById('newGtin');
   if (!el) return '';
@@ -1289,6 +1277,18 @@ function normalizeNewGtinInput(raw) {
   const plain = String(raw || '').replace(/\D/g, '');
   if (/^\d{8,14}$/.test(plain)) return plain;
   return '';
+}
+
+function clearAddProductForm() {
+  ['newGtin','newProductName','newModel','newSize','newRef','newAliases','newPhotoUrl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('newBrand').value = 'APEX';
+  document.getElementById('newType').value = 'device';
+  document.getElementById('newCategory').value = '';
+  document.getElementById('productPhotoPreview').classList.remove('on');
+  document.getElementById('productPhotoThumb').removeAttribute('src');
 }
 
 async function refreshProductsOnly() {
@@ -1788,13 +1788,12 @@ function lookup(d) {
   const gtinHit = lookupProductByGtin(gtinRaw);
   if (gtinHit) return _mergeLotDetails(gtinHit, lot || d.raw || '', { preferProductIdentity:true });
 
-  const indexed = lookupProductFromIndex({ lot, ref:d.ref, raw:d.raw });
+  const indexed = lookupProductFromIndex({ gtin:gtinRaw, lot, sn, ref:d.ref, raw:d.raw });
   if (indexed) return _mergeLotDetails(indexed, lot || d.raw || '');
 
   const inferred = inferFromLot(lot || scanText);
   const refHit = lookupProductByEmbeddedRef(scanText, inferred);
   if (refHit) return _mergeLotDetails(refHit, lot || scanText);
-
 
   const db = CACHE.products || [];
   let wildcardLotHit = null;
@@ -1836,16 +1835,16 @@ function rebuildProductLookupIndex() {
   });
 }
 
+function lookupProductByGtin(gtin) {
+  gtin = normalizeGtinForMatch(gtin || '');
+  return gtin && PRODUCT_LOOKUP.byGtin.has(gtin) ? PRODUCT_LOOKUP.byGtin.get(gtin) : null;
+}
+
 function addLookupBucket(map, key, product) {
   if (!key) return;
   const cur = map.get(key);
   if (!cur) map.set(key, [product]);
   else cur.push(product);
-}
-
-function lookupProductByGtin(gtin) {
-  gtin = normalizeGtinForMatch(gtin || '');
-  return gtin && PRODUCT_LOOKUP.byGtin.has(gtin) ? PRODUCT_LOOKUP.byGtin.get(gtin) : null;
 }
 
 function lookupProductFromIndex(d) {
@@ -2180,8 +2179,12 @@ function completeProductFromScan(scan) {
 }
 
 function stockInIdentityError(type, p) {
-  if (type === 'device' && !String(p.model || '').trim()) return 'Missing device model mapping';
-  if (type === 'mask' && (!String(p.model || '').trim() || !String(p.size || '').trim())) return 'Missing mask model/size mapping';
+  if (type === 'device' && !String(p.model || '').trim()) {
+    return 'ยังระบุรุ่นเครื่องไม่ได้ — ตรวจ mapping ก่อนรับเข้า';
+  }
+  if (type === 'mask' && (!String(p.model || '').trim() || !String(p.size || '').trim())) {
+    return 'ยังระบุรุ่น/ไซส์หน้ากากไม่ได้ — ตรวจ mapping ก่อนรับเข้า';
+  }
   return '';
 }
 
