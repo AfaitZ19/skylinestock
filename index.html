@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -120,6 +120,23 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 .chart-fill.mask{background:var(--G)}
 .chart-value{font-size:12px;font-weight:800;color:#111;min-width:28px;text-align:right}
 .chart-sub{font-size:11px;color:var(--mu);margin-top:7px;line-height:1.5}
+
+.adiv{display:flex;align-items:center;gap:8px;margin:14px 0 10px}
+.adiv-l{flex:1;height:1px;background:var(--bd)}
+.adiv-tx{font-size:11px;color:var(--mu);font-weight:700;white-space:nowrap}
+
+.asum-hd{display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+.asum-hd h3{margin:0}
+.atag{font-size:10px;font-weight:800;color:var(--B);background:var(--BL);padding:2px 8px;border-radius:10px;white-space:nowrap}
+
+.prow{background:#fff;border-radius:var(--ra);padding:11px 12px;margin-bottom:8px;box-shadow:var(--sh)}
+.prow-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
+.prow-nm{font-size:13.5px;font-weight:700;flex:1;min-width:0;word-break:break-word}
+.rord{border-radius:8px;padding:7px 9px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--AL)}
+.rord .k{font-size:12px;font-weight:700;color:var(--A)}
+.rord .v{font-size:15px;font-weight:800;color:var(--A);white-space:nowrap}
+.rord.ok{background:var(--GL)}
+.rord.ok .k,.rord.ok .v{color:var(--G)}
 
 .chips{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
 .chips::-webkit-scrollbar{display:none}
@@ -484,13 +501,16 @@ body.admin .admin-only{display:inline-flex}
     </div>
 
     <div id="v-analysis" style="display:none">
-      <div class="scrd" id="purposeSummary"></div>
+      <div class="scrd" id="purposeSummary" style="border-left:4px solid var(--B)"></div>
+
+      <div class="adiv"><div class="adiv-l"></div><div class="adiv-tx">เลือกเดือนเพื่อดูรายละเอียดเพิ่มเติม</div><div class="adiv-l"></div></div>
+
       <div class="scrd">
         <h3>วิเคราะห์จ่ายออกเพื่อสั่งของ</h3>
         <input class="finp" id="outMonthI" type="month" onchange="loadMonthlyOutSummaryForSelected()">
         <button class="bfull bout2" onclick="loadMonthlyOutSummaryForSelected()">วิเคราะห์เดือนที่เลือก</button>
       </div>
-      <div class="scrd" id="monthlyOutSummary"></div>
+      <div id="monthlyOutSummary"></div>
     </div>
 
     <div id="v-sales" style="display:none">
@@ -3371,7 +3391,7 @@ function renderPurposeSummary(items) {
     const p = rawPurpose.startsWith('อื่นๆ') ? 'อื่นๆ' : (rawPurpose || 'อื่นๆ');
     sums[p] = (sums[p] || 0) + historyQty(it);
   });
-  el.innerHTML = `<h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
+  el.innerHTML = `<div class="asum-hd"><span class="atag">อัตโนมัติ</span><h3>สรุปจ่ายออกตามวัตถุประสงค์ (${escapeHtml(month)})</h3></div>` + Object.entries(sums).map(([k,v]) => `<div class="bdash-row"><div>${escapeHtml(k)}</div><div class="bdash-qty">${v}</div></div>`).join('');
 }
 
 function renderMonthlyOutSummary() {
@@ -3385,36 +3405,57 @@ function renderMonthlyOutSummary() {
   const rows = (data.rows || []).slice(0, 20);
 
   if (!rows.length) {
-    el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3><div class="empty"><div class="empty-ic">📊</div><div>ยังไม่มีรายการจ่ายออกในเดือนนี้</div></div>`;
+    el.innerHTML = `<div class="scrd"><h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3><div class="empty"><div class="empty-ic">📊</div><div>ยังไม่มีรายการจ่ายออกในเดือนนี้</div></div></div>`;
     return;
   }
 
   const totalQty = Number(data.totalQty || rows.reduce((n, r) => n + Number(r.qty || 0), 0));
-  el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3>` +
-    `<div class="bdash-row"><div>รวมจ่ายออกเดือนที่เลือก</div><div class="bdash-qty">${escapeHtml(String(totalQty))}</div></div>` +
-    renderMaskSalesCharts(data) +
-    rows.map(r => {
+
+  const totalCardHtml = `<div class="scrd">
+    <h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3>
+    <div class="bdash-row"><div>รวมจ่ายออกเดือนที่เลือก</div><div class="bdash-qty">${escapeHtml(String(totalQty))}</div></div>
+  </div>`;
+
+  const chartsInner = renderMaskSalesCharts(data);
+  const chartsCardHtml = chartsInner ? `<div class="scrd"><h3>กราฟภาพรวมหน้ากาก</h3>${chartsInner}</div>` : '';
+
+  const rowsHtml = rows.map(r => {
       const currentQty = currentQtyForMonthlyRow(r);
       const forecastQty = Number(r.forecastQty || r.qty || 0);
       const suggested = Math.max(0, forecastQty - currentQty);
+      const typeLower = String(r.type || '').toLowerCase();
+      const badgeCls = typeLower.includes('device') ? 'bd2' : typeLower.includes('mask') ? 'bm' : 'ba';
+      const typeLabel = typeLower.includes('device') ? 'Device' : typeLower.includes('mask') ? 'Mask' : typeLower.includes('accessory') ? 'Accessory' : (r.type || '-');
       const sub = [
-        r.type || '',
         r.brand || '',
         r.model ? 'รุ่น ' + r.model : '',
         r.size ? 'ไซส์ ' + r.size : '',
         r.reference ? 'REF ' + r.reference : ''
       ].filter(Boolean).join(' · ');
-      const stats = `เดือนที่เลือก ${Number(r.qty || 0)} · เฉลี่ย 3 เดือนก่อน ${Number(r.prevAvg || 0)} · เดือนเดียวกันปีก่อน ${Number(r.sameMonthLastYearQty || 0)}`;
-      return `<div class="bdash-row">
-        <div>
-          <b>${escapeHtml(r.productName || '-')}</b>
-          <div class="hm">${escapeHtml(sub || '-')}</div>
-          <div class="hm">${escapeHtml(stats)}</div>
-          <div class="hm">Forecast ${escapeHtml(String(forecastQty))} · คงเหลือ ${escapeHtml(String(currentQty))}${suggested ? ` · แนะนำสั่งเพิ่ม ${escapeHtml(String(suggested))}` : ''}</div>
+      const stats = [
+        sub || '',
+        'คงเหลือ ' + currentQty,
+        'จ่ายออกเดือนที่เลือก ' + Number(r.qty || 0),
+        'เฉลี่ย 3 เดือนก่อน ' + Number(r.prevAvg || 0),
+        'เดือนเดียวกันปีก่อน ' + Number(r.sameMonthLastYearQty || 0),
+        'Forecast ' + forecastQty
+      ].filter(Boolean).join(' · ');
+      return `<div class="prow">
+        <div class="prow-top">
+          <div class="prow-nm">${escapeHtml(r.productName || '-')}</div>
+          <span class="bg ${badgeCls}">${escapeHtml(typeLabel)}</span>
         </div>
-        <div class="bdash-qty">${escapeHtml(String(forecastQty))}</div>
+        <div class="rord ${suggested ? '' : 'ok'}">
+          <span class="k">${suggested ? 'แนะนำสั่งเพิ่ม' : 'สต็อกเพียงพอ'}</span>
+          <span class="v">${suggested ? escapeHtml(String(suggested)) + ' ชิ้น' : 'คงเหลือ ' + escapeHtml(String(currentQty))}</span>
+        </div>
+        <div class="hm">${escapeHtml(stats)}</div>
       </div>`;
     }).join('');
+
+  const rowsCardHtml = `<div class="scrd"><h3>รายละเอียดสินค้า (${rows.length} รายการ)</h3>${rowsHtml}</div>`;
+
+  el.innerHTML = totalCardHtml + chartsCardHtml + rowsCardHtml;
 }
 
 function renderMaskSalesCharts(data) {
