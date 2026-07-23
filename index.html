@@ -3429,8 +3429,7 @@ function renderMonthlyOutSummary() {
       const sub = [
         r.brand || '',
         r.model ? 'รุ่น ' + r.model : '',
-        r.size ? 'ไซส์ ' + r.size : '',
-        r.reference ? 'REF ' + r.reference : ''
+        r.size ? 'ไซส์ ' + r.size : ''
       ].filter(Boolean).join(' · ');
       const stats = [
         sub || '',
@@ -3612,13 +3611,11 @@ function currentQtyForMonthlyRow(row) {
   const type = String(row.type || '').toLowerCase();
   const name = String(row.productName || '').trim().toLowerCase();
     const brand = String(row.brand || '').trim().toLowerCase();
-    const ref = String(row.reference || '').trim().toLowerCase();
   const model = String(row.model || '').trim().toLowerCase();
   const size = String(row.size || '').trim().toLowerCase();
   const match = it =>
     String(it['Product Name'] || '').trim().toLowerCase() === name &&
     (!brand || String(it['Brand'] || '').trim().toLowerCase() === brand) &&
-    (!ref || String(it['REF'] || '').trim().toLowerCase() === ref) &&
     (!type.includes('mask') || !model || String(it['Model'] || '').trim().toLowerCase() === model) &&
     (!type.includes('mask') || !size || String(it['Size'] || '').trim().toLowerCase() === size);
 
@@ -3667,7 +3664,6 @@ function monthlySummaryKey(row) {
     row.type || '',
     row.productName || '',
     row.brand || '',
-    row.reference || '',
     type.includes('mask') ? (row.model || '') : '',
     type.includes('mask') ? (row.size || '') : ''
   ].join('|').toUpperCase();
