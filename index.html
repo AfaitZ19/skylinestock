@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -673,7 +673,7 @@ body.admin .admin-only{display:inline-flex}
 <script>
 let API_URL  = localStorage.getItem('skl_api') || '';
 let AUTH_TOKEN = localStorage.getItem('skl_token') || '';
-let CUR_USER = '', CUR_ROLE = 'stock', CUR_STAFF = localStorage.getItem('skl_staff') || '';
+let CUR_USER = localStorage.getItem('skl_user') || '', CUR_ROLE = localStorage.getItem('skl_role') || 'stock', CUR_STAFF = localStorage.getItem('skl_staff') || '';
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
 let PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
@@ -732,7 +732,24 @@ window.onload = () => {
   updateModeUI();
   setupHidScanner();
   setupManualScanner();
+  resumeStoredSession();
 };
+
+async function resumeStoredSession() {
+  if (!API_URL || !AUTH_TOKEN || !CUR_USER || !CUR_STAFF) return;
+  document.body.classList.toggle('admin', CUR_ROLE === 'admin');
+  document.getElementById('scSetup').classList.remove('on');
+  document.getElementById('scApp').classList.add('on');
+  document.getElementById('usrBadge').textContent = CUR_STAFF + ' (' + CUR_USER + ')' + (CUR_ROLE === 'admin' ? ' admin' : '');
+  setPill('busy');
+  try {
+    await loadAll();
+    _lastSyncTime = Date.now();
+    enableHIDMode(true);
+  } catch (e) {
+    handleAuthExpired(e);
+  }
+}
 
 function getHidInput() {
   return document.getElementById('hidInput');
@@ -1010,8 +1027,10 @@ async function doSetup() {
     AUTH_TOKEN = loginRes.token || '';
     CUR_ROLE = loginRes.role || loginRes.userRole || (user === 'admin' ? 'admin' : 'stock');
     localStorage.setItem('skl_api', url);
+    localStorage.setItem('skl_user', CUR_USER);
     localStorage.setItem('skl_token', AUTH_TOKEN);
     localStorage.setItem('skl_staff', CUR_STAFF);
+    localStorage.setItem('skl_role', CUR_ROLE);
 
     
     document.body.classList.toggle('admin', CUR_ROLE === 'admin');
@@ -1054,9 +1073,15 @@ function setSetupLoading(isLoading, msg = '') {
 function signOut() {
   CUR_USER = '';
   AUTH_TOKEN = '';
+  CUR_ROLE = 'stock';
+  CUR_STAFF = '';
   LAST = null;
   PENDING_SCAN = null;
   HID_AUTO_RESUME = false;
+  localStorage.removeItem('skl_user');
+  localStorage.removeItem('skl_token');
+  localStorage.removeItem('skl_staff');
+  localStorage.removeItem('skl_role');
   clearTimeout(_bgSyncTimer);
   _bgSyncTimer = null;
   stopScannerOnly();
@@ -1068,8 +1093,10 @@ function signOut() {
 
 function changeApiUrl() {
   localStorage.removeItem('skl_api');
+  localStorage.removeItem('skl_user');
   localStorage.removeItem('skl_token');
   localStorage.removeItem('skl_staff');
+  localStorage.removeItem('skl_role');
   signOut();
 }
 
@@ -1077,6 +1104,19 @@ function showSetupErr(msg) {
   const errEl = document.getElementById('setupErr');
   errEl.textContent = msg;
   errEl.style.display = 'block';
+}
+
+function isAuthErrorMessage(msg) {
+  return /Unauthorized|missing staff name|เซสชัน/i.test(String(msg || ''));
+}
+
+function handleAuthExpired(e) {
+  const msg = e && e.message ? e.message : String(e || '');
+  if (!isAuthErrorMessage(msg)) return false;
+  signOut();
+  showSetupErr('เซสชันหมดอายุหรือข้อมูลผู้ใช้ไม่ครบ กรุณาเข้าสู่ระบบใหม่');
+  setPill('err');
+  return true;
 }
 
 async function apiFetch(url) {
@@ -1088,7 +1128,12 @@ async function apiFetch(url) {
     r = await fetchWithTimeout(url, { redirect:'follow', credentials:'omit' });
   }
     if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+  const data = await r.json();
+  if (data && data.ok === false && isAuthErrorMessage(data.error)) {
+    handleAuthExpired(new Error(data.error));
+    throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  }
+  return data;
 }
 
 function buildApiUrl(base, params = {}) {
@@ -1136,8 +1181,14 @@ async function apiPost(body, url) {
     credentials: 'omit'
   });
   const txt = await r.text();
-  try { return JSON.parse(txt); }
+  let data;
+  try { data = JSON.parse(txt); }
   catch(e) { throw new Error('Response not JSON: ' + txt.slice(0,120)); }
+  if (data && data.ok === false && isAuthErrorMessage(data.error)) {
+    handleAuthExpired(new Error(data.error));
+    throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  }
+  return data;
 }
 
 function isAddProductUnlocked() {
@@ -3034,7 +3085,8 @@ function closeModal() {
   _qoItem = null;
 }
 
-function confirmQuickOut() {
+async function confirmQuickOut() {
+  if (IS_PROCESSING) return;
   const who = document.getElementById('modalWho').value.trim();
   const purpose = document.getElementById('modalPurpose').value;
   const purposeOther = document.getElementById('modalPurposeOther').value.trim();
@@ -3081,8 +3133,10 @@ function confirmQuickOut() {
     staffName: CUR_STAFF
   };
 
+  IS_PROCESSING = true;
   setPill('busy');
-  apiPost(payload).then(res => {
+  try {
+    const res = await apiPost(payload);
     if (!res.ok) throw new Error(res.error || 'API error');
     toast('จ่ายออกให้ ' + who + ' สำเร็จ', 'ok');
     _patchCache('out', payload);  
@@ -3091,10 +3145,14 @@ function confirmQuickOut() {
     updateStats();
     setPill('ok');
     _scheduleBgSync();
-  }).catch(e => {
+  } catch(e) {
     setPill('err');
     toast('❌ ' + e.message, 'err');
-  });
+  } finally {
+    IS_PROCESSING = false;
+    updateActionButtons();
+    focusScanInput(120);
+  }
 }
 
 
