@@ -3674,6 +3674,7 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  let lock = null;
   try {
     const body = JSON.parse(e.postData.contents);
     const ss   = SpreadsheetApp.getActiveSpreadsheet();
@@ -3703,6 +3704,10 @@ function doPost(e) {
     const auth = requireAuth(body);
     if (!auth.ok) return err(auth.error);
     applyAuthContext_(body, auth);
+    if (requiresWriteLock_(body.action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(20000);
+    }
 
     if (body.action === 'in') {
       try { enrichTransactionProduct_(ss, body); } catch(enrichErr) { Logger.log('Stock In enrich skipped: ' + (enrichErr.message || enrichErr.toString())); }
@@ -3791,6 +3796,10 @@ function doPost(e) {
   } catch(ex) {
     Logger.log('doPost fatal error: ' + ex.toString());
     return err('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง');
+  } finally {
+    if (lock) {
+      try { lock.releaseLock(); } catch(lockErr) {}
+    }
   }
 }
 
@@ -3924,6 +3933,19 @@ function requireAuth(payload, requiredRole) {
     return { ok:false, error:'Admin permission required' };
   }
   return { ok:true, user:user, role:getUserRole(user), staffName:staffName };
+}
+
+function requiresWriteLock_(action) {
+  return [
+    'add_product',
+    'in',
+    'out',
+    'out_by_id',
+    'batch_stocktake',
+    'update_product_names',
+    'update_sales_details',
+    'sort'
+  ].indexOf(String(action || '')) !== -1;
 }
 
 function normalizeLot(lot) {

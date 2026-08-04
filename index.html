@@ -747,7 +747,10 @@ async function resumeStoredSession() {
     _lastSyncTime = Date.now();
     enableHIDMode(true);
   } catch (e) {
-    handleAuthExpired(e);
+    if (!handleAuthExpired(e)) {
+      signOut();
+      showSetupErr('เชื่อมต่อ API เดิมไม่สำเร็จ: ' + apiFriendlyError(e.message || e));
+    }
   }
 }
 
@@ -1004,6 +1007,8 @@ async function doSetup() {
   const errEl = document.getElementById('setupErr');
 
   if (!url) { showSetupErr('กรุณากรอก Apps Script URL'); return; }
+  const apiUrlError = validateApiUrl(url);
+  if (apiUrlError) { showSetupErr(apiUrlError); return; }
   if (!user) { showSetupErr('กรุณากรอกชื่อผู้ใช้'); return; }
   if (!staff) { showSetupErr('กรุณากรอกชื่อพนักงานผู้ทำรายการ'); return; }
 
@@ -1051,7 +1056,7 @@ async function doSetup() {
       : 'Stock User - รับเข้าและจ่ายออกได้';
     enableHIDMode(false); 
   } catch(e) {
-    showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + e.message);
+    showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + apiFriendlyError(e.message));
     setPill('err');
   } finally {
     setSetupLoading(false);
@@ -1118,6 +1123,29 @@ function handleAuthExpired(e) {
   showSetupErr('เซสชันหมดอายุหรือข้อมูลผู้ใช้ไม่ครบ กรุณาเข้าสู่ระบบใหม่');
   setPill('err');
   return true;
+}
+
+function validateApiUrl(url) {
+  let u;
+  try { u = new URL(url); }
+  catch(e) { return 'URL ไม่ถูกต้อง กรุณาวาง Apps Script Web App URL'; }
+  const host = u.hostname.toLowerCase();
+  const path = u.pathname;
+  if (host === 'afaitz19.github.io' || host === 'github.com') {
+    return 'ช่องนี้ต้องเป็น Google Apps Script Web App URL ไม่ใช่ลิงก์ GitHub Pages';
+  }
+  if (!host.includes('script.google.com') || !/\/macros\/s\/.+\/exec$/.test(path)) {
+    return 'กรุณาวาง Apps Script Web App URL ที่ลงท้าย /exec จาก Deploy → Web app';
+  }
+  return '';
+}
+
+function apiFriendlyError(msg) {
+  msg = String(msg || '');
+  if (/Response not JSON|Unexpected token|DOCTYPE|Skyline Stock/i.test(msg)) {
+    return 'API URL ตอบกลับเป็นหน้าเว็บ ไม่ใช่ JSON กรุณาตรวจว่าใช้ Apps Script Web App URL ที่ลงท้าย /exec';
+  }
+  return msg;
 }
 
 async function apiFetch(url) {
@@ -1191,10 +1219,11 @@ async function apiPost(body, url) {
     redirect: 'follow',
     credentials: 'omit'
   });
+  if (!r.ok) throw new Error(apiHttpErrorMessage(r.status));
   const txt = await r.text();
   let data;
   try { data = JSON.parse(txt); }
-  catch(e) { throw new Error('Response not JSON: ' + txt.slice(0,120)); }
+  catch(e) { throw new Error(apiFriendlyError('Response not JSON: ' + txt.slice(0,120))); }
   if (data && data.ok === false && isAuthErrorMessage(data.error)) {
     handleAuthExpired(new Error(data.error));
     throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
