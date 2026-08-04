@@ -1128,13 +1128,23 @@ async function apiFetch(url) {
     
     r = await fetchWithTimeout(url, { redirect:'follow', credentials:'omit' });
   }
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) throw new Error(apiHttpErrorMessage(r.status));
   const data = await r.json();
   if (data && data.ok === false && isAuthErrorMessage(data.error)) {
     handleAuthExpired(new Error(data.error));
     throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
   }
   return data;
+}
+
+function apiHttpErrorMessage(status) {
+  if (status === 404) return 'HTTP 404 - ไม่พบ API endpoint กรุณาตรวจ Apps Script Web App URL ต้องลงท้าย /exec และ deploy เวอร์ชันล่าสุด';
+  if (status === 401 || status === 403) return 'HTTP ' + status + ' - ไม่มีสิทธิ์เรียก API กรุณาเข้าสู่ระบบหรือตรวจสิทธิ์ Web App';
+  return 'HTTP ' + status;
+}
+
+function apiSetupHelpHtml(message) {
+  return `${escapeHtml(message)}<br><button class="bfull bout2" style="margin-top:8px" onclick="goTab('cfg')">ไปตั้งค่า API URL</button>`;
 }
 
 function buildApiUrl(base, params = {}) {
@@ -1395,12 +1405,14 @@ async function loadAll() {
   syncOutMonthInput();
   const outMonth = selectedOutMonthParts();
   try {
-    const [stock, hist, prods, monthlyOut, salesAlerts] = await Promise.all([
+    const [stock, hist, prods] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'stock' })),
       apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
       apiFetch(buildApiUrl(API_URL, { action:'products' })),
-      apiFetch(buildApiUrl(API_URL, { action:'monthly_out_summary', year:outMonth.year, month:outMonth.month })),
-      apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' })),
+    ]);
+    const [monthlyOut, salesAlerts] = await Promise.all([
+      apiFetch(buildApiUrl(API_URL, { action:'monthly_out_summary', year:outMonth.year, month:outMonth.month })).catch(e => ({ ok:false, error:e.message })),
+      apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' })).catch(e => ({ ok:false, error:e.message })),
     ]);
 
     if (!stock.ok) throw new Error(stock.error);
@@ -1409,7 +1421,7 @@ async function loadAll() {
     CACHE.mask      = stock.mask || [];
     CACHE.accessory = stock.accessory || [];
     CACHE.history   = (hist && hist.history) ? hist.history : [];
-    CACHE.monthlyOut = monthlyOut && monthlyOut.ok ? monthlyOut : null;
+    CACHE.monthlyOut = monthlyOut && monthlyOut.ok ? monthlyOut : monthlyOutSummaryFromHistory(CACHE.history);
     CACHE.salesAlerts = salesAlerts && salesAlerts.ok ? (salesAlerts.alerts || []) : [];
     if (prods && prods.ok && prods.products) CACHE.products = prods.products;
     rebuildProductLookupIndex();
@@ -3633,7 +3645,9 @@ async function loadMonthlyOutSummaryForSelected() {
     CACHE.monthlyOut = res;
     renderMonthlyOutSummary();
   } catch(e) {
-    if (el) el.innerHTML = `<h3>สรุปจ่ายออกรายสินค้า</h3><div class="hm">โหลดรายงานไม่สำเร็จ: ${escapeHtml(e.message)}</div>`;
+    CACHE.monthlyOut = monthlyOutSummaryFromHistory(CACHE.history);
+    renderMonthlyOutSummary();
+    if (el) el.insertAdjacentHTML('beforeend', `<div class="hm" style="margin-top:8px">${apiSetupHelpHtml('โหลดรายงานจาก API ไม่สำเร็จ: ' + e.message)}<br>แสดงข้อมูลสำรองจากประวัติที่โหลดไว้แทน</div>`);
     toast('โหลดรายงาน forecast ไม่สำเร็จ: ' + e.message, 'err');
   }
 }
