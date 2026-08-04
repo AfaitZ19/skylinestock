@@ -677,6 +677,7 @@ let CUR_USER = localStorage.getItem('skl_user') || '', CUR_ROLE = localStorage.g
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
 let PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
+let ACTIVE_STOCK_CACHE = null;
 const ADD_PRODUCT_PIN = '1234';
 const ADD_PRODUCT_UNLOCK_MS = 30 * 60 * 1000;
 let IS_PROCESSING = false;
@@ -1453,6 +1454,7 @@ async function loadAll() {
     CACHE.monthlyOut = monthlyOut && monthlyOut.ok ? monthlyOut : monthlyOutSummaryFromHistory(CACHE.history);
     CACHE.salesAlerts = salesAlerts && salesAlerts.ok ? (salesAlerts.alerts || []) : [];
     if (prods && prods.ok && prods.products) CACHE.products = prods.products;
+    invalidateActiveStockCache();
     rebuildProductLookupIndex();
     populateProductFilters();
     renderManualProducts();
@@ -1759,7 +1761,8 @@ function parseCode(raw) {
 }
 
 function activeStockItems() {
-  return [
+  if (ACTIVE_STOCK_CACHE) return ACTIVE_STOCK_CACHE;
+  ACTIVE_STOCK_CACHE = [
     ...CACHE.device.map(x => ({...x, _type:'device'})),
     ...CACHE.mask.map(x => ({...x, _type:'mask'})),
     ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
@@ -1769,6 +1772,11 @@ function activeStockItems() {
     if (x._type !== 'device' && Number(x['Qty'] || 0) <= 0) return false;
     return true;
   });
+  return ACTIVE_STOCK_CACHE;
+}
+
+function invalidateActiveStockCache() {
+  ACTIVE_STOCK_CACHE = null;
 }
 
 function productFromStockItem(x) {
@@ -2881,6 +2889,7 @@ function _patchCache(action, b) {
     }
   }
 
+  invalidateActiveStockCache();
   
   const now = new Date();
   CACHE.history.unshift({
