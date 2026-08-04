@@ -867,7 +867,8 @@ function processScannerText(text) {
 
   
 
-  parseCode(code);
+  const parsed = parseCode(code);
+  if (!parsed || parsed.pending) return;
 
   
   
@@ -1591,19 +1592,19 @@ function normalizeLot(lot) { return _gs1NormLot(lot); }
 
 
 function parseCode(raw) {
-  if (!raw) return;
+  if (!raw) return null;
   raw = normalizeScannerLayout(raw);
 
   
   const key = String(raw).replace(/[^\x1D\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
-  if (!key) return;
+  if (!key) return null;
 
   const now = Date.now();
-  if (IS_PROCESSING) return;
+  if (IS_PROCESSING) return null;
   if (key === LAST_SCAN_TEXT && (now - LAST_SCAN_TIME) < DUP_MS) {
     const secLeft = Math.ceil((DUP_MS - (now - LAST_SCAN_TIME)) / 1000);
     toast(`สแกนซ้ำเร็วเกินไป รอ ${secLeft} วินาที`, 'warn');
-    return;
+    return null;
   }
 
 
@@ -1646,7 +1647,7 @@ function parseCode(raw) {
     document.getElementById('rbox').classList.remove('on');
     document.getElementById('sf').style.display = 'none';
     showManualProductPanel(true);
-    return;
+    return { pending: true };
   }
   if (stockHit) {
     d.stockItem = stockHit;
@@ -1677,7 +1678,7 @@ function parseCode(raw) {
     document.getElementById('sf').style.display = 'none';
     showManualProductPanel(true);
     toast('ไม่พบ SN/LOT นี้ในสต็อก จ่ายออกอัตโนมัติไม่ได้', 'warn');
-    return;
+    return { pending: true };
   }
 
   if (!d.p && (d.gtin || d.sn || d.lot)) {
@@ -1697,7 +1698,7 @@ function parseCode(raw) {
     document.getElementById('rbox').classList.remove('on');
     document.getElementById('sf').style.display = 'none';
     showManualProductPanel(true);
-    return;
+    return { pending: true };
   }
 
   PENDING_SCAN = null;
@@ -1713,6 +1714,7 @@ function parseCode(raw) {
     prepareOutFormAfterScan(d);
     maybeAutoStockOutAfterScan(d);
   } else toast('สแกนสำเร็จ', 'ok');
+  return d;
 }
 
 function activeStockItems() {
