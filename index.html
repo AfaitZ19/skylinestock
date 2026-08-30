@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -1907,22 +1907,26 @@ function lookup(d) {
   const sn  = String(d.sn||'').replace(/[^\x20-\x7E]/g,'').replace(/\s/g,'').toUpperCase();
   const scanText = [d.raw, d.lot, d.ref].join(' ');
 
-  const gtinHit = lookupProductByGtin(gtinRaw);
+  const inferred = inferFromLot(lot || scanText);
+  const gtinHit = lookupProductByGtin(gtinRaw, inferred);
   if (gtinHit) return _mergeLotDetails(gtinHit, lot || d.raw || '', { preferProductIdentity:true });
 
   const indexed = lookupProductFromIndex({ gtin:gtinRaw, lot, sn, ref:d.ref, raw:d.raw });
   if (indexed) return _mergeLotDetails(indexed, lot || d.raw || '');
 
-  const inferred = inferFromLot(lot || scanText);
   const refHit = lookupProductByEmbeddedRef(scanText, inferred);
   if (refHit) return _mergeLotDetails(refHit, lot || scanText);
 
   const db = CACHE.products || [];
   let wildcardLotHit = null;
+  const gtinRows = [];
 
   for (const p of db) {
     const pGtin = String(p.gtin || '').replace(/^0+/, '');
-    if (pGtin && gtinRaw === pGtin) return _mergeLotDetails(p, lot, { preferProductIdentity:true });
+    if (pGtin && gtinRaw === pGtin) {
+      gtinRows.push(p);
+      continue;
+    }
     if (p.sn_exact && sn === p.sn_exact) return _mergeLotDetails(p, lot);
     if (p.sn_pfx && sn.startsWith(p.sn_pfx)) return _mergeLotDetails(p, lot);
     if (p.lot_pfx && _matchProductPattern(lot, p.lot_pfx)) {
@@ -1932,6 +1936,12 @@ function lookup(d) {
         return _mergeLotDetails(p, lot);
       }
     }
+  }
+
+  if (gtinRows.length === 1) return _mergeLotDetails(gtinRows[0], lot, { preferProductIdentity:true });
+  if (gtinRows.length > 1) {
+    const hinted = lookupUniqueProductRows(gtinRows, inferred);
+    if (hinted) return _mergeLotDetails(hinted, lot, { preferProductIdentity:true });
   }
 
   if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
@@ -1949,7 +1959,7 @@ function rebuildProductLookupIndex() {
   PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
   (CACHE.products || []).forEach(p => {
     const gtin = normalizeGtinForMatch(p.gtin || '');
-    if (gtin) PRODUCT_LOOKUP.byGtin.set(gtin, p);
+    if (gtin) addLookupBucket(PRODUCT_LOOKUP.byGtin, gtin, p);
     const ref = normalizeRefToken(p.ref || p.reference || '');
     if (ref) addLookupBucket(PRODUCT_LOOKUP.byRef, ref, p);
     const code = normalizeSkuToken(p.product_code || p.productCode || '');
@@ -1957,9 +1967,9 @@ function rebuildProductLookupIndex() {
   });
 }
 
-function lookupProductByGtin(gtin) {
+function lookupProductByGtin(gtin, hint = null) {
   gtin = normalizeGtinForMatch(gtin || '');
-  return gtin && PRODUCT_LOOKUP.byGtin.has(gtin) ? PRODUCT_LOOKUP.byGtin.get(gtin) : null;
+  return gtin ? lookupUniqueBucket(PRODUCT_LOOKUP.byGtin, gtin, hint) : null;
 }
 
 function addLookupBucket(map, key, product) {
@@ -1993,6 +2003,10 @@ function lookupProductByEmbeddedRef(text, hint = null) {
 
 function lookupUniqueBucket(map, key, hint = null) {
   const rows = map.get(key) || [];
+  return lookupUniqueProductRows(rows, hint);
+}
+
+function lookupUniqueProductRows(rows, hint = null) {
   if (!rows.length) return null;
   if (rows.length === 1) return rows[0];
   if (hint?.model) {
@@ -2002,6 +2016,14 @@ function lookupUniqueBucket(map, key, hint = null) {
       const bySize = byModel.filter(p => sameText(p.size, hint.size));
       if (bySize.length === 1) return bySize[0];
     }
+  }
+  if (hint?.size) {
+    const bySize = rows.filter(p => sameText(p.size, hint.size));
+    if (bySize.length === 1) return bySize[0];
+  }
+  if (hint?.ref) {
+    const byRef = rows.filter(p => sameText(p.ref, hint.ref));
+    if (byRef.length === 1) return byRef[0];
   }
   return null;
 }
@@ -2212,6 +2234,65 @@ function productSearchText(p) {
 
 function productPhotoUrl(p) {
   return p?.photoUrl || p?.photo_url || p?.['Photo URL'] || '';
+}
+
+function productVariantLabel(p) {
+  return [
+    p?.model ? 'รุ่น ' + p.model : '',
+    p?.size ? 'ไซส์ ' + p.size : '',
+    p?.ref ? 'REF ' + p.ref : ''
+  ].filter(Boolean).join(' · ');
+}
+
+function stockBatchLabel(p) {
+  if (!p?.stockItem) return p?.category || '-';
+  return [
+    p.fifoFirst ? 'FIFO' : '',
+    p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) : '',
+    p.size ? 'ไซส์ ' + p.size : '',
+    p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก'
+  ].filter(Boolean).join(' · ');
+}
+
+function parseStockDate(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) return v;
+  const s = String(v || '').trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    let y = Number(m[3]);
+    if (y > 2400) y -= 543;
+    return new Date(y, Number(m[2]) - 1, Number(m[1]));
+  }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function sameMaskStockIdentity(a, b) {
+  return sameText(a?.['Product Name'], b?.['Product Name']) &&
+    sameText(a?.['Brand'], b?.['Brand']) &&
+    sameText(a?.['Model'], b?.['Model']) &&
+    sameText(a?.['Size'], b?.['Size']) &&
+    sameText(a?.['REF'], b?.['REF']);
+}
+
+function isFifoMaskStockRow(row) {
+  if (!row || row._type !== 'mask') return false;
+  const rows = (CACHE.mask || []).filter(x => {
+    const status = String(x['Status'] || 'Active').trim().toLowerCase();
+    return status === 'active' && Number(x['Qty'] || 0) > 0 && sameMaskStockIdentity(x, row);
+  });
+  if (!rows.length) return false;
+  const first = rows.slice().sort((a, b) => {
+    const da = parseStockDate(a['Date In']);
+    const db = parseStockDate(b['Date In']);
+    if (da && db && da.getTime() !== db.getTime()) return da - db;
+    if (da) return -1;
+    if (db) return 1;
+    return Number(a._sheetRow || 0) - Number(b._sheetRow || 0);
+  })[0];
+  return Number(first?._sheetRow || 0) === Number(row._sheetRow || 0);
 }
 
 function photoUrlForStockItem(it) {
@@ -2429,16 +2510,47 @@ function filteredProducts(prefix) {
       lot: x['LOT Number'] || '',
       gtin: x['GTIN / Barcode'] || '',
       qty: x['Qty'] || '',
+      fifoFirst: x._type === 'mask' && isFifoMaskStockRow(x),
+      stockItem: x
+    }));
+  }
+
+  if (prefix === 'take') {
+    return [
+      ...CACHE.mask.map(x => ({...x, _type:'mask'})),
+      ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
+    ].filter(x => {
+      const status = String(x['Status'] || 'Active').trim().toLowerCase();
+      if (status !== 'active') return false;
+      if (cat && ['mask','accessory'].includes(cat) && x._type !== cat) return false;
+      if (brand && (x['Brand'] || '') !== brand) return false;
+      const hay = [
+        x['Product Name'], x['Brand'], x['Model'], x['Size'], x['REF'],
+        x['LOT Number'], x['GTIN / Barcode'], x['Location']
+      ].join(' ').toLowerCase();
+      return !q || hay.includes(q);
+    }).map(x => ({
+      name: x['Product Name'] || '',
+      brand: x['Brand'] || '',
+      type: x._type,
+      model: x['Model'] || '',
+      size: x['Size'] || '',
+      ref: x['REF'] || '',
+      product_code: `${x._type.toUpperCase()}-${x._sheetRow || ''}`,
+      category: 'ในสต็อก',
+      sn: '',
+      lot: x['LOT Number'] || '',
+      gtin: x['GTIN / Barcode'] || '',
+      qty: x['Qty'] || '',
+      fifoFirst: x._type === 'mask' && isFifoMaskStockRow(x),
       stockItem: x
     }));
   }
 
   return (CACHE.products || []).filter(p => {
-    if ((prefix === 'manual' || prefix === 'take') && !p.product_code) return false;
+    if (prefix === 'manual' && !p.product_code) return false;
     if (cat && p.category !== cat) return false;
     if (brand && p.brand !== brand) return false;
-    if (prefix === 'take' && p.type === 'device') return false;
-    if (prefix === 'take' && p.has_barcode && !/filter|hose|ท่อ|circuit|cushion|humidifier|chamber|chin strap|accessor/i.test((p.category || '') + ' ' + (p.name || ''))) return false;
     const hay = productSearchText(p);
     return !q || hay.includes(q);
   });
@@ -2452,7 +2564,7 @@ function renderManualProducts() {
     <div class="manual-row selectable" onclick="selectManualProduct(${i})">
       <div class="manual-row-main">
         ${productPhotoUrl(p) ? `<img class="prod-thumb" src="${escapeHtml(productPhotoUrl(p))}" alt="">` : ''}
-        <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? ((p.type !== 'device' ? 'คงเหลือ ' + (p.qty || 0) + ' · ' : '') + (p.lot ? 'LOT ' + p.lot : p.sn ? 'SN ' + p.sn : 'ในสต็อก')) : (p.category || '-'))}</span></div>
+        <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? stockBatchLabel(p) : (productVariantLabel(p) || p.category || '-'))}</span></div>
       </div>
       <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
     </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
@@ -2626,6 +2738,7 @@ document.addEventListener('change', e => {
 });
 
 function currentStockQtyForProduct(p) {
+  if (p?.stockItem) return Number(p.stockItem['Qty'] || 0);
   const arr = p.type === 'mask' ? CACHE.mask : CACHE.accessory;
   const names = [p.name, p.product_name, p.stock_name].filter(Boolean).map(x => String(x).trim());
   const hit = (arr || []).find(x => names.includes(String(x['Product Name'] || '').trim()) && (x['Brand'] || '') === (p.brand || '') && (p.type !== 'mask' || (x['Size'] || '') === (p.size || '')) && (x['Status'] || 'Active') === 'Active');
@@ -2638,8 +2751,19 @@ function renderStocktake() {
   const rows = filteredProducts('take').slice(0, 120);
   el.innerHTML = rows.map(p => `
     <div class="manual-row">
-      <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
-      <input class="takeQty" data-code="${escapeHtml(p.product_code || '')}" type="number" min="0" placeholder="จำนวน" oninput="validateStocktakeSubmit()">
+      <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(stockBatchLabel(p))} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
+      <input class="takeQty"
+        data-code="${escapeHtml(p.product_code || '')}"
+        data-type="${escapeHtml(p.type || '')}"
+        data-row="${escapeHtml(p.stockItem?._sheetRow || '')}"
+        data-name="${escapeHtml(p.name || '')}"
+        data-brand="${escapeHtml(p.brand || '')}"
+        data-model="${escapeHtml(p.model || '')}"
+        data-size="${escapeHtml(p.size || '')}"
+        data-ref="${escapeHtml(p.ref || '')}"
+        data-lot="${escapeHtml(p.lot || '')}"
+        data-gtin="${escapeHtml(p.gtin || '')}"
+        type="number" min="0" placeholder="จำนวน" oninput="validateStocktakeSubmit()">
     </div>`).join('') || '<div class="empty">ไม่พบสินค้า</div>';
   validateStocktakeSubmit();
 }
@@ -2652,8 +2776,20 @@ function validateStocktakeSubmit() {
 
 async function submitStocktake() {
   const items = [...document.querySelectorAll('.takeQty')]
-    .filter(x => x.value !== '' && x.dataset.code)
-    .map(x => ({ productCode: x.dataset.code, qty: Number(x.value) }));
+    .filter(x => x.value !== '' && (x.dataset.row || x.dataset.code))
+    .map(x => ({
+      sheetRow: Number(x.dataset.row || 0) || '',
+      type: x.dataset.type || '',
+      productCode: x.dataset.code || '',
+      name: x.dataset.name || '',
+      brand: x.dataset.brand || '',
+      model: x.dataset.model || '',
+      size: x.dataset.size || '',
+      ref: x.dataset.ref || '',
+      lot: x.dataset.lot || '',
+      gtin: x.dataset.gtin || '',
+      qty: Number(x.value)
+    }));
   if (!items.length) return;
   setPill('busy');
   try {
@@ -4096,7 +4232,7 @@ function renderProductNameManager() {
     return `
       <div class="name-row${active}" onclick="selectProductName('${code}')">
         <b>${escapeHtml(stockDisplayName(p) || '-')}</b>
-        <span>${code} · ${escapeHtml(p.brand || '-')} · PO: ${escapeHtml(po || '-')}</span>
+        <span>${code} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(productVariantLabel(p) || p.category || '-')} · PO: ${escapeHtml(po || '-')}</span>
       </div>
     `;
   }).join('') : '<div class="empty">ไม่พบสินค้า</div>';
