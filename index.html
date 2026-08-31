@@ -979,6 +979,7 @@ function setupHidScanner() {
     const tag = (t.tagName || '').toLowerCase();
     const isTypingField = tag === 'input' || tag === 'textarea';
     if (!isTypingField) return;
+    HID_AUTO_RESUME = true;
     disableHIDMode(false);
     toast('พักเครื่องสแกนชั่วคราว เพื่อให้กรอกข้อมูลได้', 'warn');
   });
@@ -2916,9 +2917,10 @@ function showResult(d) {
 }
 
 function resetScan(opts = {}) {
+  const shouldResumeHid = HID_AUTO_RESUME;
+  HID_AUTO_RESUME = false;
   LAST = null;
   PENDING_SCAN = null;
-  HID_AUTO_RESUME = false;
   clearScanDedup();
   HID_BUFFER = '';
   clearTimeout(hidBufferTimer);
@@ -2948,7 +2950,9 @@ function resetScan(opts = {}) {
     stopScannerOnly();
     document.getElementById('reader').innerHTML = '';
   }
-  if (HID_ENABLED) {
+  if (shouldResumeHid) {
+    enableHIDMode(true);
+  } else if (HID_ENABLED) {
     focusScanInput(100);
   } else {
     focusScanInput(100);
