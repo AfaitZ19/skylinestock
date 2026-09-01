@@ -2387,10 +2387,15 @@ function stockInIdentityError(type, p) {
   if (type === 'device' && !String(p.model || '').trim()) {
     return 'ยังระบุรุ่นเครื่องไม่ได้ — ตรวจ mapping ก่อนรับเข้า';
   }
-  if (type === 'mask' && (!String(p.model || '').trim() || !String(p.size || '').trim())) {
+  if (type === 'mask' && !isSizelessMaskProduct(p) && (!String(p.model || '').trim() || !String(p.size || '').trim())) {
     return 'ยังระบุรุ่น/ไซส์หน้ากากไม่ได้ — ตรวจ mapping ก่อนรับเข้า';
   }
   return '';
+}
+
+function isSizelessMaskProduct(p) {
+  const text = normalizeSkuToken([p?.name, p?.model, p?.ref, p?.productCode].join(' '));
+  return text.includes('EASEFITPMI') || text.includes('PILLOW');
 }
 
 function showManualProductPanel(focusSearch = false) {
@@ -3126,7 +3131,7 @@ async function doAct(action) {
     IS_PROCESSING = false;
     return;
   }
-  const identityError = action === 'in' ? stockInIdentityError(type, { model, size }) : '';
+  const identityError = action === 'in' ? stockInIdentityError(type, { name, model, size, ref }) : '';
   if (identityError) {
     toast(identityError, 'warn');
     IS_PROCESSING = false;

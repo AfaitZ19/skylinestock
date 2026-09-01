@@ -1,4 +1,4 @@
-﻿/************************************************************
+/************************************************************
  * SKYLINE STOCK SYSTEM
  * Version: clean full backend
  * Use with a NEW Google Sheet, then run initSheet()
@@ -20,7 +20,10 @@ const TABS = {
 const HDR_ROW = 2;
 const DATA_START = 3;
 
-const PRODUCTDB_HEADERS = ['GTIN','SN_Exact','SN_Prefix','LOT_Prefix','Product Name','Brand','Type','Model','Size','REF','Product Code','Category','has_barcode'];
+const PRODUCTDB_HEADERS = [
+  'GTIN','SN_Exact','SN_Prefix','LOT_Prefix','Product Name','Brand','Type','Model','Size','REF','Product Code','Category','has_barcode',
+  'Stock Display Name','PO Print Name','Search Aliases','Photo URL','Added Date'
+];
 
 const SKYLINE_PRODUCT_MASTER = [
   [
@@ -37,51 +40,6 @@ const SKYLINE_PRODUCT_MASTER = [
     "22-06-013",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
     true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX XT-Fit",
-    "APEX",
-    "device",
-    "XT-Fit",
-    "",
-    "",
-    "22-06-017",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX XT-Prime",
-    "APEX",
-    "device",
-    "XT-Prime",
-    "",
-    "",
-    "22-06-020",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX iCH Filter (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
   ],
   [
     "04713025000271",
@@ -114,21 +72,6 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
-    "",
-    "",
-    "",
-    "Apex CPAP iX Auto with Humidifier (4G DEMO)",
-    "APEX",
-    "accessory",
-    "iX Auto with Humidifier",
-    "",
-    "",
-    "9S-010620",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
     "04719893347074",
     "",
     "",
@@ -142,516 +85,6 @@ const SKYLINE_PRODUCT_MASTER = [
     "9S-010620",
     "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
     true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "iCH Auto",
-    "APEX",
-    "device",
-    "iCH Auto",
-    "",
-    "",
-    "22-06-018",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "iCH Chamber",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "35-03-005",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "iCH Prime",
-    "APEX",
-    "device",
-    "iCH Prime",
-    "",
-    "",
-    "22-06-017",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "iCH Sense",
-    "APEX",
-    "device",
-    "iCH Sense",
-    "",
-    "",
-    "22-06-021",
-    "1. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 CPAP/APAP (APEX)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX Filter 12 \u0e0a\u0e34\u0e49\u0e19",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX Filter iX (5 \u0e0a\u0e34\u0e49\u0e19)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 2 \u0e0a\u0e34\u0e49\u0e19)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "APEX XT Filter (1 \u0e41\u0e1e\u0e04 = 8 \u0e0a\u0e34\u0e49\u0e19)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-009",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Beyond Filter ResPlus (1 \u0e41\u0e1e\u0e04 = 5 \u0e0a\u0e34\u0e49\u0e19)",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "ResPlus",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Beyond Filter \u0e2a\u0e35\u0e14\u0e33 (1 \u0e41\u0e1e\u0e04 = 2 \u0e0a\u0e34\u0e49\u0e19)",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "ResFree",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Filter Proton",
-    "Proton",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Air inlet Fine Filters(PB Filter)",
-    "Puritan Bennett (Medtronic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "T2963366",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Filter Winmann",
-    "Weinmann",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Fine filter for SOMNOsmart2",
-    "Weinmann",
-    "accessory",
-    "",
-    "",
-    "",
-    "WM 15565",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Bacterial Filter",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "W6216",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Bacterial Filter (\u0e2a\u0e35\u0e02\u0e32\u0e27)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "W6216",
-    "10. Filters",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e19\u0e49\u0e33\u0e22\u0e32\u0e02\u0e27\u0e14\u0e40\u0e25\u0e47\u0e01 (\u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "11. \u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e19\u0e49\u0e33\u0e22\u0e32\u0e02\u0e27\u0e14\u0e43\u0e2b\u0e0d\u0e48 (\u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "11. \u0e19\u0e49\u0e33\u0e22\u0e32\u0e25\u0e49\u0e32\u0e07\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "XT Heated Humidifier",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "22-06-009",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "XT Series Water Chamber",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "35-03-006",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "iX Chamber",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "35-03-007",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Humidfier BEYOND B-30F",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "BEYOND",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Water tank BEYOND ResFree",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "BEYOND",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Water tank BEYOND ResPlus",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "BEYOND",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Heated Humifier(Vadi)",
-    "Vadi",
-    "accessory",
-    "",
-    "",
-    "",
-    "VH-2000",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Reusable Adult Chamber(Vadi)",
-    "Vadi",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-314004",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Reusable Auto-Feeding Chamber(Vadi)",
-    "Vadi",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-314002",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Reusable Humidification Chamber(Vadi)",
-    "Vadi",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-314004",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Humidifier iX Series",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "SA001577",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Humidifier bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e43\u0e1a\u0e43\u0e2b\u0e0d\u0e48 \u0e2a\u0e35\u0e1f\u0e49\u0e32)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "8TH27335",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Water Trap",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-313003",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Water Trap \u0e40\u0e14\u0e47\u0e01",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-313003",
-    "12. Humidifier / Water Chamber",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Apex Hose",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "22-06-025",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
   ],
   [
     "04713025000189",
@@ -682,591 +115,6 @@ const SKYLINE_PRODUCT_MASTER = [
     "-",
     "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
     true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e17\u0e48\u0e2d BEYOND \u0e2a\u0e35\u0e40\u0e17\u0e32",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "BEYOND",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e17\u0e48\u0e2d HEATED BEYOND",
-    "BEYOND",
-    "accessory",
-    "",
-    "",
-    "",
-    "BEYOND",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "ADT PVC DSTR EXHA DBL LIMB CIRC",
-    "Puritan Bennett (Medtronic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "5094000",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Adult single-Limb patient circuit with exhalation valve",
-    "Puritan Bennett (Medtronic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "5093600",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "PAED PVC DSTR EXHA DBL LIMB CIRC",
-    "Puritan Bennett (Medtronic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "5093900",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Paed single-Limb patient circuit with exhalation valve",
-    "Puritan Bennett (Medtronic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "5093500",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Hose (siam)120cm",
-    "SIAM",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "7'Kink Resistant Tubing",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "W0007",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Corrugated",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G-HN-63P-100FT",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Corrugated Tube 1.5'",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "Tube 1.5'",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Corrugated Tube 6'",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "Tube 6'",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Dis Con 15/22,22",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G74055",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Disp.Elbow Connector",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G76101/72211",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Disp.Wye Connector",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G77301",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Floton hose",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "SA000544",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Oxygen  Tubing",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Flex Tubing",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G7119/G77015",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Flex Tubing",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G77014",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Flex Tubing",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G7119/77015",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Resus.W/POP Mask#5",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "H-HS92111A",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Tube Smoothbore 15mm-130cm.",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Silicone Tube Smoothbore 22mm-45cm.",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Straight Connector",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G75211/74055",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Swivel Elbow Connector",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G76511/72209",
-    "13. Hose / \u0e17\u0e48\u0e2d / Circuit",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "PCB  for  XT  Prime",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "163122",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Carrying bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e1f\u0e49\u0e32)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "8TH27335",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Carrying bag(\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e41\u0e14\u0e07)",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "8TH27335",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Disp. Straight 22F,6M,22/11MM",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G76246",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Forehead",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "SD  module  for  CPAP",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "163021",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Swivel Elbow W/Suction Port",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "G72231",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e16\u0e38\u0e07\u0e1c\u0e49\u0e32\u0e2a\u0e1b\u0e31\u0e19\u0e1a\u0e2d\u0e19\u0e14\u0e4c Spunbond Bag \u0e2a\u0e35\u0e1f\u0e49\u0e32",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "-",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "\u0e23\u0e16\u0e40\u0e02\u0e47\u0e19\u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "CTH2009",
-    "14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Puritan Bennett 520",
-    "Puritan Bennett (Medtronic)",
-    "device",
-    "",
-    "",
-    "",
-    "4096600-03",
-    "2. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BiPAP/Ventilator (PB/Medtronic)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Puritan Bennett 560",
-    "Puritan Bennett (Medtronic)",
-    "device",
-    "",
-    "",
-    "",
-    "4098300-03",
-    "2. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BiPAP/Ventilator (PB/Medtronic)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND B-25T",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "B-25T",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND B-30F",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "B-30F",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND B19",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "B-19",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND F-20C",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "F-20C",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
   ],
   [
     "16958949927302",
@@ -1314,21 +162,6 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND R-25T",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "R-25T",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
     "16958949927425",
     "",
     "",
@@ -1344,457 +177,7 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
-    "",
-    "",
-    "",
-    "BEYOND R-30S",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "R-30S",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Resguard Complete set",
-    "BEYOND",
-    "device",
-    "",
-    "",
-    "",
-    "RG-BP40",
-    "3. \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 BEYOND",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "High Flow Heated Respiratory Humidifier HF6",
-    "APEX (High Flow)",
-    "accessory",
-    "",
-    "",
-    "",
-    "HF6",
-    "4. High Flow",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "High Flow Heated Respiratory Humidifier HF7",
-    "APEX (High Flow)",
-    "accessory",
-    "",
-    "",
-    "",
-    "HF7",
-    "4. High Flow",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "High Flow Heated Respiratory Humidifier HF8",
-    "APEX (High Flow)",
-    "accessory",
-    "",
-    "",
-    "",
-    "HF8",
-    "4. High Flow",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear L",
-    "APEX",
-    "mask",
-    "",
-    "L",
-    "",
-    "9N220001",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear LW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220004",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear M",
-    "APEX",
-    "mask",
-    "",
-    "M",
-    "",
-    "9N220002",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear MW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220005",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear S",
-    "APEX",
-    "mask",
-    "",
-    "S",
-    "",
-    "9N220003",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face 220 WiZARD Mask With Headgear SW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220006",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face Fit Mask With Headgear L",
-    "APEX",
-    "mask",
-    "",
-    "L",
-    "",
-    "32-32-101",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face Fit Mask With Headgear M",
-    "APEX",
-    "mask",
-    "",
-    "M",
-    "",
-    "32-32-102",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face Mask Fit With Headgear S",
-    "APEX",
-    "mask",
-    "",
-    "S",
-    "",
-    "32-32-103",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face WiZARD Mask With Headgear LW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220004",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face WiZARD Mask With Headgear MW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220005",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face WiZARD Mask With Headgear SW",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "9N220006",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Headgear 210 & 220",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "32-32-210",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Headgear 310 & 320",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "32-32-310",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Headgear 510",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "32-32-510",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Nasal WiZARD  Fit Mask With Headgear S",
-    "APEX",
-    "mask",
-    "",
-    "S",
-    "",
-    "32-32-113",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Nasal WiZARD Fit With Headgear L",
-    "APEX",
-    "mask",
-    "",
-    "L",
-    "",
-    "32-32-111",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Nasal WiZARD Fit With Headgear M",
-    "APEX",
-    "mask",
-    "",
-    "M",
-    "",
-    "32-32-112",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Nasal WiZARD Fit With Headgear S",
-    "APEX",
-    "mask",
-    "",
-    "S",
-    "",
-    "32-32-113",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Pillow Mr",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "32-32-027",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Pillow Ms",
-    "APEX",
-    "mask",
-    "",
-    "",
-    "",
-    "32-32-026",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "WiZARD 210 Nasal Mask With Headgear L",
-    "APEX",
-    "mask",
-    "WiZARD 210",
-    "L",
-    "",
-    "9N210001",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "WiZARD 210 Nasal Mask With Headgear M",
-    "APEX",
-    "mask",
-    "WiZARD 210",
-    "M",
-    "",
-    "9N210002",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "WiZARD 210 Nasal Mask With Headgear S",
-    "APEX",
-    "mask",
-    "WiZARD 210",
-    "S",
-    "",
-    "9N210003",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "WiZARD 210 Nasal Mask With Headgear XS",
-    "APEX",
-    "mask",
-    "WiZARD 210",
-    "XS",
-    "",
-    "9N210004",
-    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
+    "04719893347975",
     "",
     "",
     "",
@@ -1803,10 +186,10 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 310",
     "L",
-    "",
+    "SM07001",
     "310L",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "04719893347982",
@@ -1824,7 +207,7 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
+    "04719893347999",
     "",
     "",
     "",
@@ -1833,10 +216,10 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 310",
     "S",
-    "",
+    "SM07003",
     "310S",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "04719893348194",
@@ -1854,7 +237,7 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
+    "04719893348200",
     "",
     "",
     "",
@@ -1863,13 +246,13 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 320",
     "M",
-    "",
+    "SM08002",
     "320M",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
-    "",
+    "04719893348217",
     "",
     "",
     "",
@@ -1878,10 +261,10 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 320",
     "S",
-    "",
+    "SM08003",
     "320S",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
     "04719893347319",
@@ -1899,7 +282,7 @@ const SKYLINE_PRODUCT_MASTER = [
     true
   ],
   [
-    "",
+    "04719893347326",
     "",
     "",
     "",
@@ -1908,13 +291,13 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 510",
     "M",
-    "",
-    "510S/M",
+    "SM06007",
+    "510M",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
-    "",
+    "04713025001742",
     "",
     "",
     "",
@@ -1923,13 +306,13 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 520",
     "L",
-    "",
+    "SM12001",
     "520L",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
-    "",
+    "04713025001759",
     "",
     "",
     "",
@@ -1938,13 +321,13 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 520",
     "M",
-    "",
+    "SM12002",
     "520M",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
+    true
   ],
   [
-    "",
+    "04713025001766",
     "",
     "",
     "",
@@ -1953,340 +336,40 @@ const SKYLINE_PRODUCT_MASTER = [
     "mask",
     "WiZARD 520",
     "S",
-    "",
+    "SM12003",
     "520S",
     "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks Ease Fit PMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit PMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks L Ease Fit FMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks L Ease Fit FMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks L Ease Fit NMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks L Ease Fit NMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks M Ease Fit FMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks M Ease Fit FMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks M Ease Fit FMII",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMII",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks M Ease Fit NMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks M Ease Fit NMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks S Ease Fit FMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks S Ease Fit FMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit FMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks S Ease Fit NMI",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "CPAP/BiPAP Masks S Ease Fit NMI-NV",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "Ease Fit NMI",
-    "",
-    "",
-    "BEYOND",
-    "6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "BestFit Nasal Mask Large",
-    "BestFit",
-    "mask",
-    "",
-    "",
-    "",
-    "20100030",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
     true
   ],
   [
+    "04713025000615",
     "",
     "",
     "",
-    "",
-    "BestFit Nasal Mask Medium",
-    "BestFit",
+    "WiZARD 230 Nasal Pillows Mask Mr. With Headgear",
+    "APEX",
     "mask",
-    "",
-    "",
-    "",
-    "20100020",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    "WiZARD 230",
+    "Mr.",
+    "SM03001",
+    "230Mr",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
     true
   ],
   [
+    "04713025000622",
     "",
     "",
     "",
-    "",
-    "BestFit Nasal Mask Small",
-    "BestFit",
+    "WiZARD 230 Nasal Pillows Mask Ms. With Headgear",
+    "APEX",
     "mask",
-    "",
-    "",
-    "",
-    "20100010",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
+    "WiZARD 230",
+    "Ms.",
+    "SM03002",
+    "230Ms",
+    "5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD",
     true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "P Amara Gel Fullface mask W/RS frame",
-    "Philips",
-    "mask",
-    "",
-    "",
-    "",
-    "PHILIPS",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Pico",
-    "Philips",
-    "mask",
-    "",
-    "",
-    "",
-    "PHILIPS",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "S Amara Gel Fullface mask W/RS frame",
-    "Philips",
-    "mask",
-    "",
-    "",
-    "",
-    "PHILIPS",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "True Blue mask L",
-    "Philips",
-    "mask",
-    "",
-    "L",
-    "",
-    "PHILIPS",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "True Blue mask MW",
-    "Philips",
-    "mask",
-    "",
-    "",
-    "",
-    "PHILIPS",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
   ],
   [
     "00606959006829",
@@ -2302,486 +385,6 @@ const SKYLINE_PRODUCT_MASTER = [
     "PHILIPS",
     "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
     true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "AIRFIT F20 MED SYS - APAP",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "AIRFIT N20 MED SYS - APAP",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "AIRFIT N20 SML SYS - APAP",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Pixi Pediatric Mask-AMER",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Resmed Mirage Activa LT LG-WD Mask",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Resmed Mirage Quattro FFM SML-AP",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "RESMED",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Swift 2 mask",
-    "ResMed",
-    "mask",
-    "",
-    "",
-    "",
-    "1122009",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face Mask L",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "",
-    "L",
-    "",
-    "20100030",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Full Face Mask M",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "mask",
-    "",
-    "M",
-    "",
-    "20100030",
-    "7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)",
-    true
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FaceFace 220 SW",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-6",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 L (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-210-1",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 LW (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-4",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 LW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-4",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 M (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-2",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 MW (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22 )",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-5",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 MW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-5",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 S (\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-3",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for FullFace 220 SW (\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e14\u0e37\u0e2d\u0e22)",
-    "APEX",
-    "accessory",
-    "",
-    "",
-    "",
-    "32-32-220-6",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 210 L",
-    "APEX",
-    "accessory",
-    "",
-    "L",
-    "",
-    "32-32-210-1",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 210 M",
-    "APEX",
-    "accessory",
-    "",
-    "M",
-    "",
-    "32-32-210-2",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 210 S",
-    "APEX",
-    "accessory",
-    "",
-    "S",
-    "",
-    "32-32-210-3",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 210 XS",
-    "APEX",
-    "accessory",
-    "",
-    "XS",
-    "",
-    "32-32-210-4",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 310 L",
-    "APEX",
-    "accessory",
-    "",
-    "L",
-    "",
-    "32-32-310L",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 310 M",
-    "APEX",
-    "accessory",
-    "",
-    "M",
-    "",
-    "32-32-310M",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 310 S",
-    "APEX",
-    "accessory",
-    "",
-    "S",
-    "",
-    "32-32-310S",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 320 L",
-    "APEX",
-    "accessory",
-    "",
-    "L",
-    "",
-    "32-32-320L",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 320 M",
-    "APEX",
-    "accessory",
-    "",
-    "M",
-    "",
-    "32-32-320M",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 320 S",
-    "APEX",
-    "accessory",
-    "",
-    "S",
-    "",
-    "32-32-320S",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 510 L",
-    "APEX",
-    "accessory",
-    "",
-    "L",
-    "",
-    "32-32-510L",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Cushion for nasal 510 S/M",
-    "APEX",
-    "accessory",
-    "",
-    "S/M",
-    "",
-    "32-32-510S/M",
-    "8. Cushion (\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01)",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Chin Strap Philips \u0e14\u0e33",
-    "Philips",
-    "accessory",
-    "",
-    "",
-    "",
-    "302175",
-    "9. Chin Strap",
-    false
-  ],
-  [
-    "",
-    "",
-    "",
-    "",
-    "Chin Strap \u0e41\u0e14\u0e07",
-    "\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b / \u0e2d\u0e37\u0e48\u0e19\u0e46 (Generic)",
-    "accessory",
-    "",
-    "",
-    "",
-    "302176",
-    "9. Chin Strap",
-    false
   ]
 ];
 
@@ -2856,7 +459,7 @@ function buildDashboard(ss, existingSheet) {
 
   ws.setRowHeight(1, 50);
   ws.getRange('A1:I1').merge()
-    .setValue('SKYLINE MEDICAL — Stock Management')
+    .setValue('SKYLINE MEDICAL ??Stock Management')
     .setBackground('#1a1a2e')
     .setFontFamily('Arial').setFontSize(16).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
@@ -3013,7 +616,7 @@ function buildDeviceSheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:P1').merge().setValue('CPAP / BPAP Device Stock — Skyline Medical')
+  ws.getRange('A1:P1').merge().setValue('CPAP / BPAP Device Stock ??Skyline Medical')
     .setBackground('#1a4fa0').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
@@ -3035,7 +638,7 @@ function buildMaskSheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:O1').merge().setValue('Mask Stock — Skyline Medical')
+  ws.getRange('A1:O1').merge().setValue('Mask Stock ??Skyline Medical')
     .setBackground('#1a7a4a').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
@@ -3056,7 +659,7 @@ function buildAccessorySheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:L1').merge().setValue('Accessory Stock — Skyline Medical')
+  ws.getRange('A1:L1').merge().setValue('Accessory Stock ??Skyline Medical')
     .setBackground('#a06a00').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
@@ -3077,17 +680,18 @@ function buildHistorySheet(ss) {
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
 
-  ws.getRange('A1:K1').merge().setValue('Stock Movement History — Skyline Medical')
-    .setBackground('#4a3580').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
-    .setHorizontalAlignment('center').setVerticalAlignment('middle');
-
   const headers = [
     'Date','Time','Type','Product Name','Brand','Serial / LOT','Action',
     'Location / Recipient','Recorded By','Operator','Purpose'
-  ];
+  ].concat(historyExtraHeaders_());
+
+  styleHistoryTitle_(ws, headers.length);
   styleHeaderRow(ws, 2, headers, '#4a3580');
 
-  const widths = [14,8,14,30,18,26,12,22,14,18,14];
+  const widths = [
+    14,8,14,30,18,26,12,22,14,18,14,
+    10,12,12,24,14,16,10,20,18,16,14,14,16
+  ];
   widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
   ws.setFrozenRows(2);
   return ws;
@@ -3099,12 +703,13 @@ function buildProductDBSheet(ss) {
 
   ws.setHiddenGridlines(true);
   ws.setRowHeight(1, 36);
-  ws.getRange('A1:M1').merge().setValue('Product Database - Skyline Medical')
+  ws.getRange(1, 1, 1, Math.max(ws.getLastColumn(), PRODUCTDB_HEADERS.length)).breakApart();
+  ws.getRange(1, 1, 1, PRODUCTDB_HEADERS.length).merge().setValue('Product Database - Skyline Medical')
     .setBackground('#333333').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
 
   styleHeaderRow(ws, 2, PRODUCTDB_HEADERS, '#333333');
-  const widths = [18,14,12,20,32,20,12,18,8,12,16,28,12];
+  const widths = [18,14,12,20,32,20,12,18,8,12,16,28,12,32,32,34,24,18];
   widths.forEach((w,i) => ws.setColumnWidth(i+1, w*7));
   ws.setFrozenRows(2);
 
@@ -3112,17 +717,14 @@ function buildProductDBSheet(ss) {
   return ws;
 }
 
-/* =========================================================
- * syncProductDB ??鉆鉊葩鉆腹 GTIN / LOT_Prefix 鉆葦鉊﹤?鉆鉊?鉊?ProductDB
- * 鉊葭鉆腹鉊菽葉鉊Ｒ號鉆?鉊丞?鉊?鉆?鉊Ｒ?鉊﹤?鉊丞?鉊?鉊冢腹鉊嫩艇鉆鉊葩鉊?
- * 鉊抉葩鉊葭鉆?鉆? 鉆鉊葩鉊?Apps Script Editor ??鉊?萵鉊?syncProductDB()
- * ========================================================= */
+
 function syncProductDB() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(TABS.productdb);
   if (!sheet) sheet = ss.insertSheet(TABS.productdb);
 
-  sheet.getRange('A1:M1').merge().setValue('Product Database - Skyline Medical')
+  sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).breakApart();
+  sheet.getRange(1, 1, 1, PRODUCTDB_HEADERS.length).merge().setValue('Product Database - Skyline Medical')
     .setBackground('#333333').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
     .setHorizontalAlignment('center').setVerticalAlignment('middle');
   styleHeaderRow(sheet, 2, PRODUCTDB_HEADERS, '#333333');
@@ -3133,7 +735,7 @@ function syncProductDB() {
   const legacyRows = existingRows.filter(r => String(r[4] || '').trim()).map(r => normalizeProductDBRow_(r));
   const seedRows = getLegacyProductDBSeed_().map(r => normalizeProductDBRow_(r));
   const masterRows = SKYLINE_PRODUCT_MASTER.map(r => normalizeProductDBRow_(r));
-  const combined = dedupeProductRows_(seedRows.concat(masterRows).concat(legacyRows));
+  const combined = dedupeProductRows_(legacyRows.concat(seedRows).concat(masterRows));
 
   if (sheet.getLastRow() > 2) {
     sheet.getRange(3, 1, sheet.getLastRow() - 2, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).clearContent();
@@ -3152,11 +754,42 @@ function syncProductDB() {
   Logger.log('ProductDB synced: ' + combined.length + ' rows (' + masterRows.length + ' master SKU)');
 }
 
+function repairProductDBSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TABS.productdb);
+  if (!sheet) sheet = ss.insertSheet(TABS.productdb);
+  styleProductDBTitle_(sheet);
+  sheet.getRange(2, 1, 1, PRODUCTDB_HEADERS.length).setValues([PRODUCTDB_HEADERS]);
+  styleHeaderRow(sheet, 2, PRODUCTDB_HEADERS, '#333333');
+  const widths = [18,14,12,20,32,20,12,18,8,12,16,28,12,32,32,34,24,18];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w * 7));
+  sheet.setFrozenRows(2);
+  const last = sheet.getLastRow();
+  if (last >= DATA_START) {
+    const width = Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length);
+    const rows = sheet.getRange(DATA_START, 1, last - DATA_START + 1, width).getValues()
+      .map(r => normalizeProductDBRow_(r));
+    sheet.getRange(DATA_START, 1, rows.length, PRODUCTDB_HEADERS.length).setValues(rows);
+    rows.forEach((_, i) => {
+      const r = DATA_START + i;
+      sheet.getRange(r, 1, 1, PRODUCTDB_HEADERS.length)
+        .setBackground(r % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+        .setFontFamily('Arial').setFontSize(10)
+        .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+    });
+  }
+  SpreadsheetApp.flush();
+  Logger.log('ProductDB repaired: title and headers prepared through column ' + PRODUCTDB_HEADERS.length);
+}
+
 function normalizeProductDBRow_(r) {
   const row = (r || []).slice(0, PRODUCTDB_HEADERS.length);
   while (row.length < PRODUCTDB_HEADERS.length) row.push('');
   row[6] = normalizeType_(row[6], row[11], row[4]);
+  if (!String(row[10] || '').trim()) row[10] = String(row[9] || row[0] || row[4] || '').trim();
   row[12] = toBool_(row[12]) || hasBarcodePattern_(row[0]) || hasBarcodePattern_(row[1]) || hasBarcodePattern_(row[2]) || hasBarcodePattern_(row[3]);
+  if (!String(row[13] || '').trim()) row[13] = String(row[4] || '').trim();
+  if (!String(row[14] || '').trim()) row[14] = String(row[4] || '').trim();
   return row;
 }
 
@@ -3233,6 +866,214 @@ function learnProductMapping_(ss, b) {
   return true;
 }
 
+function ocrLabel_(base64Image) {
+  let fileId = '';
+  try {
+    const parsed = parseBase64Image_(base64Image);
+    if (!parsed.bytes.length) return { text: '' };
+    const blob = Utilities.newBlob(parsed.bytes, parsed.mimeType, 'ocr_label_' + Date.now());
+    const file = Drive.Files.insert(
+      { title: 'ocr_tmp_' + Date.now(), mimeType: blob.getContentType() },
+      blob,
+      { convert: true }
+    );
+    fileId = file.id;
+    const doc = DocumentApp.openById(fileId);
+    const text = doc.getBody().getText();
+    DriveApp.getFileById(fileId).setTrashed(true);
+    return { text: text || '' };
+  } catch(ex) {
+    Logger.log('ocr_label Drive OCR failed: ' + (ex.message || ex.toString()));
+    if (fileId) {
+      try { DriveApp.getFileById(fileId).setTrashed(true); } catch(cleanupErr) {}
+    }
+    return { text: '' };
+  }
+}
+
+function uploadProductPhoto_(base64Image, filename) {
+  try {
+    const parsed = parseBase64Image_(base64Image);
+    if (!parsed.bytes.length) throw new Error('Missing image');
+    const safeName = sanitizeFilename_(filename || ('product-' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd-HHmmss') + '.jpg'));
+    const folder = getOrCreateDriveFolder_('Product Photos');
+    const blob = Utilities.newBlob(parsed.bytes, parsed.mimeType, safeName);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { url: 'https://drive.google.com/uc?id=' + file.getId() };
+  } catch(ex) {
+    Logger.log('upload_product_photo failed: ' + (ex.message || ex.toString()));
+    throw ex;
+  }
+}
+
+function addProduct_(ss, b) {
+  const productName = String(b.productName || b.name || '').trim();
+  if (!productName) throw new Error('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e0a\u0e37\u0e48\u0e2d\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32');
+
+  const gtin = normalizeIncomingGtin_(b.gtin || '');
+  const normalizedGtin = normalizeGtinForCompare_(gtin);
+  const productType = normalizeType_(String(b.type || '').trim(), String(b.category || '').trim(), productName);
+  const productModel = String(b.model || '').trim();
+  const productSize = String(b.size || '').trim();
+  const productRef = String(b.ref || '').trim();
+  if (normalizedGtin && readProductDB(ss).some(p => isDuplicateProductForAdd_(p, {
+    gtin: gtin,
+    name: productName,
+    type: productType,
+    model: productModel,
+    size: productSize,
+    ref: productRef,
+    category: String(b.category || '').trim()
+  }))) {
+    throw new Error('GTIN \u0e19\u0e35\u0e49\u0e21\u0e35\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a\u0e41\u0e25\u0e49\u0e27');
+  }
+
+  const sheet = getOrCreateAddProductSheet_(ss);
+  const idx = ensureProductDBColumns_(sheet);
+  const productCode = String(b.productCode || b.product_code || b.code || '').trim() || makeProductCode_(b, productName, gtin);
+  const row = new Array(PRODUCTDB_HEADERS.length).fill('');
+  const set = (name, value) => {
+    const col = idx[name];
+    if (col != null) row[col - 1] = value;
+  };
+
+  set('GTIN', gtin);
+  set('Product Name', productName);
+  set('Brand', String(b.brand || '').trim());
+  set('Type', productType);
+  set('Model', productModel);
+  set('Size', productSize);
+  set('REF', productRef);
+  set('Product Code', productCode);
+  set('Category', String(b.category || '').trim());
+  set('has_barcode', toBool_(b.hasBarcode) || !!gtin);
+  set('Stock Display Name', String(b.stockName || '').trim() || productName);
+  set('PO Print Name', String(b.poName || '').trim() || productName);
+  set('Search Aliases', Array.isArray(b.aliases) ? b.aliases.join(', ') : String(b.aliases || '').trim());
+  set('Photo URL', String(b.photoUrl || '').trim());
+  set('Added Date', new Date().toISOString());
+
+  sheet.appendRow(row);
+  const newRow = sheet.getLastRow();
+  sheet.getRange(newRow, 1, 1, PRODUCTDB_HEADERS.length)
+    .setBackground(newRow % 2 === 0 ? '#f7f8fa' : '#FFFFFF')
+    .setFontFamily('Arial').setFontSize(10)
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+  return {productCode: productCode};
+}
+
+function getOrCreateAddProductSheet_(ss) {
+  const sheet = buildProductDBSheet(ss);
+  styleProductDBTitle_(sheet);
+  styleHeaderRow(sheet, 2, PRODUCTDB_HEADERS, '#333333');
+  return sheet;
+}
+
+function styleProductDBTitle_(sheet) {
+  sheet.setHiddenGridlines(true);
+  sheet.setRowHeight(1, 36);
+  sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).breakApart();
+  sheet.getRange(1, 1, 1, PRODUCTDB_HEADERS.length).merge().setValue('Product Database - Skyline Medical')
+    .setBackground('#333333').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  sheet.setFrozenRows(2);
+}
+
+function makeProductCode_(b, productName, gtin) {
+  const base = String(b.ref || b.model || gtin || productName || 'SKU')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toUpperCase()
+    .slice(0, 24) || 'SKU';
+  return 'NEW-' + base + '-' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss');
+}
+
+function getOrCreateAddProductSheet_LEGACY_UNUSED_(ss) {
+  const headers = ['GTIN','Product Name','Brand','Type','Model','Size','REF','Category','Aliases','has_barcode','Photo URL','Added Date'];
+  let sheet = ss.getSheetByName(TABS.productdb);
+  if (!sheet) {
+    sheet = ss.insertSheet(TABS.productdb);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sheet;
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function addProductLegacyRow_UNUSED_(sheet, b, productName, gtin) {
+  sheet.appendRow([
+    gtin,
+    productName,
+    String(b.brand || '').trim(),
+    String(b.type || '').trim(),
+    String(b.model || '').trim(),
+    String(b.size || '').trim(),
+    String(b.ref || '').trim(),
+    String(b.category || '').trim(),
+    Array.isArray(b.aliases) ? b.aliases.join(', ') : String(b.aliases || '').trim(),
+    toBool_(b.hasBarcode) ? 'TRUE' : 'FALSE',
+    String(b.photoUrl || '').trim(),
+    new Date().toISOString()
+  ]);
+}
+
+function normalizeGtinForCompare_(value) {
+  return String(value || '').replace(/[^\x20-\x7E]/g, '').replace(/\s/g, '').replace(/^0+/, '').trim();
+}
+
+function normalizeProductIdentityText_(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function sameProductIdentityText_(a, b) {
+  return normalizeProductIdentityText_(a) === normalizeProductIdentityText_(b);
+}
+
+function isMaskProduct_(p) {
+  return normalizeType_(p.type, p.category, p.product_name || p.name) === 'mask';
+}
+
+function isDuplicateProductForAdd_(existing, candidate) {
+  if (normalizeGtinForCompare_(existing && existing.gtin) !== normalizeGtinForCompare_(candidate && candidate.gtin)) return false;
+  if (!isMaskProduct_(existing) && !isMaskProduct_(candidate)) return true;
+
+  const sameRef = normalizeProductIdentityText_(existing.ref) &&
+    sameProductIdentityText_(existing.ref, candidate.ref);
+  const sameModelSize = sameProductIdentityText_(existing.model, candidate.model) &&
+    sameProductIdentityText_(existing.size, candidate.size);
+  const existingName = existing.product_name || existing.name || '';
+  const sameNameSize = sameProductIdentityText_(existingName, candidate.name) &&
+    sameProductIdentityText_(existing.size, candidate.size);
+
+  return !!(sameRef || sameModelSize || sameNameSize);
+}
+
+function stripBase64Prefix_(value) {
+  return String(value || '').replace(/^data:[^;]+;base64,/, '').trim();
+}
+
+function parseBase64Image_(value) {
+  const raw = String(value || '');
+  const m = raw.match(/^data:([^;]+);base64,(.+)$/);
+  const mimeType = m ? m[1] : 'image/jpeg';
+  const data = m ? m[2] : raw;
+  return { mimeType: mimeType, bytes: Utilities.base64Decode(data) };
+}
+
+function getOrCreateDriveFolder_(name) {
+  const it = DriveApp.getFoldersByName(name);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(name);
+}
+
+function sanitizeFilename_(name) {
+  const s = String(name || '').replace(/[\\/:*?"<>|#%{}~&]/g, '-').trim();
+  return s || 'product-photo.jpg';
+}
+
 function normalizeType_(type, category, name) {
   const t = String(type || '').trim().toLowerCase();
   if (['device','mask','accessory'].indexOf(t) !== -1) return t;
@@ -3282,12 +1123,9 @@ function getLegacyProductDBSeed_() {
     ['04719893347982','','','','WiZARD 310 Nasal Mask','Wellell','mask','WiZARD 310','M','SM07002','310M','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
     ['04719893348194','','','','WiZARD 320 Full Face Mask','Wellell','mask','WiZARD 320','L','SM08001','320L','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
     ['04716872506873','','','','Light Grey Tubing \u00d819mm','Wellell','accessory','','','SF00001','','13. Hose / \u0e17\u0e48\u0e2d / Circuit',true],
+    ['04713025000172','','','','Light Grey Tubing 15mm','APEX','accessory','','','SF00022','','13. Hose / \u0e17\u0e48\u0e2d / Circuit',true],
     ['04713025000189','','','','Heated Tubing 15mm','APEX','accessory','','','SF00023','','13. Hose / \u0e17\u0e48\u0e2d / Circuit',true],
-    ['00606959006829','','','','Philips Wisp Mask Fabric Frame','Philips Respironics','mask','Wisp','','1094051','PHILIPS','7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)',true],
-    ['','26B17','','','APEX Unknown Device 26B17','APEX Medical','device','Unknown','','','','',true],
-    ['','25J100','','','APEX Unknown Device 25J100','APEX Medical','device','Unknown','','','','',true],
-    ['','26B39','','','APEX Unknown Device 26B39','APEX Medical','device','Unknown','','','','',true],
-    ['','','','*SPO2*','Beyond SpO2 Kits','Hunan Beyond','accessory','SpO2 Kit','','','','',true]
+    ['00606959006829','','','','Philips Wisp Mask Fabric Frame','Philips Respironics','mask','Wisp','','1094051','PHILIPS','7. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e2d\u0e37\u0e48\u0e19 (Philips/ResMed/etc.)',true]
   ];
 }
 
@@ -3300,33 +1138,261 @@ function updateProductAndDashboard() {
 }
 
 function readProductDB(ss) {
-  const sheet = ss.getSheetByName(TABS.productdb);
-  if (!sheet) return [];
-  const last = sheet.getLastRow();
-  if (last < 3) return [];
+  const out = [];
+  const byGtin = {};
 
-  const headers = sheet.getRange(2, 1, 1, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).getValues()[0];
-  const idx = {};
-  headers.forEach((h, i) => idx[String(h || '').trim()] = i);
-  const col = name => idx[name] == null ? PRODUCTDB_HEADERS.indexOf(name) : idx[name];
-  const data = sheet.getRange(3, 1, last - 2, Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length)).getValues();
-  return data
-    .filter(r => r[col('Product Name')])
-    .map(r => ({
-      gtin:         String(r[col('GTIN')] || '').trim(),
-      sn_exact:     String(r[col('SN_Exact')] || '').trim().toUpperCase(),
-      sn_pfx:       String(r[col('SN_Prefix')] || '').trim().toUpperCase(),
-      lot_pfx:      String(r[col('LOT_Prefix')] || '').trim().toUpperCase(),
-      name:         String(r[col('Product Name')] || '').trim(),
-      brand:        String(r[col('Brand')] || '').trim(),
-      type:         normalizeType_(r[col('Type')], r[col('Category')], r[col('Product Name')]),
-      model:        String(r[col('Model')] || '').trim(),
-      size:         String(r[col('Size')] || '').trim(),
-      ref:          String(r[col('REF')] || '').trim(),
-      product_code: String(r[col('Product Code')] || '').trim(),
-      category:     String(r[col('Category')] || '').trim(),
-      has_barcode:  toBool_(r[col('has_barcode')])
-    }));
+  getLegacyProductDBSeed_().concat(SKYLINE_PRODUCT_MASTER).forEach(r => {
+    const p = productFromMasterRow_(normalizeProductDBRow_(r));
+    addMergedProduct_(out, byGtin, p, false);
+  });
+
+  const sheet = ss.getSheetByName(TABS.productdb);
+  if (!sheet) return out;
+
+  const last = sheet.getLastRow();
+  const width = Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length, 12);
+  if (last < 1) return out;
+
+  const values = sheet.getRange(1, 1, last, width).getValues();
+  const headerRows = [];
+  values.forEach((row, i) => {
+    const joined = row.map(v => String(v || '').trim()).join('|');
+    if (joined.indexOf('GTIN') !== -1 && joined.indexOf('Product Name') !== -1) {
+      headerRows.push({ index: i, headers: row.map(h => String(h || '').trim()) });
+    }
+  });
+
+  headerRows.forEach(hr => {
+    const idx = {};
+    hr.headers.forEach((h, i) => {
+      if (h) idx[h] = i;
+    });
+    for (let i = hr.index + 1; i < values.length; i++) {
+      const row = values[i];
+      if (isHeaderLikeProductRow_(row)) continue;
+      const p = productFromSheetRow_(row, idx);
+      addMergedProduct_(out, byGtin, p, true);
+    }
+  });
+
+  return out;
+}
+
+function productFromMasterRow_(r) {
+  const baseName = String(r[4] || '').trim();
+  return {
+    gtin:         String(r[0] || '').trim(),
+    sn_exact:     String(r[1] || '').trim().toUpperCase(),
+    sn_pfx:       String(r[2] || '').trim().toUpperCase(),
+    lot_pfx:      String(r[3] || '').trim().toUpperCase(),
+    name:         baseName,
+    product_name: baseName,
+    stock_name:   '',
+    po_name:      '',
+    aliases:      '',
+    brand:        String(r[5] || '').trim(),
+    type:         normalizeType_(r[6], r[11], baseName),
+    model:        String(r[7] || '').trim(),
+    size:         String(r[8] || '').trim(),
+    ref:          String(r[9] || '').trim(),
+    product_code: String(r[10] || '').trim(),
+    category:     String(r[11] || '').trim(),
+    has_barcode:  toBool_(r[12]),
+    photoUrl:     String(r[16] || '').trim(),
+    addedDate:    String(r[17] || '').trim()
+  };
+}
+
+function productFromSheetRow_(row, idx) {
+  const hasFullSchema = idx['SN_Exact'] != null || idx['Product Code'] != null || idx['Search Aliases'] != null;
+  const get = name => idx[name] == null ? '' : row[idx[name]];
+  const looksLikeSimpleAppend = hasFullSchema &&
+    String(row[1] || '').trim() &&
+    ['device','mask','accessory'].indexOf(String(row[3] || '').trim().toLowerCase()) !== -1;
+  if (looksLikeSimpleAppend) {
+    return productFromSimpleProductRow_(row, {
+      GTIN: 0,
+      'Product Name': 1,
+      Brand: 2,
+      Type: 3,
+      Model: 4,
+      Size: 5,
+      REF: 6,
+      Category: 7,
+      Aliases: 8,
+      has_barcode: 9,
+      'Photo URL': 10,
+      'Added Date': 11
+    });
+  }
+  if (hasFullSchema) {
+    const baseName = String(get('Product Name') || '').trim();
+    const stockName = String(get('Stock Display Name') || '').trim();
+    const poName = String(get('PO Print Name') || '').trim();
+    const aliases = String(get('Search Aliases') || get('Aliases') || '').trim();
+    return {
+      gtin:         String(get('GTIN') || '').trim(),
+      sn_exact:     String(get('SN_Exact') || '').trim().toUpperCase(),
+      sn_pfx:       String(get('SN_Prefix') || '').trim().toUpperCase(),
+      lot_pfx:      String(get('LOT_Prefix') || '').trim().toUpperCase(),
+      name:         stockName || baseName,
+      product_name: baseName,
+      stock_name:   stockName,
+      po_name:      poName,
+      aliases:      aliases,
+      brand:        String(get('Brand') || '').trim(),
+      type:         normalizeType_(get('Type'), get('Category'), baseName),
+      model:        String(get('Model') || '').trim(),
+      size:         String(get('Size') || '').trim(),
+      ref:          String(get('REF') || '').trim(),
+      product_code: String(get('Product Code') || get('REF') || get('GTIN') || '').trim(),
+      category:     String(get('Category') || '').trim(),
+      has_barcode:  toBool_(get('has_barcode')),
+      photoUrl:     String(get('Photo URL') || '').trim(),
+      addedDate:    String(get('Added Date') || '').trim()
+    };
+  }
+
+  return productFromSimpleProductRow_(row, idx);
+}
+
+function productFromSimpleProductRow_(row, idx) {
+  const get = name => idx[name] == null ? '' : row[idx[name]];
+  const baseName = String(get('Product Name') || '').trim();
+  return {
+    gtin:         String(get('GTIN') || '').trim(),
+    sn_exact:     '',
+    sn_pfx:       '',
+    lot_pfx:      '',
+    name:         baseName,
+    product_name: baseName,
+    stock_name:   '',
+    po_name:      '',
+    aliases:      String(get('Aliases') || '').trim(),
+    brand:        String(get('Brand') || '').trim(),
+    type:         normalizeType_(get('Type'), get('Category'), baseName),
+    model:        String(get('Model') || '').trim(),
+    size:         String(get('Size') || '').trim(),
+    ref:          String(get('REF') || '').trim(),
+    product_code: String(get('REF') || get('GTIN') || '').trim(),
+    category:     String(get('Category') || '').trim(),
+    has_barcode:  toBool_(get('has_barcode')),
+    photoUrl:     String(get('Photo URL') || '').trim(),
+    addedDate:    String(get('Added Date') || '').trim()
+  };
+}
+
+function addMergedProduct_(out, byGtin, p, preferExistingGtin) {
+  if (!p || !String(p.product_name || p.name || '').trim()) return;
+  const key = normalizeGtinForCompare_(p.gtin);
+  const identity = productMergeIdentity_(p);
+  const mergeKey = key ? key + '|' + identity : 'NO_GTIN|' + identity;
+  if (byGtin[mergeKey] != null) {
+    if (preferExistingGtin) out[byGtin[mergeKey]] = p;
+    return;
+  }
+  byGtin[mergeKey] = out.length;
+  out.push(p);
+}
+
+function productMergeIdentity_(p) {
+  const type = normalizeType_(p.type, p.category, p.product_name || p.name);
+  const productCode = normalizeProductIdentityText_(p.product_code);
+  if (productCode) return [type, 'CODE', productCode].join('|');
+  if (type === 'mask') {
+    return [
+      type,
+      normalizeProductIdentityText_(p.ref),
+      normalizeProductIdentityText_(p.model),
+      normalizeProductIdentityText_(p.size),
+      normalizeProductIdentityText_(p.product_name || p.name)
+    ].join('|');
+  }
+  return [
+    type,
+    normalizeProductIdentityText_(p.ref),
+    normalizeProductIdentityText_(p.product_name || p.name)
+  ].join('|');
+}
+
+function isHeaderLikeProductRow_(row) {
+  return String(row[0] || '').trim() === 'GTIN' || String(row[4] || '').trim() === 'Product Name';
+}
+
+function ensureProductDBColumns_(sheet) {
+  if (!sheet) throw new Error('ProductDB sheet not found');
+  const width = Math.max(sheet.getLastColumn(), PRODUCTDB_HEADERS.length);
+  const headers = sheet.getRange(2, 1, 1, width).getValues()[0].map(h => String(h || '').trim());
+  let changed = false;
+
+  PRODUCTDB_HEADERS.forEach((h, i) => {
+    if (headers[i] !== h) {
+      headers[i] = h;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    sheet.getRange(2, 1, 1, PRODUCTDB_HEADERS.length).setValues([headers.slice(0, PRODUCTDB_HEADERS.length)]);
+    styleHeaderRow(sheet, 2, PRODUCTDB_HEADERS, '#333333');
+  }
+  return PRODUCTDB_HEADERS.reduce((idx, h, i) => {
+    idx[h] = i + 1;
+    return idx;
+  }, {});
+}
+
+function updateProductNames_(ss, b) {
+  const code = normalizeText(b.productCode || b.product_code);
+  if (!code) throw new Error('Missing product code');
+
+  const sheet = buildProductDBSheet(ss);
+  const cols = ensureProductDBColumns_(sheet);
+  const last = sheet.getLastRow();
+  if (last < DATA_START) throw new Error('ProductDB is empty');
+
+  const codeVals = sheet.getRange(DATA_START, cols['Product Code'], last - DATA_START + 1, 1).getValues();
+  let row = -1;
+  for (let i = 0; i < codeVals.length; i++) {
+    if (normalizeText(codeVals[i][0]).toUpperCase() === code.toUpperCase()) {
+      row = i + DATA_START;
+      break;
+    }
+  }
+  if (row === -1) throw new Error('Product code not found: ' + code);
+
+  const stockName = normalizeText(b.stockName || b.stock_name).slice(0, 160);
+  const poName = normalizeText(b.poName || b.po_name).slice(0, 220);
+  const aliases = normalizeText(b.aliases).slice(0, 500);
+
+  sheet.getRange(row, cols['Stock Display Name']).setValue(stockName);
+  sheet.getRange(row, cols['PO Print Name']).setValue(poName);
+  sheet.getRange(row, cols['Search Aliases']).setValue(aliases);
+
+  const note = [
+    'Name edit',
+    'code=' + code,
+    'stock=' + stockName,
+    'po=' + poName,
+    'aliases=' + aliases,
+    'by=' + (b.operator || b.staffName || b.user || '')
+  ].join(' | ');
+
+  appendHistory(ss, {
+    type: 'accessory',
+    name: normalizeText(sheet.getRange(row, cols['Product Name']).getValue()) || code,
+    brand: normalizeText(sheet.getRange(row, cols['Brand']).getValue()),
+    productCode: code,
+    qty: 1,
+    purpose: 'product update',
+    recipient: '',
+    user: b.user,
+    operator: b.operator,
+    note: note
+  }, Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy'), Utilities.formatDate(new Date(), TZ, 'HH:mm'), 'Product Update');
+
+  SpreadsheetApp.flush();
+  return { row: row, productCode: code, stockName: stockName, poName: poName, aliases: aliases };
 }
 
 function backfillStockDetails() {
@@ -3516,12 +1582,31 @@ function enrichTransactionProduct_(ss, b) {
 function transactionIdentityError_(b, action) {
   if (action !== 'in') return '';
   if (b.type === 'device' && !String(b.model || '').trim()) return 'Missing device model mapping';
-  if (b.type === 'mask' && (!String(b.model || '').trim() || !String(b.size || '').trim())) return 'Missing mask model/size mapping';
+  if (b.type === 'mask' && !isSizelessMaskProduct_(b) && (!String(b.model || '').trim() || !String(b.size || '').trim())) {
+    return 'Missing mask model/size mapping';
+  }
   return '';
+}
+
+function isSizelessMaskProduct_(p) {
+  const text = normalizeSkuToken_([p && p.name, p && p.model, p && p.ref, p && p.productCode].join(' '));
+  return text.indexOf('EASEFITPMI') !== -1 || text.indexOf('PILLOW') !== -1;
 }
 
 function normalizeSkuToken_(v) {
   return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeIncomingGtin_(raw) {
+  raw = String(raw || '').replace(/[^\x20-\x7E]/g, '').replace(/\s/g, '').trim();
+  if (!raw) return '';
+  let m = raw.match(/\(01\)(\d{8,14})/);
+  if (m) return m[1].replace(/^0+/, '');
+  m = raw.match(/^01(\d{14})/);
+  if (m) return m[1].replace(/^0+/, '');
+  m = raw.match(/\b(\d{8,14})\b/);
+  if (m) return m[1].replace(/^0+/, '');
+  return '';
 }
 
 function normalizeRefToken_(v) {
@@ -3619,7 +1704,7 @@ function doGet(e) {
   if (USERS[user] && USERS[user] === pass && staffName) {
     return ok({ message:'ok', user:user, role:getUserRole(user), staffName:staffName, token:makeAuthToken(user, staffName) });
   }
-  return err('ชื่อผู้ใช้ รหัสผ่าน หรือชื่อพนักงานไม่ถูกต้อง');
+  return err('Invalid login or missing staff name');
   }
   if (action === 'ping') {
     return ok({message:'Skyline API ready', ts:new Date().toISOString()});
@@ -3640,6 +1725,25 @@ function doGet(e) {
     }
   }
 
+  if (action === 'export_all_data') {
+    try {
+      const auth = requireAuth(p, 'admin');
+      if (!auth.ok) return err(auth.error);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return ok({
+        generatedAt: Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'),
+        device: readSheetObjects_(ss.getSheetByName(TABS.device)),
+        mask: readSheetObjects_(ss.getSheetByName(TABS.mask)),
+        accessory: readSheetObjects_(ss.getSheetByName(TABS.accessory)),
+        history: readSheetObjects_(ss.getSheetByName(TABS.history)),
+        productdb: readSheetObjects_(ss.getSheetByName(TABS.productdb)),
+        dashboard: readSheetObjects_(ss.getSheetByName(TABS.dashboard))
+      });
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
   if (action === 'history') {
     try {
       const auth = requireAuth(p);
@@ -3648,6 +1752,31 @@ function doGet(e) {
       const offset = parseInt(p.offset || '0', 10);
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       return ok({history: readHistory(ss, n, offset)});
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
+  if (action === 'sales_detail_alerts') {
+    try {
+      const auth = requireAuth(p);
+      if (!auth.ok) return err(auth.error);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return ok({alerts: readSalesDetailAlerts(ss)});
+    } catch(ex) {
+      return err(ex.toString());
+    }
+  }
+
+  if (action === 'monthly_out_summary') {
+    try {
+      const auth = requireAuth(p);
+      if (!auth.ok) return err(auth.error);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const now = new Date();
+      const year = parseInt(p.year || now.getFullYear(), 10);
+      const month = parseInt(p.month || (now.getMonth() + 1), 10);
+      return ok(readMonthlyOutSummary(ss, year, month));
     } catch(ex) {
       return err(ex.toString());
     }
@@ -3682,7 +1811,7 @@ function doPost(e) {
     const date = Utilities.formatDate(now, TZ, 'dd/MM/yyyy');
     const time = Utilities.formatDate(now, TZ, 'HH:mm');
 
-    // ?? Login via POST (鉊?葦鉊晤葵鉊?鉊耜?鉆腹鉆?鉊艇鉆?鉊?URL) ????????????????
+
     if (body.action === 'login') {
       const user = String(body.user || '');
       const pass = String(body.pass || '');
@@ -3690,14 +1819,14 @@ function doPost(e) {
       if (USERS[user] && USERS[user] === pass && staffName) {
         return ok({ message:'ok', user:user, role:getUserRole(user), staffName:staffName, token:makeAuthToken(user, staffName) });
       }
-      return err('ชื่อผู้ใช้ รหัสผ่าน หรือชื่อพนักงานไม่ถูกต้อง');
+      return err('Invalid login or missing staff name');
     }
 
-    // ?? Validate type ??????????????????????????????????????????
+
     const VALID_TYPES = ['device', 'mask', 'accessory'];
     if (['in', 'out', 'check', 'out_by_id'].includes(body.action)) {
       if (!VALID_TYPES.includes(body.type)) {
-        return err('ประเภทสินค้าไม่ถูกต้อง: ' + String(body.type || ''));
+        return err('Invalid product type: ' + String(body.type || ''));
       }
     }
 
@@ -3707,6 +1836,34 @@ function doPost(e) {
     if (requiresWriteLock_(body.action)) {
       lock = LockService.getScriptLock();
       lock.waitLock(20000);
+    }
+
+    if (body.action === 'ocr_label') {
+      try {
+        return ok(ocrLabel_(body.image || body.base64 || body.base64Image || ''));
+      } catch(ex) {
+        Logger.log('ocr_label error: ' + ex.toString());
+        return ok({ text: '' });
+      }
+    }
+
+    if (body.action === 'upload_product_photo') {
+      try {
+        return ok(uploadProductPhoto_(body.image || body.base64 || body.base64Image || '', body.filename || ''));
+      } catch(ex) {
+        Logger.log('upload_product_photo error: ' + ex.toString());
+        return err('Upload product photo failed: ' + (ex.message || ex.toString()));
+      }
+    }
+
+    if (body.action === 'add_product') {
+      try {
+        addProduct_(ss, body.product || body);
+        return ok({});
+      } catch(ex) {
+        Logger.log('add_product error: ' + ex.toString());
+        return err(ex.message || ex.toString());
+      }
     }
 
     if (body.action === 'in') {
@@ -3778,12 +1935,32 @@ function doPost(e) {
       }
     }
 
+    if (body.action === 'update_product_names') {
+      try {
+        const result = updateProductNames_(ss, body);
+        return ok(Object.assign({message:'update_product_names'}, result));
+      } catch(ex) {
+        Logger.log('update_product_names error: ' + ex.toString());
+        return err('Update product names failed: ' + (ex.message || ex.toString()));
+      }
+    }
+
+    if (body.action === 'update_sales_details') {
+      try {
+        const result = updateSalesDetails_(ss, body);
+        return ok(Object.assign({message:'update_sales_details'}, result));
+      } catch(ex) {
+        Logger.log('update_sales_details error: ' + ex.toString());
+        return err('Update sales details failed: ' + (ex.message || ex.toString()));
+      }
+    }
+
     if (body.action === 'sort') {
       const admin = requireAuth(body, 'admin');
       if (!admin.ok) return err(admin.error);
       try {
         const sheet = ss.getSheetByName(TABS.device);
-        if (!sheet) return err('ไม่พบ Device Sheet');
+        if (!sheet) return err('Device Sheet not found');
         sortDeviceSheet(sheet);
         return ok({message:'sorted'});
       } catch(ex) {
@@ -3795,7 +1972,7 @@ function doPost(e) {
     return err('Unknown action');
   } catch(ex) {
     Logger.log('doPost fatal error: ' + ex.toString());
-    return err('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง');
+    return err('Server error: ' + (ex.message || ex.toString()));
   } finally {
     if (lock) {
       try { lock.releaseLock(); } catch(lockErr) {}
@@ -3821,7 +1998,31 @@ function readStock(ss, type) {
       if (h) o[h] = row[j];
     });
     return o;
-  }).filter(r => r['Product Name'] && r['Status'] === 'Active');
+  }).filter(r => {
+    if (!r['Product Name']) return false;
+    if (normalizeText(r['Status']).toLowerCase() !== 'active') return false;
+    if (type !== 'device' && Number(r['Qty'] || 0) <= 0) return false;
+    return true;
+  });
+}
+
+function readSheetObjects_(sheet) {
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < HDR_ROW || lastCol < 1) return [];
+
+  const headers = sheet.getRange(HDR_ROW, 1, 1, lastCol).getValues()[0]
+    .map((h, i) => String(h || ('Column ' + (i + 1))).trim());
+  if (lastRow < DATA_START) return [];
+
+  return sheet.getRange(DATA_START, 1, lastRow - DATA_START + 1, lastCol).getValues()
+    .map((row, idx) => {
+      const o = {_sheetRow: idx + DATA_START};
+      headers.forEach((h, i) => { if (h) o[h] = row[i]; });
+      return o;
+    })
+    .filter(o => Object.keys(o).some(k => k !== '_sheetRow' && String(o[k] || '').trim() !== ''));
 }
 
 function readHistory(ss, n, offset) {
@@ -3834,9 +2035,9 @@ function readHistory(ss, n, offset) {
   const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0];
   const totalRows = last - DATA_START + 1;
 
-  // offset 鉊萵鉊?鉊耜?鉆?鉊抉艇鉆葡鉊芹虜鉊?(鉊腦鉊啤葷鉊晤?鉊毯?鉊徇腹鉆葵鉊詮?)
+
   const off = parseInt(offset || 0, 10);
-  if (off >= totalRows) return [];  // 鉆腹鉆腹鉊菽?鉆葉鉊﹤號鉊丞?鉊葩鉆腹鉆艇鉆葷
+  if (off >= totalRows) return [];
   const startFromBottom = Math.max(DATA_START, last - off - n + 1);
   const endRow = Math.max(DATA_START, last - off);
   const count = endRow - startFromBottom + 1;
@@ -3844,8 +2045,8 @@ function readHistory(ss, n, offset) {
 
   const data = sheet.getRange(startFromBottom, 1, count, sheet.getLastColumn()).getValues();
 
-  return data.reverse().map(row => {
-    const o = {};
+  return data.reverse().map((row, i) => {
+    const o = {_sheetRow: endRow - i};
     headers.forEach((h, j) => { if (h) o[h] = row[j]; });
     return normalizeHistoryRecord_(o);
   }).filter(r => r['Product Name']);
@@ -3853,6 +2054,7 @@ function readHistory(ss, n, offset) {
 
 function ensureHistoryColumns_(sheet) {
   if (!sheet) return;
+  sheet.setRowHeight(1, 36);
   const expectedCompact = [
     'Date','Time','Type','Product Name','Brand','Serial / LOT','Action',
     'Location / Recipient','Recorded By','Operator','Purpose'
@@ -3878,6 +2080,67 @@ function ensureHistoryColumns_(sheet) {
   if (dupHeaders.every((h, i) => h === duplicate[i])) {
     sheet.deleteColumns(12, duplicate.length);
   }
+
+  ensureHistoryExtraColumns_(sheet, historyExtraHeaders_());
+  styleHistoryTitle_(sheet, Math.max(sheet.getLastColumn(), expectedCompact.length + historyExtraHeaders_().length));
+}
+
+function ensureHistoryExtraColumns_(sheet, names) {
+  const width = Math.max(sheet.getLastColumn(), expectedHistoryMinWidth_());
+  const headers = sheet.getRange(HDR_ROW, 1, 1, width).getValues()[0]
+    .map(h => String(h || '').trim());
+  const missing = names.filter(name => !headers.includes(name));
+  if (!missing.length) return;
+
+  const startCol = sheet.getLastColumn() + 1;
+  sheet.getRange(HDR_ROW, startCol, 1, missing.length).setValues([missing]);
+  sheet.getRange(HDR_ROW, startCol, 1, missing.length)
+    .setBackground('#4a3580')
+    .setFontFamily('Arial').setFontSize(10).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle')
+    .setBorder(true,true,true,true,true,true,'#d0d0d0',SpreadsheetApp.BorderStyle.SOLID);
+  missing.forEach((_, i) => sheet.setColumnWidth(startCol + i, 12 * 7));
+}
+
+function expectedHistoryMinWidth_() {
+  return 11 + historyExtraHeaders_().length;
+}
+
+function historyExtraHeaders_() {
+  return [
+    'Qty','Before Qty','After Qty','Note','Reference','Model','Size',
+    'Buyer Name','Hospital','PO No','Sale Date','Sale Price','Wholesale Price'
+  ];
+}
+
+function styleHistoryTitle_(sheet, width) {
+  const titleWidth = Math.max(width || 1, expectedHistoryMinWidth_());
+  sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), titleWidth)).breakApart();
+  sheet.getRange(1, 1, 1, titleWidth).merge().setValue('Stock Movement History — Skyline Medical')
+    .setBackground('#4a3580').setFontFamily('Arial').setFontSize(13).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+}
+
+function repairHistorySheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) sheet = ss.insertSheet(TABS.history);
+  ensureHistoryColumns_(sheet);
+  const headers = [
+    'Date','Time','Type','Product Name','Brand','Serial / LOT','Action',
+    'Location / Recipient','Recorded By','Operator','Purpose'
+  ].concat(historyExtraHeaders_());
+  sheet.getRange(HDR_ROW, 1, 1, headers.length).setValues([headers]);
+  styleHeaderRow(sheet, HDR_ROW, headers, '#4a3580');
+  styleHistoryTitle_(sheet, headers.length);
+  const widths = [
+    14,8,14,30,18,26,12,22,14,18,14,
+    10,12,12,24,14,16,10,20,18,16,14,14,16
+  ];
+  widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w * 7));
+  sheet.setFrozenRows(2);
+  SpreadsheetApp.flush();
+  Logger.log('History repaired: title and headers prepared through column ' + headers.length);
 }
 
 function normalizeHistoryRecord_(o) {
@@ -3889,9 +2152,251 @@ function normalizeHistoryRecord_(o) {
     o['Recorded By'] = o['Record by'] || o['Record By'] || o['record by'] || o['User'] || '';
   }
   if (!o['Purpose']) {
-    o['Purpose'] = o['วัตถุประสงค์'] || '';
+    o['Purpose'] = o['วัตถุประสงค์'] || o['วัตถุประสงค์การเบิก'] || '';
   }
   return o;
+}
+
+function readMonthlyOutSummary(ss, year, month) {
+  const sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) return {year: year, month: month, totalQty: 0, rows: []};
+  ensureHistoryColumns_(sheet);
+
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return {year: year, month: month, totalQty: 0, rows: []};
+
+  const width = sheet.getLastColumn();
+  const headers = sheet.getRange(HDR_ROW, 1, 1, width).getValues()[0]
+    .map(h => String(h || '').trim());
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, width).getValues();
+  const selectedKey = monthKey_(year, month);
+  const prevKeys = previousMonthKeys_(year, month, 3);
+  const lastYearKey = monthKey_(year - 1, month);
+  const byProduct = {};
+
+  data.forEach(row => {
+    const it = {};
+    headers.forEach((h, i) => { if (h) it[h] = row[i]; });
+    normalizeHistoryRecord_(it);
+
+    if (String(it['Action'] || '').trim() !== 'Stock Out') return;
+    const d = parseHistoryDate_(it['Date']);
+    if (!d) return;
+
+    const product = String(it['Product Name'] || '').trim() || '-';
+    const brand = String(it['Brand'] || '').trim();
+    const type = String(it['Type'] || '').trim();
+    const ref = String(it['Reference'] || '').trim();
+    const inferred = inferHistoryModelSize_(it);
+    const model = String(it['Model'] || inferred.model || '').trim();
+    const size = String(it['Size'] || inferred.size || '').trim();
+    const isMask = String(type).toLowerCase().indexOf('mask') !== -1;
+    const key = [type, product, brand, ref, isMask ? model : '', isMask ? size : ''].join('|');
+    const qty = historyOutQty_(it);
+    if (!qty) return;
+
+    if (!byProduct[key]) {
+      byProduct[key] = {type: type, productName: product, brand: brand, reference: ref, model: model, size: size, months: {}};
+    }
+    const mk = monthKey_(d.getFullYear(), d.getMonth() + 1);
+    byProduct[key].months[mk] = (byProduct[key].months[mk] || 0) + qty;
+  });
+
+  const rows = Object.keys(byProduct).map(k => {
+    const item = byProduct[k];
+    const selectedQty = item.months[selectedKey] || 0;
+    const prevTotal = prevKeys.reduce((n, mk) => n + (item.months[mk] || 0), 0);
+    const prevAvg = Math.round((prevTotal / prevKeys.length) * 10) / 10;
+    const sameMonthLastYearQty = item.months[lastYearKey] || 0;
+    const forecastQty = Math.ceil(Math.max(selectedQty, prevAvg, sameMonthLastYearQty));
+    return {
+      type: item.type,
+      productName: item.productName,
+      brand: item.brand,
+      reference: item.reference,
+      model: item.model,
+      size: item.size,
+      qty: selectedQty,
+      prevAvg: prevAvg,
+      sameMonthLastYearQty: sameMonthLastYearQty,
+      forecastQty: forecastQty
+    };
+  }).filter(r => r.qty || r.prevAvg || r.sameMonthLastYearQty || r.forecastQty).sort((a, b) =>
+    b.forecastQty - a.forecastQty ||
+    b.qty - a.qty ||
+    String(a.type).localeCompare(String(b.type)) ||
+    String(a.productName).localeCompare(String(b.productName))
+  );
+  return {year: year, month: month, totalQty: rows.reduce((n, r) => n + r.qty, 0), rows: rows};
+}
+
+function monthKey_(year, month) {
+  return String(year) + '-' + String(month).padStart(2, '0');
+}
+
+function previousMonthKeys_(year, month, count) {
+  const out = [];
+  for (let i = 1; i <= count; i++) {
+    const d = new Date(year, month - 1 - i, 1);
+    out.push(monthKey_(d.getFullYear(), d.getMonth() + 1));
+  }
+  return out;
+}
+
+function historyDateMatchesMonth_(value, year, month) {
+  const d = parseHistoryDate_(value);
+  return !!d && d.getFullYear() === year && (d.getMonth() + 1) === month;
+}
+
+function parseHistoryDate_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) return value;
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!slash) return null;
+  let y = Number(slash[3]);
+  if (y > 2400) y -= 543;
+  return new Date(y, Number(slash[2]) - 1, Number(slash[1]));
+}
+
+function historyOutQty_(it) {
+  const q = Number(it['Qty']);
+  return Number.isFinite(q) && q > 0 ? q : 1;
+}
+
+function updateSalesDetails_(ss, b) {
+  const sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) throw new Error('History sheet not found');
+  ensureHistoryColumns_(sheet);
+
+  const row = parseInt(b.historyRow || b.sheetRow || 0, 10);
+  if (!row || row < DATA_START || row > sheet.getLastRow()) throw new Error('Invalid history row');
+
+  const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(h => String(h || '').trim());
+  const col = name => headers.indexOf(name) + 1;
+  const rowValues = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const current = {};
+  headers.forEach((h, i) => { if (h) current[h] = rowValues[i]; });
+  normalizeHistoryRecord_(current);
+  const inferred = inferHistoryModelSize_(current);
+  const updates = {
+    'Buyer Name': b.buyerName || '',
+    'Hospital': b.hospital || '',
+    'PO No': b.poNo || '',
+    'Sale Date': b.saleDate || '',
+    'Sale Price': b.salePrice || '',
+    'Wholesale Price': b.wholesalePrice || '',
+    'Model': b.model || current['Model'] || inferred.model || '',
+    'Size': b.size || current['Size'] || inferred.size || ''
+  };
+
+  Object.keys(updates).forEach(name => {
+    const c = col(name);
+    if (c) sheet.getRange(row, c).setValue(updates[name]);
+  });
+  return {row: row};
+}
+
+function inferHistoryModelSize_(it) {
+  const currentModel = String(it['Model'] || '').trim();
+  const currentSize = String(it['Size'] || '').trim();
+  if (currentModel && currentSize) return {model: currentModel, size: currentSize};
+
+  const type = String(it['Type'] || '').toLowerCase();
+  const lot = String(it['Serial / LOT'] || it['LOT Number'] || it['LOT'] || '').trim();
+  const inferred = inferProductFromLot_(lot) || {};
+  const inferredType = String(inferred.type || '').toLowerCase();
+  if (type && type.indexOf('mask') === -1 && inferredType !== 'mask') {
+    return {model: currentModel, size: currentSize};
+  }
+  let model = currentModel || inferred.model || '';
+  let size = currentSize || inferred.size || '';
+
+  const name = String(it['Product Name'] || '').toUpperCase();
+  if (!model) {
+    if (name.indexOf('NM6A') !== -1) model = 'EaseFit NM6A';
+    else if (name.indexOf('NM6') !== -1) model = 'EaseFit NM6';
+    else if (name.indexOf('NM5A') !== -1) model = 'EaseFit NM5A';
+    else if (name.indexOf('NM5') !== -1) model = 'EaseFit NM5';
+    else if (name.indexOf('PMI') !== -1) model = 'EaseFit PMI';
+  }
+  if (!size) {
+    const sizeMatch = name.match(/\b([SML])\b|NM\dA?([SML])$/);
+    size = sizeMatch ? (sizeMatch[1] || sizeMatch[2] || '') : '';
+  }
+  return {model: model, size: size};
+}
+
+function readSalesDetailAlerts(ss) {
+  const sheet = ss.getSheetByName(TABS.history);
+  if (!sheet) return [];
+  ensureHistoryColumns_(sheet);
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return [];
+
+  const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(h => String(h || '').trim());
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn()).getValues();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const alerts = [];
+
+  data.forEach((row, i) => {
+    const it = {_sheetRow: i + DATA_START};
+    headers.forEach((h, j) => { if (h) it[h] = row[j]; });
+    normalizeHistoryRecord_(it);
+    if (String(it['Action'] || '').trim() !== 'Stock Out') return;
+    const d = parseHistoryDate_(it['Date']);
+    if (!d) return;
+    d.setHours(0,0,0,0);
+    const ageDays = Math.floor((today - d) / 86400000);
+
+    const missingSale = salesDetailMissing_(it);
+    const missingPo = !String(it['PO No'] || '').trim();
+    if (missingSale && ageDays >= 7) {
+      alerts.push(salesAlertRow_(it, ageDays, 'sales_detail', 'Sales detail is missing for more than 7 days'));
+    }
+    if (missingPo && ageDays >= 30) {
+      alerts.push(salesAlertRow_(it, ageDays, 'po', 'PO number is missing for more than 30 days'));
+    }
+  });
+
+  return alerts.sort((a,b) => b.ageDays - a.ageDays).slice(0, 50);
+}
+
+function salesDetailMissing_(it) {
+  return !String(it['Buyer Name'] || '').trim() ||
+    !String(it['Hospital'] || '').trim() ||
+    !String(it['Sale Date'] || '').trim() ||
+    !String(it['Sale Price'] || '').trim() ||
+    !String(it['Wholesale Price'] || '').trim();
+}
+
+function salesAlertRow_(it, ageDays, kind, message) {
+  return {
+    historyRow: it._sheetRow,
+    kind: kind,
+    message: message,
+    ageDays: ageDays,
+    date: it['Date'] || '',
+    productName: it['Product Name'] || '',
+    brand: it['Brand'] || '',
+    model: it['Model'] || '',
+    size: it['Size'] || '',
+    serialLot: it['Serial / LOT'] || '',
+    recipient: it['Location / Recipient'] || '',
+    buyerName: it['Buyer Name'] || '',
+    hospital: it['Hospital'] || '',
+    poNo: it['PO No'] || '',
+    saleDate: it['Sale Date'] || '',
+    salePrice: it['Sale Price'] || '',
+    wholesalePrice: it['Wholesale Price'] || ''
+  };
 }
 
 /* =========================================================
@@ -3955,18 +2460,19 @@ function normalizeLot(lot) {
   const idxBy = lot.indexOf('BY-');
   if (idxBy !== -1) return lot.substring(idxBy);
 
-  // 鉊萵鉊?鉊Ｒ萼鉊萵鉊抉?鉊丞? GS1 鉊?鉊耜?鉊徇?鉆葡鉊冢葉鉊?鉆艇鉊啤?鉊晤? C.\d+ patterns (sync 鉊萵鉊?frontend)
+
   return lot.replace(/^\d{10,}/, '').replace(/C\.\d+(?:\.\d+)+/g, '').trim();
 }
 
 function findExistingAggregateRow(sheet, type, b) {
+  // Masks are stocked by product + size + LOT so expiry and batch-level stock
+  // stay accurate. Accessories keep the older product-level aggregation.
   const last = sheet.getLastRow();
   if (last < DATA_START) return -1;
 
   const numCols = sheet.getLastColumn();
   const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, numCols).getValues();
 
-  const lotCol  = type === 'mask' ? MASK_COL_LOT  : ACC_COL_LOT;
   const sizeCol = MASK_COL_SIZE;
 
   for (let i = 0; i < data.length; i++) {
@@ -3975,16 +2481,16 @@ function findExistingAggregateRow(sheet, type, b) {
 
     const productName = normalizeText(row[3]);   // col 4
     const brand       = normalizeText(row[5]);   // col 6
-    const lot         = normalizeText(row[lotCol - 1]);
     const size        = type === 'mask' ? normalizeText(row[sizeCol - 1]) : '';
+    const lot         = type === 'mask' ? normalizeLot(row[MASK_COL_LOT - 1]) : '';
 
     const sameName  = productName === normalizeText(b.name);
     const sameBrand = brand       === normalizeText(b.brand);
-    const sameLot   = normalizeLot(lot) === normalizeLot(b.lot);
     const sameSize  = (type !== 'mask') || (size === normalizeText(b.size));
+    const sameLot   = (type !== 'mask') || (lot === normalizeLot(b.lot));
 
-    if (sameName && sameBrand && sameLot && sameSize) {
-      return i + DATA_START;  // 鉊虞鉊?row number 鉊腦鉊毯?鉆? sheet
+    if (sameName && sameBrand && sameSize && sameLot) {
+      return i + DATA_START;
     }
   }
 
@@ -3992,7 +2498,12 @@ function findExistingAggregateRow(sheet, type, b) {
 }
 
 function rowMatchesPayload(row, type, b) {
-  if (normalizeText(row[COL_STATUS - 1]) !== 'Active') return false;
+  if (normalizeText(row[COL_STATUS - 1]).toLowerCase() !== 'active') return false;
+
+  // When a trusted sheet row is supplied, the row itself is the identity.
+  // The remaining payload fields are user-facing metadata and may differ in
+  // formatting from the sheet, especially for manual stock-out.
+  if (b && b.sheetRow) return true;
 
   const rowName = normalizeText(row[3]).toUpperCase();
   const rowBrand = normalizeText(row[5]).toUpperCase();
@@ -4086,6 +2597,8 @@ function appendHistory(ss, b, date, time, action) {
     'Type': tl[b.type] || b.type,
     'Product Name': b.name || '',
     'Brand': b.brand || '',
+    'Model': b.model || '',
+    'Size': b.size || '',
     'Serial / LOT': snLot,
     'Action': action,
     'Qty': qty,
@@ -4097,7 +2610,13 @@ function appendHistory(ss, b, date, time, action) {
     'Recorded By': b.user || '',
     'Operator': b.operator || b.staffName || b.user || '',
     'Note': b.note || '',
-    'Reference': b.ref || ''
+    'Reference': b.ref || '',
+    'Buyer Name': b.buyerName || '',
+    'Hospital': b.hospital || '',
+    'PO No': b.poNo || '',
+    'Sale Date': b.saleDate || '',
+    'Sale Price': b.salePrice || '',
+    'Wholesale Price': b.wholesalePrice || ''
   };
   const headers = sheet.getRange(HDR_ROW, 1, 1, sheet.getLastColumn()).getValues()[0]
     .map(h => String(h || '').trim());
@@ -4127,8 +2646,8 @@ function validateTransaction_(b, action) {
   const qty = parseInt(b.qty || 1, 10);
   if (!qty || qty <= 0) throw new Error('Quantity must be greater than 0');
   if (!String(b.operator || b.staffName || b.user || '').trim()) throw new Error('Missing operator');
-  if (b.type === 'device' && !String(b.sn || '').trim()) throw new Error('กรุณากรอกเลขเครื่อง (SN)');
-  if ((b.type === 'mask' || b.type === 'accessory') && !String(b.lot || '').trim()) throw new Error('กรุณากรอกเลขล็อต (LOT)');
+  if (b.type === 'device' && !String(b.sn || '').trim() && !(action === 'out' && b.sheetRow)) throw new Error('Missing serial number (SN)');
+  if (action !== 'out' && (b.type === 'mask' || b.type === 'accessory') && !String(b.lot || '').trim()) throw new Error('Missing lot number (LOT)');
   if (action === 'out') {
     const purpose = String(b.purpose || '').trim();
     const recipient = String(b.recipient || b.location || '').trim();
@@ -4155,7 +2674,7 @@ function doStockIn(ss, b, date, time) {
 
   b.lot = normalizeLot(b.lot);
 
-  // DEVICE = 鉊?葡鉊Ｒ?鉊腦鉊獅?鉊冢?
+
   if (b.type === 'device') {
     const seq = sheet.getLastRow() - HDR_ROW + 1;
     const row = [
@@ -4184,7 +2703,7 @@ function doStockIn(ss, b, date, time) {
     return newRow;
   }
 
-  // MASK / ACCESSORY = 鉊?葷鉊﹤艇鉆葉鉊?鉊葭鉊Ｒ葷鉊萵鉊?
+
   const addQty = Math.max(1, parseInt(b.qty || 1, 10));
   const existingRow = findExistingAggregateRow(sheet, b.type, b);
 
@@ -4259,6 +2778,14 @@ function doStockIn(ss, b, date, time) {
   return newRow;
 }
 
+function parseExpiryDate_(v) {
+  if (!v) return null;
+  const d = (v instanceof Date) ? v : new Date(v);
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 /* =========================================================
  * STOCK OUT
  * ========================================================= */
@@ -4274,7 +2801,7 @@ function doStockOut(ss, b, date, time) {
   const numCols = sheet.getLastColumn();
   const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, numCols).getValues();
 
-  // DEVICE = 鉊冢葉鉊?鉊耜腹 SN 鉆鉊?鉊葦鉊丞萵鉊?(scan 鉊葡鉊艇鉆葡鉊?鉊嗣?鉊?鉊?鉆鉊葉鉊丞?鉊耜葵鉊詮?鉊?鉊冢?)
+
   if (b.type === 'device') {
     const keyVal = b.sn || b.lot || '';
     const gtin = normalizeText(b.gtin).replace(/\s/g, '').replace(/^0+/, '').toUpperCase();
@@ -4306,11 +2833,12 @@ function doStockOut(ss, b, date, time) {
     return -1;
   }
 
-  // MASK / ACCESSORY = 鉊丞? Qty 鉆? Active row + 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉊?萼鉊虜鉊號鉆腦鉊晤?
+
   const lotCol  = b.type === 'mask' ? MASK_COL_LOT  : ACC_COL_LOT;
   const qtyCol  = b.type === 'mask' ? MASK_COL_QTY  : ACC_COL_QTY;
   const outQty  = Math.max(1, parseInt(b.qty || 1, 10));
 
+  const matches = [];
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     if (normalizeText(row[COL_STATUS - 1]) !== 'Active') continue;
@@ -4319,40 +2847,79 @@ function doStockOut(ss, b, date, time) {
     const rowName = normalizeText(row[3]);  // col 4 = Product Name
     const rowSize = b.type === 'mask' ? normalizeText(row[MASK_COL_SIZE - 1]) : '';
 
-    // 鉊腦鉊抉? LOT (鉊萵鉊?鉊晤?)
-    if (normalizeLot(rowLot) !== normalizeLot(b.lot)) continue;
-    // 鉊腦鉊抉? Product Name (鉊?鉊耜腹鉊?
     if (b.name && rowName.toUpperCase() !== normalizeText(b.name).toUpperCase()) continue;
-    // 鉊腦鉊抉? Size 鉊芹董鉊徇腦鉊晤? mask (鉊?鉊耜腹鉊? 鉆鉊虞鉆葉鉆腹鉆?鉆葡鉊Ｒ?鉊毯? size
     if (b.type === 'mask' && b.size && rowSize.toUpperCase() !== normalizeText(b.size).toUpperCase()) continue;
+    if (b.type === 'mask' && b.lot && normalizeLot(rowLot) !== normalizeLot(b.lot)) continue;
+    if (b.type !== 'mask' && b.lot && normalizeLot(rowLot) !== normalizeLot(b.lot)) continue;
 
-    const r = i + DATA_START;
     const qty = parseInt(row[qtyCol - 1] || 0, 10);
     if (qty <= 0) continue;
-    const actualOutQty = Math.min(outQty, qty);
+    matches.push({ row, index: i, sheetRow: i + DATA_START, qty });
+  }
 
-    // 鉊丞? Qty 鉊葡鉊﹤?鉊喪?鉊抉?鉊腦鉊毯?鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊?鉊耜?鉊徇艇鉊獅葉 0 鉆葦鉆?mark Out)
-    if (qty > actualOutQty) {
-      sheet.getRange(r, qtyCol).setValue(qty - actualOutQty);
+  const picked = pickStockOutBatch_(matches, b.type);
+  if (picked) {
+    const actualOutQty = Math.min(outQty, picked.qty);
+
+    if (picked.qty > actualOutQty) {
+      sheet.getRange(picked.sheetRow, qtyCol).setValue(picked.qty - actualOutQty);
     } else {
-      markOut(sheet, r, b.type, date);
+      markOut(sheet, picked.sheetRow, b.type, date);
     }
 
-    // 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆鉊芹腹鉊?鉆鉊虞鉆葉 track 鉊抉?鉊耜?鉆葡鉊Ｒ?鉊徇?鉆?鉊?
-    appendOutRow(sheet, b.type, row, date, time, b.location || b.recipient || '', b.note || '', actualOutQty, b.purpose || '');
+    appendOutRow(sheet, b.type, picked.row, date, time, b.location || b.recipient || '', b.note || '', actualOutQty, b.purpose || '');
     b.qty = actualOutQty;
-    b.beforeQty = qty;
-    b.afterQty = Math.max(0, qty - actualOutQty);
-    if (qty <= actualOutQty && _needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
+    b.beforeQty = picked.qty;
+    b.afterQty = Math.max(0, picked.qty - actualOutQty);
+    if (picked.qty <= actualOutQty && _needsSort(sheet, COL_STATUS, 2)) sortMaskAccSheet(sheet);
 
     appendHistory(ss, b, date, time, 'Stock Out');
-    return r;
+    return picked.sheetRow;
   }
 
   return -1;
 }
 
-/* 鉊芹腦鉆葡鉊?Out row 鉆葦鉊﹤?鉆? Mask / Accessory sheet */
+function pickStockOutBatch_(matches, type) {
+  if (!matches.length) return null;
+  if (type !== 'mask') return matches[0];
+  return matches.slice().sort((a, b) => {
+    const da = parseSheetDate_(a.row[1]);
+    const db = parseSheetDate_(b.row[1]);
+    if (da && db && da.getTime() !== db.getTime()) return da - db;
+    if (da) return -1;
+    if (db) return 1;
+    return a.sheetRow - b.sheetRow;
+  })[0];
+}
+
+function parseSheetDate_(v) {
+  if (!v) return null;
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const d = new Date(v.getTime());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  const s = String(v || '').trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    let y = parseInt(m[3], 10);
+    if (y > 2400) y -= 543;
+    const d = new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+
 function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purpose) {
   qty = Math.max(1, parseInt(qty || 1, 10));
   const seq = sheet.getLastRow() - HDR_ROW + 1;
@@ -4372,7 +2939,7 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purp
       srcRow[MASK_COL_LOT  - 1],   // LOT
       srcRow[MASK_COL_GTIN - 1],   // GTIN
       srcRow[MASK_COL_MFG    - 1],   // Mfg Date
-      qty,                           // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
+      qty,
       formatOutDetail_(location, purpose, note),
       srcRow[MASK_COL_EXPIRY - 1] || ''  // Expiry
     ];
@@ -4387,8 +2954,8 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purp
       srcRow[ACC_COL_LOT  - 1],    // LOT
       srcRow[ACC_COL_GTIN - 1],    // GTIN
       srcRow[ACC_COL_MFG  - 1],    // Mfg Date
-      qty,                    // Qty 鉊葭鉆?鉆葡鉊Ｒ葉鉊冢? (鉊葡鉊﹤?鉊?葩鉊?
-      location,               // Location = 鉊虞鉆葉鉊號鉆腦鉊晤?
+      qty,
+      location,
       formatOutDetail_('', purpose, note)
     ];
   }
@@ -4398,7 +2965,7 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purp
   sheet.appendRow(outRow);
   const newRow = sheet.getLastRow();
 
-  // 鉊芹?鉊艇鉆?鉊葷 Out (鉊芹葭鉆?鉊葉鉆葉鉊?
+
   sheet.getRange(newRow, 1, 1, sheet.getLastColumn())
     .setBackground('#fde8e8')
     .setFontFamily('Arial')
@@ -4411,25 +2978,25 @@ function appendOutRow(sheet, type, srcRow, date, time, location, note, qty, purp
     .setFontWeight('bold');
 }
 
-/* 鉆鉊?葭鉊Ｒ? Device sheet: Active 鉊?鉊冢? ??SN A? */
+
 function sortDeviceSheet(sheet) {
   const last = sheet.getLastRow();
-  if (last < DATA_START + 1) return;  // 鉊?鉊冢?鉊﹤葭鉊冢腺鉆葡鉊?鉆葉鉊?2 鉆?鉊抉?鉆葉鉊﹤號鉊?
+  if (last < DATA_START + 1) return;
   const range = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn());
   range.sort([
-    { column: COL_STATUS,  ascending: true },   // "Active" < "Out" ??Active 鉊葆鉆?鉊?鉊冢?
-    { column: DEV_COL_SN,  ascending: true }    // SN A? 鉊葡鉊Ｒ?鉊?鉊丞虜鉆腹
+    { column: COL_STATUS,  ascending: true },
+    { column: DEV_COL_SN,  ascending: true }
   ]);
 }
 
-/* 鉆鉊?葭鉊Ｒ? Mask / Accessory sheet: Active (In) 鉊?鉊冢? ??Out 鉆艇鉆艇鉊腹鉊耜?鉆葡鉊艇鉆葡鉊?*/
+
 function sortMaskAccSheet(sheet) {
   const last = sheet.getLastRow();
   if (last < DATA_START + 1) return;
   const range = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn());
   range.sort([
-    { column: COL_STATUS, ascending: true },  // "Active" < "Out" ??Active 鉊葆鉆?鉊?鉊冢?
-    { column: 2,          ascending: true }   // 鉆鉊?葭鉊Ｒ?鉊葡鉊?Date In 鉊葡鉊Ｒ?鉊?鉊?鉊丞萼鉊艇鉊詮?鉊?
+    { column: COL_STATUS, ascending: true },
+    { column: 2,          ascending: true }
   ]);
 }
 
@@ -4470,9 +3037,9 @@ function doStockOutByRow(ss, b, date, time) {
       const extra = formatOutDetail_(b.location || b.recipient || '', b.purpose || '', b.note || '');
       sheet.getRange(r, 16).setValue(oldNote ? oldNote + ' | ' + extra : extra);
     }
-    // sort 鉊徇艇鉊晤? appendHistory 鉆鉊虞鉆葉鉊?鉊冢?鉊萵鉊?row index 鉆鉊艇鉊菽?鉊Ｒ?
+
   } else {
-    // Mask / Accessory: 鉊丞? Qty 鉊葡鉊﹤?鉊喪?鉊抉?鉊腦鉊毯? + 鉊芹腦鉆葡鉊?Out row
+
     const qtyCol = b.type === 'mask' ? MASK_COL_QTY : ACC_COL_QTY;
     const qty = parseInt(srcRow[qtyCol - 1] || 0, 10);
     if (qty <= 0) throw new Error('No stock left');
@@ -4493,6 +3060,33 @@ function doStockOutByRow(ss, b, date, time) {
   appendHistory(ss, b, date, time, 'Stock Out');
 }
 
+function findFifoMaskRowForSelected_(sheet, selectedRow) {
+  const last = sheet.getLastRow();
+  if (last < DATA_START) return null;
+  const data = sheet.getRange(DATA_START, 1, last - DATA_START + 1, sheet.getLastColumn()).getValues();
+  const matches = [];
+  data.forEach((row, i) => {
+    if (normalizeText(row[COL_STATUS - 1]) !== 'Active') return;
+    if (parseInt(row[MASK_COL_QTY - 1] || 0, 10) <= 0) return;
+    if (!sameMaskStockIdentity_(row, selectedRow)) return;
+    matches.push({
+      row: row,
+      index: i,
+      sheetRow: i + DATA_START,
+      qty: parseInt(row[MASK_COL_QTY - 1] || 0, 10)
+    });
+  });
+  return pickStockOutBatch_(matches, 'mask');
+}
+
+function sameMaskStockIdentity_(a, b) {
+  return normalizeText(a[3]).toUpperCase() === normalizeText(b[3]).toUpperCase() &&
+    normalizeText(a[5]).toUpperCase() === normalizeText(b[5]).toUpperCase() &&
+    normalizeText(a[6]).toUpperCase() === normalizeText(b[6]).toUpperCase() &&
+    normalizeText(a[MASK_COL_SIZE - 1]).toUpperCase() === normalizeText(b[MASK_COL_SIZE - 1]).toUpperCase() &&
+    normalizeText(a[MASK_COL_REF - 1]).toUpperCase() === normalizeText(b[MASK_COL_REF - 1]).toUpperCase();
+}
+
 function doBatchStocktake(ss, items, date, time, ctx) {
   if (!Array.isArray(items) || !items.length) throw new Error('No stocktake items');
   if (!String(ctx.operator || ctx.staffName || '').trim()) throw new Error('Missing operator');
@@ -4501,24 +3095,97 @@ function doBatchStocktake(ss, items, date, time, ctx) {
   let updated = 0;
 
   items.forEach(item => {
-    const code = String(item.productCode || item.product_code || '').trim().toUpperCase();
     const qty = parseInt(item.qty, 10);
-    if (!code || !Number.isFinite(qty) || qty < 0) throw new Error('Invalid stocktake item: ' + code);
-    const product = byCode.get(code);
-    if (!product) throw new Error('Product code not found: ' + code);
-    if (product.type === 'device') return;
+    if (!Number.isFinite(qty) || qty < 0) throw new Error('Invalid stocktake quantity');
 
-    const sheet = ss.getSheetByName(TABS[product.type]);
-    if (!sheet) throw new Error('Sheet not found: ' + product.type);
-    const result = setAggregateQty_(sheet, product, qty, date, ctx);
+    let product = null;
+    let result = null;
+    const exact = stocktakeBySheetRow_(ss, item, qty);
+    if (exact) {
+      product = exact.product;
+      result = exact.result;
+    } else {
+      const code = String(item.productCode || item.product_code || '').trim().toUpperCase();
+      if (!code) throw new Error('Invalid stocktake item');
+      product = resolveStocktakeProduct_(products, byCode, item, code);
+      if (!product) throw new Error('Product code not found or ambiguous: ' + code);
+      if (product.type === 'device') return;
+      const sheet = ss.getSheetByName(TABS[product.type]);
+      if (!sheet) throw new Error('Sheet not found: ' + product.type);
+      result = setAggregateQty_(sheet, product, qty, date, ctx);
+    }
+    if (!product || product.type === 'device') return;
     appendHistory(ss, {
       type: product.type, name: product.name, brand: product.brand, model: product.model, size: product.size,
-      ref: product.ref, productCode: product.product_code, qty: qty, beforeQty: result.beforeQty, afterQty: result.afterQty,
+      ref: product.ref, productCode: product.product_code, lot: product.lot, gtin: product.gtin,
+      qty: qty, beforeQty: result.beforeQty, afterQty: result.afterQty,
       purpose: 'ปรับยอดจาก stocktake', recipient: '', user: ctx.user, operator: ctx.operator, note: 'batch stocktake'
     }, date, time, 'Stocktake');
     updated++;
   });
   return {updated:updated};
+}
+
+function stocktakeBySheetRow_(ss, item, qty) {
+  const type = normalizeType_(item.type, '', item.name);
+  if (type !== 'mask' && type !== 'accessory') return null;
+  const sheetRow = parseInt(item.sheetRow, 10);
+  if (!Number.isFinite(sheetRow) || sheetRow < DATA_START) return null;
+  const sheet = ss.getSheetByName(TABS[type]);
+  if (!sheet || sheetRow > sheet.getLastRow()) throw new Error('Stocktake row not found');
+  const qtyCol = type === 'mask' ? MASK_COL_QTY : ACC_COL_QTY;
+  const row = sheet.getRange(sheetRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const beforeQty = parseInt(row[qtyCol - 1] || 0, 10);
+  sheet.getRange(sheetRow, qtyCol).setValue(qty);
+  sheet.getRange(sheetRow, COL_STATUS).setValue(qty > 0 ? 'Active' : 'Out');
+  styleDataRow(sheet, sheetRow, type);
+  return {
+    product: productFromStockRow_(type, row),
+    result: {row:sheetRow, beforeQty:beforeQty, afterQty:qty}
+  };
+}
+
+function productFromStockRow_(type, row) {
+  if (type === 'mask') {
+    return {
+      type:'mask',
+      name: normalizeText(row[3]),
+      brand: normalizeText(row[5]),
+      model: normalizeText(row[6]),
+      size: normalizeText(row[MASK_COL_SIZE - 1]),
+      ref: normalizeText(row[MASK_COL_REF - 1]),
+      lot: normalizeText(row[MASK_COL_LOT - 1]),
+      gtin: normalizeText(row[MASK_COL_GTIN - 1]),
+      product_code: normalizeText(row[MASK_COL_REF - 1] || row[MASK_COL_GTIN - 1])
+    };
+  }
+  return {
+    type:'accessory',
+    name: normalizeText(row[3]),
+    brand: normalizeText(row[5]),
+    model:'',
+    size:'',
+    ref:'',
+    lot: normalizeText(row[ACC_COL_LOT - 1]),
+    gtin: normalizeText(row[ACC_COL_GTIN - 1]),
+    product_code: normalizeText(row[ACC_COL_GTIN - 1])
+  };
+}
+
+function resolveStocktakeProduct_(products, byCode, item, code) {
+  const direct = byCode.get(code);
+  if (direct) return direct;
+  const matches = (products || []).filter(p => String(p.product_code || '').trim().toUpperCase() === code);
+  if (!matches.length) return null;
+  const hinted = matches.filter(p =>
+    (!item.type || normalizeType_(p.type, p.category, p.name) === normalizeType_(item.type, '', item.name)) &&
+    (!item.name || sameProductIdentityText_(p.name || p.product_name, item.name)) &&
+    (!item.brand || sameProductIdentityText_(p.brand, item.brand)) &&
+    (!item.model || sameProductIdentityText_(p.model, item.model)) &&
+    (!item.size || sameProductIdentityText_(p.size, item.size)) &&
+    (!item.ref || sameProductIdentityText_(p.ref, item.ref))
+  );
+  return hinted.length === 1 ? hinted[0] : null;
 }
 
 function buildUniqueProductCodeMap_(products) {
@@ -4544,7 +3211,7 @@ function setAggregateQty_(sheet, product, qty, date, ctx) {
   const type = product.type;
   const rowPayload = {
     type:type, name:product.name, brand:product.brand, model:product.model, size:product.size, ref:product.ref,
-    lot:'', gtin:product.gtin || '', qty:qty, location:'Stocktake', note:'stocktake by ' + (ctx.operator || ctx.user || '')
+    lot:product.lot || '', gtin:product.gtin || '', qty:qty, location:'Stocktake', note:'stocktake by ' + (ctx.operator || ctx.user || '')
   };
   const row = findExistingAggregateRow(sheet, type, rowPayload);
   const qtyCol = type === 'mask' ? MASK_COL_QTY : ACC_COL_QTY;
@@ -4558,7 +3225,7 @@ function setAggregateQty_(sheet, product, qty, date, ctx) {
   if (qty <= 0) return {row:-1, beforeQty:0, afterQty:0};
   const seq = sheet.getLastRow() - HDR_ROW + 1;
   const newRow = type === 'mask'
-    ? [seq,date,'',product.name,'Active',product.brand,product.model,product.size,product.ref,'',product.gtin || '','',qty,'stocktake create','']
+    ? [seq,date,'',product.name,'Active',product.brand,product.model,product.size,product.ref,product.lot || '',product.gtin || '','',qty,'stocktake create','']
     : [seq,date,'',product.name,'Active',product.brand,'',product.gtin || '','',qty,'Stocktake','stocktake create'];
   sheet.appendRow(newRow);
   const r = sheet.getLastRow();
@@ -4581,26 +3248,14 @@ function err(msg, extra) {
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
-/* =========================================================
- * ALERT SYSTEM ??鉆?鉆?鉆鉊虞鉊冢?鉊葡鉊葉鉊菽?鉊﹤艇鉊冢萵鉊?鉊腹鉊晤?鉊?
- *
- * 鉊抉葩鉊葭鉆鉊葩鉊?鉊?鉊葡鉊?(鉊董鉊腦鉊晤?鉊?鉊葭鉊Ｒ葷):
- *   1. 鉆葵鉆葉鉊菽?鉊﹤艇鉊號鉆腦鉊晤?鉊葭鉆?ALERT_EMAIL 鉊?鉊耜?鉊丞?鉊耜?
- *   2. 鉆鉊葩鉊?Apps Script Editor ??鉊?萵鉊?setupAlertTrigger()
- *   3. 鉊冢?鉊詮?鉊耜? Permission 鉊葭鉆?鉊?(Gmail + Sheets)
- *   4. 鉊?萼鉊?鉊萼鉊芹?鉊葉鉊菽?鉊﹤艇鉊虜鉊葷鉊晤? 08:00 鉊? 鉊冢萵鉊?鉊腹鉊晤?鉊?
- *   5. 鉊?鉊芹葉鉊?鉊?鉊萵鉊?鉊菽?鉊腺鉊?萵鉊?sendTestAlert()
- * ========================================================= */
-const ALERT_EMAIL    = 'supitcha.raks@gmail.com';  // 鉊冢葭鉆鉊﹤艇鉊號鉆腦鉊晤?鉆?鉆?鉆鉊虞鉊冢? (鉊萵鉆?鉊徇艇鉊耜腺鉊冢葭鉆鉊﹤艇鉊?鉊抉腺 comma)
-const ALERT_LOW_QTY  = 3;  // 鉆?鉆?鉆鉊虞鉊冢?鉆鉊﹤虞鉆葉 qty ??鉊?鉊耜?鉊菽?
-const ALERT_EXP_DAYS = 90; // 鉆?鉆?鉆鉊虞鉊冢?鉊丞?鉊抉?鉊徇?鉆葡鉊葭鉆葷鉊晤?鉊?鉊冢?鉊徇腹鉊葉鉊耜腺鉊?
 
-/**
- * 鉊?萵鉊?鉊?萵鉆?鉆鉊葭鉊Ｒ葷鉊葡鉊?Apps Script Editor 鉆鉊虞鉆葉鉊芹腦鉆葡鉊?Trigger
- * 鉊徇艇鉊晤?鉊葡鉊?鉊晤?鉊?checkAndAlert() 鉊萼鉊董鉊葡鉊葉鉊晤?鉆?鉊﹤萵鉊葩鉊虜鉊葷鉊晤? 08:00
- */
+const ALERT_EMAIL    = 'supitcha.raks@gmail.com';
+const ALERT_LOW_QTY  = 3;
+const ALERT_EXP_DAYS = 90;
+
+
 function setupAlertTrigger() {
-  // 鉊丞? trigger 鉆鉊?鉊耜?鉊菽?鉊虞鉆葉 checkAndAlert 鉊?鉊冢? (鉊?鉊冢?鉊萵鉊?鉆董)
+
   ScriptApp.getProjectTriggers()
     .filter(t => t.getHandlerFunction() === 'checkAndAlert')
     .forEach(t => ScriptApp.deleteTrigger(t));
@@ -4615,7 +3270,7 @@ function setupAlertTrigger() {
   Logger.log('Trigger created: checkAndAlert daily at 08:00');
 }
 
-/** 鉊?鉊芹葉鉊葵鉆?鉊冢葭鉆鉊﹤艇鉊萵鉊?鉊?(鉊?萵鉊?鉊耜? Editor) */
+
 function sendTestAlert() {
   const email = ALERT_EMAIL.trim();
   if (!email) { Logger.log('Missing ALERT_EMAIL'); return; }
@@ -4624,7 +3279,7 @@ function sendTestAlert() {
   const today = new Date(); today.setHours(0,0,0,0);
   const { lowItems, expItems } = _collectAlertItems(ss, today);
 
-  // 鉊?鉊耜腺鉊晤?鉆腹鉆腹鉊菽?鉆葉鉊﹤號鉊丞?鉊?葩鉊?鉆葦鉆?鉊芹?鉊萵鉊抉葉鉊Ｒ?鉊耜?鉆鉊虞鉆葉鉊號鉊徇?鉆葡鉊葡鉊冢葭鉆鉊﹤艇
+
   const testLow = lowItems.length ? lowItems : [
     { type:'Mask',      name:'Beyond EaseFit NM5A', size:'M', qty:2 },
     { type:'Accessory', name:'Breathing Tube HP1',  size:'',  qty:1 },
@@ -4638,7 +3293,7 @@ function sendTestAlert() {
   Logger.log('Test alert sent to ' + email);
 }
 
-/** 鉊萵鉊?鉆?鉊晤?鉊徇艇鉊晤? ??鉊號鉊?鉊?葭鉊Ｒ?鉆?鉊?Trigger 鉊虜鉊葷鉊晤? */
+
 function checkAndAlert() {
   const email = ALERT_EMAIL.trim();
   if (!email) { Logger.log('Missing ALERT_EMAIL'); return; }
@@ -4652,7 +3307,7 @@ function checkAndAlert() {
     return;
   }
 
-  // 鉊?鉊冢?鉊萵鉊葵鉆?鉊?鉊???鉊芹?鉊?鉊徇腹鉆?鉊?鉊耜萼鉆鉊﹤虞鉆葉鉊芹?鉊耜?鉊葡鉊??鉆?鉊艇鉊菽?鉊Ｒ?
+
   const props      = PropertiesService.getScriptProperties();
   const currentKey = JSON.stringify({
     low: lowItems.map(x => x.name + '|' + x.size),
@@ -4669,13 +3324,13 @@ function checkAndAlert() {
   Logger.log('Stock alert sent to ' + email);
 }
 
-/** 鉊?葷鉊腦鉊抉腹鉊?葡鉊Ｒ?鉊耜腦鉊葭鉆?鉆葉鉊?鉊?鉊?鉊虞鉊冢? */
+
 function _collectAlertItems(ss, today) {
   const lowItems = [];
   const expItems = [];
   const warnMs   = ALERT_EXP_DAYS * 86400000;
 
-  // ?? Mask: 鉊腦鉊抉? low stock ??????????????????????????????
+
   const maskSheet = ss.getSheetByName(TABS.mask);
   if (maskSheet && maskSheet.getLastRow() >= DATA_START) {
     const data = maskSheet.getRange(
@@ -4697,8 +3352,8 @@ function _collectAlertItems(ss, today) {
     });
   }
 
-  // ?? Mask: 鉊腦鉊抉? near expiry (col 15 = Expiry) ??????????
-  // 鉊?葉鉊腦鉊晤?鉊萵鉆? sheet 鉆鉊?鉊?(鉆腹鉆腹鉊?col 15) 鉆艇鉊?sheet 鉆葦鉊﹤?
+
+
   if (maskSheet && maskSheet.getLastRow() >= DATA_START) {
     const numColsMask = maskSheet.getLastColumn();
     if (numColsMask >= MASK_COL_EXPIRY) {
@@ -4719,7 +3374,7 @@ function _collectAlertItems(ss, today) {
           expItems.push({
             type:    'Mask',
             name:    String(row[3] || ''),
-            sn:      String(row[MASK_COL_LOT - 1] || ''),  // 鉆?鉆?LOT 鉆?鉊?SN
+            sn:      String(row[MASK_COL_LOT - 1] || ''),
             daysLeft,
             expDate: Utilities.formatDate(expDate, TZ, 'dd/MM/yyyy'),
           });
@@ -4728,7 +3383,7 @@ function _collectAlertItems(ss, today) {
     }
   }
 
-  // ?? Accessory: 鉊腦鉊抉? low stock ?????????????????????????
+
   const accSheet = ss.getSheetByName(TABS.accessory);
   if (accSheet && accSheet.getLastRow() >= DATA_START) {
     const data = accSheet.getRange(
@@ -4750,7 +3405,7 @@ function _collectAlertItems(ss, today) {
     });
   }
 
-  // ?? Device: 鉊腦鉊抉? near expiry ??????????????????????????
+
   const devSheet = ss.getSheetByName(TABS.device);
   if (devSheet && devSheet.getLastRow() >= DATA_START) {
     const data = devSheet.getRange(
@@ -4781,7 +3436,7 @@ function _collectAlertItems(ss, today) {
   return { lowItems, expItems };
 }
 
-/** 鉊芹腦鉆葡鉊?HTML body 鉊葉鉊葉鉊菽?鉊﹤艇鉆?鉆?鉆鉊虞鉊冢? */
+
 function _buildAlertHtml(lowItems, expItems, today) {
   const dateStr = Utilities.formatDate(today, TZ, 'dd/MM/yyyy');
 
@@ -4874,7 +3529,7 @@ function findDuplicate(ss, type, sn, lot, name, size) {
 
     if (type === 'device') {
       if (sn) {
-        // 鉊腦鉊抉?鉊?鉊喪?鉆葷鉊?SN (鉊腦鉊葭鉊?鉊葩)
+
         const rowSn = normalizeText(row[DEV_COL_SN - 1]);
         if (rowSn.toUpperCase() === normalizeText(sn).toUpperCase()) {
           return {
@@ -4886,12 +3541,12 @@ function findDuplicate(ss, type, sn, lot, name, size) {
           };
         }
       }
-      // 鉊?鉊?barcode 鉆腹鉆腹鉊?SN 鉊冢腺鉆葡鉊萵鉊?鉆董鉊?鉊抉腺 LOT/GTIN 鉆鉊腦鉊耜萼鉆腹鉆?鉊?鉊?葦鉊晤葵鉊?葡鉊Ｒ?鉊腦鉊獅?鉊冢?
-      // 鉆艇鉊啤?鉊啤?鉊喪?鉊徇?鉆鉊腦鉊獅?鉊冢?鉊葭鉆?鉊腺 Out 鉆艇鉆葷鉊?萵鉊?鉊丞萵鉊?鉊?鉊耜?鉊﹤?鉆?鉆?鉊﹤虞鉆葉鉊Ｒ萵鉊腹鉊菽?鉊腦鉊獅?鉊冢? LOT 鉆鉊葭鉊Ｒ葷鉊萵鉊?Active 鉊冢腺鉊嫩?
+
+
     }
 
-    // mask/accessory: 鉆腹鉆?鉊?葷鉊?鉆董鉊葭鉆?鉊菽? ??same LOT 鉊葷鉊?aggregate qty 鉆? doStockIn()
-    // 鉊萵鉊?鉊晤?鉊?duplicate check 鉆?鉆?鉊?鉊耜萼 device 鉆鉊?鉊耜?鉊晤?鉊?
+
+
   }
   return null;
 }
