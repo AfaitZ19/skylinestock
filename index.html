@@ -159,8 +159,7 @@ body{font-family:'Sarabun',-apple-system,sans-serif;background:var(--bg);color:v
 
 .hi{background:#fff;border-radius:10px;padding:12px 13px;margin-bottom:7px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .hd{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
-.hd.in{ba<!DOCTYPE html>
-ckground:var(--GL)}.hd.out{background:var(--RL)}
+.hd.in{background:var(--GL)}.hd.out{background:var(--RL)}
 .hn{font-size:15px;font-weight:700}
 .hm{font-size:12px;color:var(--mu);margin-top:2px;line-height:1.5}
 .ht{font-size:11.5px;color:var(--mu);margin-left:auto;text-align:right;white-space:nowrap;flex-shrink:0;line-height:1.6}
@@ -701,7 +700,7 @@ let HID_AUTO_RESUME = false;
 let HID_LAST_TEXT = '';
 let HID_LAST_TIME = 0;
 const AUTO_SAVE_ON_SCAN_IN = true;
-const AUTO_STOCK_OUT_ON_SCAN_OUT = true;
+const AUTO_STOCK_OUT_ON_SCAN_OUT = false;
 const DEFAULT_HOSPITAL_CHOICES = [
   'สถาบันการแพทย์จักรีนฤบดินทร์',
   'โรงพยาบาลบ้านแพ้ว (องค์การมหาชน)',
@@ -1920,7 +1919,7 @@ function lookup(d) {
   if (refHit) return _mergeLotDetails(refHit, lot || scanText);
 
   const db = CACHE.products || [];
-  let wildcardLotHit = null;
+  const wildcardLotHits = [];
   const gtinRows = [];
 
   for (const p of db) {
@@ -1933,7 +1932,7 @@ function lookup(d) {
     if (p.sn_pfx && sn.startsWith(p.sn_pfx)) return _mergeLotDetails(p, lot);
     if (p.lot_pfx && _matchProductPattern(lot, p.lot_pfx)) {
       if (String(p.lot_pfx).includes('*')) {
-        if (!wildcardLotHit) wildcardLotHit = p;
+        wildcardLotHits.push(p);
       } else {
         return _mergeLotDetails(p, lot);
       }
@@ -1946,6 +1945,7 @@ function lookup(d) {
     if (hinted) return _mergeLotDetails(hinted, lot, { preferProductIdentity:true });
   }
 
+  const wildcardLotHit = pickWildcardLotHit(wildcardLotHits, inferred);
   if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
 
 
@@ -2028,6 +2028,16 @@ function lookupUniqueProductRows(rows, hint = null) {
     if (byRef.length === 1) return byRef[0];
   }
   return null;
+}
+
+function pickWildcardLotHit(rows, hint = null) {
+  const hinted = lookupUniqueProductRows(rows || [], hint);
+  if (hinted) return hinted;
+  return (rows || []).slice().sort((a, b) => wildcardPatternSpecificity(b.lot_pfx) - wildcardPatternSpecificity(a.lot_pfx))[0] || null;
+}
+
+function wildcardPatternSpecificity(pattern) {
+  return normalizeSkuToken(pattern).length;
 }
 
 function normalizeSkuToken(v) {
@@ -2716,6 +2726,12 @@ function updateActionButtons() {
   const bIn = document.getElementById('bIn');
   const bOut = document.getElementById('bOut');
   if (!bIn || !bOut) return;
+  if (!LAST) {
+    bIn.disabled = true;
+    bOut.disabled = true;
+    bOut.title = 'กรุณาสแกนหรือเลือกสินค้าก่อน';
+    return;
+  }
   const isOut = MODE === 'out';
   const type = document.getElementById('iType')?.value || LAST?.p?.type || '';
   const qtyVal = parseInt(document.getElementById('qtyI')?.value || '', 10);
@@ -3097,7 +3113,7 @@ async function doAct(action) {
     : 1;
   const purpose = document.getElementById('purposeI')?.value || '';
   const purposeOther = document.getElementById('purposeOtherI')?.value.trim() || '';
-  const salesDetails = getSalesDetailInputs();
+  const { model: salesModelInput, size: salesSizeInput, ...salesDetails } = getSalesDetailInputs();
   const tracking = requiredTrackingValue(type);
   const sn = stockItem ? (stockItem['Serial Number (SN)'] || LAST.sn || '') : (tracking.key === 'sn' ? tracking.value : (LAST.sn || ''));
   const lot = stockItem ? (stockItem['LOT Number'] || LAST.lot || '') : (tracking.key === 'lot' ? tracking.value : (LAST.lot || ''));
@@ -3111,6 +3127,8 @@ async function doAct(action) {
   let model = stockItem ? (stockItem['Model'] || '') : (LAST.p?.model || '');
   let size = stockItem ? (stockItem['Size'] || '') : (LAST.p?.size || '');
   let ref = stockItem ? (stockItem['REF'] || '') : (LAST.p?.ref || '');
+  const payloadModel = action === 'out' && salesModelInput ? salesModelInput : model;
+  const payloadSize = action === 'out' && salesSizeInput ? salesSizeInput : size;
   const gtin = stockItem ? (stockItem['GTIN / Barcode'] || '') : LAST.gtin;
   const maxStockQty = stockItem && type !== 'device' ? Number(stockItem['Qty'] || 0) : 1;
 
@@ -3163,8 +3181,8 @@ async function doAct(action) {
       ...(submitAction === 'out_by_id' ? { sheetRow: stockItem._sheetRow } : {}),
       name,
       brand,
-      model,
-      size,
+      model: payloadModel,
+      size: payloadSize,
       ref,
       sn,
       lot,
