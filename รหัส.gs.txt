@@ -1116,7 +1116,9 @@ function getLegacyProductDBSeed_() {
     ['06958949937694','','','BY-C*NM5AM*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','M','PT78044','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
     ['06958949938370','','','BY-C*NM5AL*','Beyond EaseFit NM5A','Hunan Beyond','mask','EaseFit NM5A','L','78072','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
     ['06958949938493','','','BY-C*NM6L*','Beyond EaseFit NM6','Hunan Beyond','mask','EaseFit NM6','L','78084','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949938578','','','BY-C*NM6AS*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','S','','NM6AS','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
     ['06958949938561','','','BY-C*NM6AM*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','M','78091','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
+    ['06958949938554','','','BY-C*NM6AL*','Beyond EaseFit NM6A','Hunan Beyond','mask','EaseFit NM6A','L','','NM6AL','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
     ['06958949905648','','','BY-C*PMI*','Beyond EaseFit PMI','Hunan Beyond','mask','EaseFit PMI','','','','6. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 BEYOND (Ease Fit)',true],
     ['06958949932057','','','BY-C*HP1*','Breathing Tube HP1','Hunan Beyond','accessory','HP1','','74001EU','','14. Accessories \u0e2d\u0e37\u0e48\u0e19\u0e46',true],
     ['04719893347319','','','','WiZARD 510 Nasal Mask','Wellell','mask','WiZARD 510','L','SM06001','510L','5. \u0e2b\u0e19\u0e49\u0e32\u0e01\u0e32\u0e01 APEX / WiZARD',true],
@@ -1487,7 +1489,7 @@ function lookupProductForBackfill_(products, d) {
   const inferred = inferProductFromLot_(lot || d.raw || '');
   const refCandidates = [];
   const codeCandidates = [];
-  let wildcardLotHit = null;
+  const wildcardLotHits = [];
 
   for (const p of products || []) {
     if (p.type && d.type && p.type !== d.type) continue;
@@ -1501,7 +1503,7 @@ function lookupProductForBackfill_(products, d) {
     if (pCode && pCode !== '-' && codeToken === pCode) codeCandidates.push(p);
     if (p.lot_pfx && lot && matchProductPattern_(lot, p.lot_pfx)) {
       if (String(p.lot_pfx).indexOf('*') !== -1) {
-        if (!wildcardLotHit) wildcardLotHit = p;
+        wildcardLotHits.push(p);
       } else {
         return mergeLotDetails_(p, lot);
       }
@@ -1512,6 +1514,7 @@ function lookupProductForBackfill_(products, d) {
   if (refHit) return mergeLotDetails_(refHit, lot || d.raw || '');
   const codeHit = pickUniqueProductCandidate_(codeCandidates, inferred);
   if (codeHit) return mergeLotDetails_(codeHit, lot || d.raw || '');
+  const wildcardLotHit = pickWildcardLotHit_(wildcardLotHits, inferred);
   if (wildcardLotHit) return mergeLotDetails_(wildcardLotHit, lot);
   return inferred;
 }
@@ -1524,6 +1527,18 @@ function pickUniqueProductCandidate_(rows, hint) {
   if (hint.model) narrowed = narrowed.filter(p => normalizeText(p.model).toUpperCase() === normalizeText(hint.model).toUpperCase());
   if (hint.size) narrowed = narrowed.filter(p => normalizeText(p.size).toUpperCase() === normalizeText(hint.size).toUpperCase());
   return narrowed.length === 1 ? narrowed[0] : null;
+}
+
+function pickWildcardLotHit_(rows, hint) {
+  const hinted = pickUniqueProductCandidate_(rows || [], hint);
+  if (hinted) return hinted;
+  return (rows || []).slice().sort(function(a, b) {
+    return wildcardPatternSpecificity_(b.lot_pfx) - wildcardPatternSpecificity_(a.lot_pfx);
+  })[0] || null;
+}
+
+function wildcardPatternSpecificity_(pattern) {
+  return normalizeSkuToken_(pattern).length;
 }
 
 function matchProductPattern_(value, pattern) {
