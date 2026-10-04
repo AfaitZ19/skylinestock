@@ -70,11 +70,41 @@ window.onload = () => {
   updateModeUI();
   setupHidScanner();
   setupManualScanner();
-  resumeStoredSession();
+  const handoff = new URLSearchParams(location.hash.slice(1)).get('handoff');
+  if (handoff) {
+    history.replaceState(null, '', location.pathname + location.search); // one-time code, keep it out of history
+    signInWithHandoff(handoff);
+  } else {
+    resumeStoredSession();
+  }
 };
 
+// Opened from the SkylinePlus admin menu: swap the one-time code for this app's own tokens
+async function signInWithHandoff(code) {
+  setSetupLoading(true, 'กำลังเข้าสู่ระบบ...');
+  try {
+    const r = await fetchWithTimeout(API_BASE + '/authorize/handoff/exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+      credentials: 'omit'
+    });
+    const login = await r.json().catch(() => null);
+    if (!r.ok || !login || !login.token) {
+      resumeStoredSession(); // expired or used code: fall back to the saved session or the sign-in form
+      return;
+    }
+    await startSession(login, login.user?.email || '');
+  } catch(e) {
+    showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + apiFriendlyError(e.message));
+    setPill('err');
+  } finally {
+    setSetupLoading(false);
+  }
+}
+
 async function resumeStoredSession() {
-  if (!AUTH_TOKEN || !CUR_USER) return;
+  if (!AUTH_TOKEN) return; // a handoff login may have no email, so the token alone marks a session
   applyRoleUi();
   showApp();
   setPill('busy');
@@ -363,28 +393,33 @@ async function doSetup() {
       return;
     }
 
-    AUTH_TOKEN = login.token;
-    REFRESH_TOKEN = login.refreshToken || '';
-    CUR_USER = email;
-    CUR_STAFF = login.user?.fullName || email;
-    setSetupLoading(true, 'กำลังตรวจสิทธิ์...');
-    setPill('busy');
-    await loadMe();
-    saveSession();
-    showApp();
-
-    toast('เข้าสู่ระบบสำเร็จ', 'ok');
-    setPill('ok');
-    setSetupLoading(true, 'กำลังโหลดข้อมูล...');
-    await loadAll();
-    _lastSyncTime = Date.now();
-    enableHIDMode(false);
+    await startSession(login, email);
   } catch(e) {
     showSetupErr('เชื่อมต่อ API ไม่สำเร็จ: ' + apiFriendlyError(e.message));
     setPill('err');
   } finally {
     setSetupLoading(false);
   }
+}
+
+// After the sign-in form or an admin-menu handoff: check rights, keep the session, load data
+async function startSession(login, email) {
+  AUTH_TOKEN = login.token;
+  REFRESH_TOKEN = login.refreshToken || '';
+  CUR_USER = email;
+  CUR_STAFF = login.user?.fullName || email;
+  setSetupLoading(true, 'กำลังตรวจสิทธิ์...');
+  setPill('busy');
+  await loadMe();
+  saveSession();
+  showApp();
+
+  toast('เข้าสู่ระบบสำเร็จ', 'ok');
+  setPill('ok');
+  setSetupLoading(true, 'กำลังโหลดข้อมูล...');
+  await loadAll();
+  _lastSyncTime = Date.now();
+  enableHIDMode(false);
 }
 
 function setSetupLoading(isLoading, msg = '') {
