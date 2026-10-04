@@ -1229,8 +1229,9 @@ function gs1Decode(raw) {
     while ((m = re.exec(s)) !== null) {
       fields[m[1]] = m[2].replace(/\x1D/g, '').trim();
     }
-  } else {
-
+  } else if (s.includes('\x1D') || _gs1StartsWithAi(s)) {
+    // Positional parsing only for real GS1 element strings: a plain SN such as CAED3C02683
+    // would otherwise be read as GTIN 683 (spec §8 frontend bug 1)
     _gs1Scan(s, fields);
   }
 
@@ -1242,6 +1243,13 @@ function gs1Decode(raw) {
     expiry:  _gs1Fmt6(fields['17'] || ''),
     ref:     fields['240'] || fields['241'] || '',
   };
+}
+
+function _gs1StartsWithAi(s) {
+  return [4, 3, 2].some(n => {
+    const c = s.substr(0, n);
+    return _GS1F[c] !== undefined || _GS1V.has(c);
+  });
 }
 
 function _emptyGS1() {
@@ -1504,7 +1512,8 @@ function findStockItemForScan(d) {
       const rowSn = normalizeSerialForMatch(x['Serial Number (SN)'] || '');
       const rowLot = _gs1NormLot(x['LOT Number'] || '');
       const rowGtin = normalizeGtinForMatch(x['GTIN / Barcode'] || '');
-      if (sn && rowSn && rowSn === sn) return true;
+      // A scanned SN identifies one unit; another unit of the same model must not match on GTIN/LOT (spec §8 bug 2)
+      if (sn) return !!rowSn && rowSn === sn;
       if (hint.type === 'device' && lot && rowLot && rowLot === lot) return true;
       if (hint.type === 'device' && gtin && rowGtin && rowGtin === gtin) return true;
       return false;
@@ -2915,13 +2924,13 @@ async function doAct(action) {
       if (res.error === 'DUPLICATE') {
         const d = res.duplicate || {};
         const detail = d.row ? ` (Active row ${d.row})` : '';
-        toast('⚠️ สินค้านี้ยังมีในสต็อก' + detail, 'warn');
+        toast('สินค้านี้ยังมีในสต็อก' + detail, 'warn');
         setPill('ok');
         focusScanInput(120);
         return;
       }
       if (res.error === 'Item not found') {
-        toast('❌ ไม่พบในสต็อก — ลองเลือกประเภทให้ถูกต้อง หรือตรวจสอบเลขเครื่อง/เลขล็อต', 'err');
+        toast('ไม่พบในสต็อก — ลองเลือกประเภทให้ถูกต้อง หรือตรวจสอบเลขเครื่อง/เลขล็อต', 'err');
         setPill('err');
         focusScanInput(120);
         return;
@@ -2955,17 +2964,17 @@ async function doAct(action) {
       });
       updateActionButtons();
       focusScanInput(80);
-      toast('✅ จ่ายออกสำเร็จ', 'ok');
+      toast('จ่ายออกสำเร็จ', 'ok');
     } else if (res.merged) {
-      toast('✅ รับเข้าแล้ว — รวมกับล็อตเดิม (คงเหลือ ' + res.newQty + ' ชิ้น)', 'ok');
+      toast('รับเข้าแล้ว — รวมกับล็อตเดิม (คงเหลือ ' + res.newQty + ' ชิ้น)', 'ok');
     } else {
-      toast('✅ รับเข้าสำเร็จ', 'ok');
+      toast('รับเข้าสำเร็จ', 'ok');
     }
 
     _scheduleBgSync();  
   } catch(e) {
     setPill('err');
-    toast('❌ ' + e.message, 'err');
+    toast(e.message, 'err');
   } finally {
     document.getElementById('bIn').disabled = false;
     document.getElementById('bOut').disabled = false;
@@ -3063,7 +3072,7 @@ async function confirmQuickOut() {
     _scheduleBgSync();
   } catch(e) {
     setPill('err');
-    toast('❌ ' + e.message, 'err');
+    toast(e.message, 'err');
   } finally {
     IS_PROCESSING = false;
     updateActionButtons();
@@ -3206,7 +3215,7 @@ function renderAttention(items) {
   const more = total - combined.length;
 
   box.innerHTML = `
-    <div class="attn-hd">⚠️ ต้องตรวจสอบ (${total} รายการ)</div>
+    <div class="attn-hd">ต้องตรวจสอบ (${total} รายการ)</div>
     ${combined.map(x => {
       if (x.sales) {
         const a = x.sales;
@@ -3228,7 +3237,7 @@ function renderAttention(items) {
       if (x.expDays !== null && x.expDays <= WARN_DAYS) {
         tag = x.expDays <= 0
           ? `<span class="attn-tag exp">หมดอายุแล้ว</span>`
-          : `<span class="attn-tag exp">⚠️ ${x.expDays} วัน</span>`;
+          : `<span class="attn-tag exp">${x.expDays} วัน</span>`;
       } else if (x.low) {
         tag = `<span class="attn-tag low">สต็อกต่ำ (${x.qty})</span>`;
       }
@@ -3295,7 +3304,7 @@ function renderStock() {
   });
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-ic">📦</div><div>ไม่พบข้อมูลในสต็อก</div></div>`;
+    list.innerHTML = `<div class="empty"><div>ไม่พบข้อมูลในสต็อก</div></div>`;
     return;
   }
 
@@ -3316,7 +3325,7 @@ function renderStock() {
     if (expDays !== null && expDays <= WARN_DAYS) {
       expBadge = expDays <= 0
         ? `<span class="badge-exp">หมดอายุแล้ว</span>`
-        : `<span class="badge-exp">⚠️ ${expDays} วัน</span>`;
+        : `<span class="badge-exp">${expDays} วัน</span>`;
     }
 
     const lowBadge = (it._type !== 'device' && qty <= LOW_QTY)
@@ -3333,7 +3342,7 @@ function renderStock() {
         <div class="ic-id">${escapeHtml(idLine)}</div>
         <div class="ic-ft">
           <div class="ic-meta">
-            <span>📍 ${escapeHtml(loc)}</span>
+            <span>${escapeHtml(loc)}</span>
             ${expRaw ? `<span>หมดอายุ ${escapeHtml(String(expRaw))}</span>` : ''}
             ${expBadge}${lowBadge}
           </div>
@@ -3379,7 +3388,7 @@ function renderMonthlyOutSummary() {
   const rows = (data.rows || []).slice(0, 20);
 
   if (!rows.length) {
-    el.innerHTML = `<div class="scrd"><h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3><div class="empty"><div class="empty-ic">📊</div><div>ยังไม่มีรายการจ่ายออกในเดือนนี้</div></div></div>`;
+    el.innerHTML = `<div class="scrd"><h3>สรุปจ่ายออกรายสินค้า (${escapeHtml(month)})</h3><div class="empty"><div>ยังไม่มีรายการจ่ายออกในเดือนนี้</div></div></div>`;
     return;
   }
 
@@ -3873,7 +3882,7 @@ function renderHist(append, items) {
     const hint = q
       ? 'ลองค้นด้วยชื่อเซลล์/ผู้รับ, SN เครื่อง, LOT, ชื่อสินค้า, รุ่น หรือไซส์'
       : '';
-    list.innerHTML = `<div class="empty"><div class="empty-ic">📋</div><div>${msg}</div>${hint ? `<div class="hm">${hint}</div>` : ''}</div>`;
+    list.innerHTML = `<div class="empty"><div>${msg}</div>${hint ? `<div class="hm">${hint}</div>` : ''}</div>`;
     document.getElementById('hiMore').style.display = 'none';
     return;
   }
@@ -3885,7 +3894,7 @@ function renderHist(append, items) {
     const qty = historyQty(it);
     return `
       <div class="hi" data-history-row="${escapeHtml(String(it._sheetRow || ''))}">
-        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '⬇' : '⬆'}</div>
+        <div class="hd ${isIn ? 'in' : 'out'}">${isIn ? '↓' : '↑'}</div>
         <div class="hi-body">
           <div class="hi-top">
             <div class="hn">${escapeHtml(it['Product Name'] || '-')}</div>
