@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Skyline Medical — Stock</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -32,25 +35,27 @@
 <div id="scApp" class="sc">
   <div class="bar">
     <div class="bar-l">
-      <span class="bar-title">📦 Skyline Stock</span>
-      <span class="pill" id="pill">Sheet</span>
+      <span class="bar-logo"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg></span>
+      <div class="bar-id">
+        <span class="bar-title">Skyline Stock</span>
+        <div class="bar-sub"><span class="pill" id="pill">Sheet</span><span class="usr" id="usrBadge">-</span></div>
+      </div>
     </div>
     <div class="bar-r">
-      <span class="usr" id="usrBadge">-</span>
-      <button class="btn-xs" onclick="signOut()">ออก</button>
+      <button class="tab icon-btn" onclick="goTab('cfg')" id="t-cfg" aria-label="ตั้งค่า" title="ตั้งค่า"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="icon-btn" onclick="signOut()" aria-label="ออกจากระบบ" title="ออกจากระบบ"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
     </div>
   </div>
 
-  <div class="main">
-    <div class="tabs">
-      <button class="tab on" onclick="goTab('scan')" id="t-scan">ทำรายการ</button>
-      <button class="tab" onclick="goTab('stock')" id="t-stock">สต็อก</button>
-      <button class="tab" onclick="goTab('analysis')" id="t-analysis">วิเคราะห์</button>
-      <button class="tab" onclick="goTab('sales')" id="t-sales">ข้อมูลขาย</button>
-      <button class="tab" onclick="goTab('take')" id="t-take">นับสต็อก</button>
-      <button class="tab" onclick="goTab('cfg')" id="t-cfg">ตั้งค่า</button>
-    </div>
+  <nav class="tabs">
+    <button class="tab on" onclick="goTab('scan')" id="t-scan"><svg class="tab-ic" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg><span>ทำรายการ</span></button>
+    <button class="tab" onclick="goTab('stock')" id="t-stock"><svg class="tab-ic" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></svg><span>สต็อก</span></button>
+    <button class="tab" onclick="goTab('analysis')" id="t-analysis"><svg class="tab-ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></svg><span>วิเคราะห์</span></button>
+    <button class="tab" onclick="goTab('sales')" id="t-sales"><svg class="tab-ic" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg><span>ข้อมูลขาย</span></button>
+    <button class="tab" onclick="goTab('take')" id="t-take"><svg class="tab-ic" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><span>นับสต็อก</span></button>
+  </nav>
 
+  <div class="main">
     <div id="v-scan">
       <div class="flowbar">
         <div class="flow-step"><div class="flow-no">1</div><div class="flow-tx">เลือกงาน</div></div>
@@ -88,6 +93,11 @@
       </div>
 
       <div class="scan-secondary">
+      <div class="scan-empty">
+        <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>
+        <b>ยังไม่ได้เลือกสินค้า</b>
+        <span>สแกนบาร์โค้ด หรือกรอก Barcode / SN / LOT ทางด้านซ้าย เพื่อแสดงรายละเอียดสินค้าและบันทึกรายการ</span>
+      </div>
       <div class="scrd" id="manualProductPanel" style="display:none">
         <h3>เลือกสินค้าจากรายการ</h3>
         <div id="manualScanNotice" class="manual-alert"></div>
@@ -190,7 +200,7 @@
       <div class="attn" id="attnBox" style="display:none"></div>
 
       <div class="search-wrap">
-        <span class="search-ico">🔎</span>
+        <svg class="search-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="search-inp" id="stockSearch" type="search" placeholder="ค้นหาชื่อ, Brand, SN, LOT..." oninput="renderStock()">
       </div>
 
@@ -205,11 +215,11 @@
     </div>
 
     <div id="v-analysis" style="display:none">
-      <div class="scrd" id="purposeSummary" style="border-left:4px solid var(--B)"></div>
+      <div class="scrd" id="purposeSummary"></div>
 
       <div class="adiv"><div class="adiv-l"></div><div class="adiv-tx">เลือกเดือนเพื่อดูรายละเอียดเพิ่มเติม</div><div class="adiv-l"></div></div>
 
-      <div class="scrd">
+      <div class="scrd" id="outMonthCard">
         <h3>วิเคราะห์จ่ายออกเพื่อสั่งของ</h3>
         <input class="finp" id="outMonthI" type="month" onchange="loadMonthlyOutSummaryForSelected()">
         <button class="bfull bout2" onclick="loadMonthlyOutSummaryForSelected()">วิเคราะห์เดือนที่เลือก</button>
@@ -299,7 +309,7 @@
   style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"
 >
 
-<button class="fab-add" type="button" onclick="openAddProductModal()">เพิ่มสินค้า</button>
+<button class="fab-add" type="button" onclick="openAddProductModal()" aria-label="เพิ่มสินค้า" title="เพิ่มสินค้า"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="fab-tx">เพิ่มสินค้า</span></button>
 <input id="labelPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handleLabelPhoto(this.files && this.files[0])">
 <input id="productPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="handleProductPhoto(this.files && this.files[0])">
 

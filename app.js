@@ -15,6 +15,7 @@ let CUR_USER = localStorage.getItem('skl2_user') || '', CUR_ROLE = localStorage.
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
 let PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
+let PHOTO_LOOKUP = { byGtin:new Map(), byName:new Map(), byNameBrand:new Map() }; // renderStock looks up a photo per card
 let ACTIVE_STOCK_CACHE = null;
 let IS_PROCESSING = false;
 let PENDING_SCAN = null;
@@ -191,7 +192,7 @@ function disableHIDMode(updateButtons = true) {
 function tryAutoResumeHID() {
   const ae = document.activeElement;
   const tag = (ae?.tagName || '').toLowerCase();
-  const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea');
+  const isTypingField = ae && ae.id !== 'hidInput' && (tag === 'input' || tag === 'textarea' || tag === 'select');
   if (isTypingField) return;
   HID_AUTO_RESUME = false;
   enableHIDMode(true);
@@ -343,7 +344,8 @@ function setupHidScanner() {
     if (!HID_ENABLED || !t || t.id === 'hidInput') return;
     if (t.id === 'mc') return;
     const tag = (t.tagName || '').toLowerCase();
-    const isTypingField = tag === 'input' || tag === 'textarea';
+    // select too: otherwise the click handler refocuses hidInput and closes the open dropdown
+    const isTypingField = tag === 'input' || tag === 'textarea' || tag === 'select';
     if (!isTypingField) return;
     HID_AUTO_RESUME = true;
     disableHIDMode(false);
@@ -446,6 +448,7 @@ function signOut() {
   LAST = null;
   PENDING_SCAN = null;
   HID_AUTO_RESUME = false;
+  TAKE_COUNTS.clear();
   ['skl2_user', 'skl2_token', 'skl2_refresh', 'skl2_name', 'skl2_role'].forEach(k => localStorage.removeItem(k));
   document.body.classList.remove('admin', 'sales-scope');
   clearTimeout(_bgSyncTimer);
@@ -906,7 +909,10 @@ async function legacyCall(params) {
         model: p.model || null,
         size: p.size || null
       });
-      if (!res.success) return fail(res);
+      if (!res.success) {
+        if (res.statusCode === 409) await refreshRowVersions(ref.productId); // stale rowVersion: let a retry go through
+        return fail(res);
+      }
       await refreshRowVersions(ref.productId);
       return { ok: true, row: p.sheetRow };
     }
@@ -1081,7 +1087,10 @@ function applyOcrToForm(data) {
   if (data.productName && !document.getElementById('newProductName').value.trim()) document.getElementById('newProductName').value = data.productName;
 }
 
+let _savingProduct = false;
+
 async function saveNewProduct() {
+  if (_savingProduct) return; // a double tap would create the product twice
   const productName = document.getElementById('newProductName').value.trim();
   if (!productName) { toast('กรุณากรอกชื่อสินค้า', 'warn'); document.getElementById('newProductName').focus(); return; }
   const gtin = normalizeNewGtinField();
@@ -1099,6 +1108,7 @@ async function saveNewProduct() {
     hasBarcode: !!gtin,
     photoUrl: document.getElementById('newPhotoUrl').value.trim()
   };
+  _savingProduct = true;
   try {
     const res = await apiPost(payload);
     if (!res.ok) throw new Error(res.error || 'API error');
@@ -1108,6 +1118,8 @@ async function saveNewProduct() {
     await refreshProductsOnly();
   } catch(e) {
     toast('บันทึกไม่สำเร็จ: ' + e.message, 'err');
+  } finally {
+    _savingProduct = false;
   }
 }
 
@@ -1171,12 +1183,10 @@ async function loadAll() {
   syncOutMonthInput();
   const outMonth = selectedOutMonthParts();
   try {
-    const [stock, hist, prods] = await Promise.all([
+    const [stock, hist, prods, monthlyOut, salesAlerts] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'stock' })),
       apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:0 })),
       apiFetch(buildApiUrl(API_URL, { action:'products' })),
-    ]);
-    const [monthlyOut, salesAlerts] = await Promise.all([
       apiFetch(buildApiUrl(API_URL, { action:'monthly_out_summary', year:outMonth.year, month:outMonth.month })).catch(e => ({ ok:false, error:e.message })),
       apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' })).catch(e => ({ ok:false, error:e.message })),
     ]);
@@ -1387,7 +1397,10 @@ function parseCode(raw) {
   if (!key) return null;
 
   const now = Date.now();
-  if (IS_PROCESSING) return null;
+  if (IS_PROCESSING) {
+    toast('กำลังบันทึกรายการก่อนหน้า — สแกนชิ้นนี้ใหม่อีกครั้ง', 'warn');
+    return null;
+  }
   if (key === LAST_SCAN_TEXT && (now - LAST_SCAN_TIME) < DUP_MS) {
     const secLeft = Math.ceil((DUP_MS - (now - LAST_SCAN_TIME)) / 1000);
     toast(`สแกนซ้ำเร็วเกินไป รอ ${secLeft} วินาที`, 'warn');
@@ -1703,9 +1716,21 @@ function lookup(d) {
 
 function rebuildProductLookupIndex() {
   PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
+  PHOTO_LOOKUP = { byGtin:new Map(), byName:new Map(), byNameBrand:new Map() };
   (CACHE.products || []).forEach(p => {
     const gtin = normalizeGtinForMatch(p.gtin || '');
     if (gtin) addLookupBucket(PRODUCT_LOOKUP.byGtin, gtin, p);
+    const photo = productPhotoUrl(p);
+    if (photo) {
+      const name = String(p.name || p.product_name || '').trim().toLowerCase();
+      const brand = String(p.brand || '').trim().toLowerCase();
+      const keep = (map, key) => { if (key && !map.has(key)) map.set(key, photo); };
+      keep(PHOTO_LOOKUP.byGtin, gtin);
+      if (name) {
+        keep(PHOTO_LOOKUP.byName, name);
+        keep(PHOTO_LOOKUP.byNameBrand, name + '|' + brand);
+      }
+    }
     const ref = normalizeRefToken(p.ref || p.reference || '');
     if (ref) addLookupBucket(PRODUCT_LOOKUP.byRef, ref, p);
     const code = normalizeSkuToken(p.product_code || p.productCode || '');
@@ -2025,45 +2050,34 @@ function parseStockDate(v) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function sameMaskStockIdentity(a, b) {
-  return sameText(a?.['Product Name'], b?.['Product Name']) &&
-    sameText(a?.['Brand'], b?.['Brand']) &&
-    sameText(a?.['Model'], b?.['Model']) &&
-    sameText(a?.['Size'], b?.['Size']) &&
-    sameText(a?.['REF'], b?.['REF']);
+function compareFifo(a, b) {
+  const da = parseStockDate(a['Date In']);
+  const db = parseStockDate(b['Date In']);
+  if (da && db && da.getTime() !== db.getTime()) return da - db;
+  if (da) return -1;
+  if (db) return 1;
+  return Number(a._sheetRow || 0) - Number(b._sheetRow || 0);
 }
 
-function isFifoMaskStockRow(row) {
-  if (!row || row._type !== 'mask') return false;
-  const rows = (CACHE.mask || []).filter(x => {
+// _sheetRow of the oldest in-stock row of each mask product, in one pass (was a filter + sort per listed row)
+function fifoMaskRowSet() {
+  const firstByIdentity = new Map();
+  (CACHE.mask || []).forEach(x => {
     const status = String(x['Status'] || 'Active').trim().toLowerCase();
-    return status === 'active' && Number(x['Qty'] || 0) > 0 && sameMaskStockIdentity(x, row);
+    if (status !== 'active' || Number(x['Qty'] || 0) <= 0) return;
+    const key = ['Product Name', 'Brand', 'Model', 'Size', 'REF'].map(k => String(x[k] || '').trim().toUpperCase()).join('|');
+    const cur = firstByIdentity.get(key);
+    if (!cur || compareFifo(x, cur) < 0) firstByIdentity.set(key, x);
   });
-  if (!rows.length) return false;
-  const first = rows.slice().sort((a, b) => {
-    const da = parseStockDate(a['Date In']);
-    const db = parseStockDate(b['Date In']);
-    if (da && db && da.getTime() !== db.getTime()) return da - db;
-    if (da) return -1;
-    if (db) return 1;
-    return Number(a._sheetRow || 0) - Number(b._sheetRow || 0);
-  })[0];
-  return Number(first?._sheetRow || 0) === Number(row._sheetRow || 0);
+  return new Set([...firstByIdentity.values()].map(x => Number(x._sheetRow || 0)));
 }
 
 function photoUrlForStockItem(it) {
   const gtin = normalizeGtinForMatch(it?.['GTIN / Barcode'] || '');
   const name = String(it?.['Product Name'] || '').trim().toLowerCase();
   const brand = String(it?.['Brand'] || '').trim().toLowerCase();
-  const hit = (CACHE.products || []).find(p => {
-    const pPhoto = productPhotoUrl(p);
-    if (!pPhoto) return false;
-    const pGtin = normalizeGtinForMatch(p.gtin || '');
-    if (gtin && pGtin && gtin === pGtin) return true;
-    return name && String(p.name || p.product_name || '').trim().toLowerCase() === name &&
-      (!brand || String(p.brand || '').trim().toLowerCase() === brand);
-  });
-  return productPhotoUrl(hit);
+  return (gtin && PHOTO_LOOKUP.byGtin.get(gtin)) ||
+    (name && (brand ? PHOTO_LOOKUP.byNameBrand.get(name + '|' + brand) : PHOTO_LOOKUP.byName.get(name))) || '';
 }
 
 function populateProductFilters() {
@@ -2083,18 +2097,41 @@ function maskProductsFromDB() {
   return (CACHE.products || []).filter(p => String(p.type || '').toLowerCase() === 'mask');
 }
 
+// Every sales form in the history list asks for these: compute once per product list, not once per row
+let _productDerived = { products:null };
+function productDerived() {
+  if (_productDerived.products !== CACHE.products) _productDerived = { products: CACHE.products, maskModels: null, maskSizes: new Map(), lower: null };
+  return _productDerived;
+}
+
 function maskModelChoicesFromDB() {
-  return [...new Set(maskProductsFromDB().map(p => String(p.model || '').trim()).filter(Boolean))]
+  const c = productDerived();
+  if (!c.maskModels) c.maskModels = [...new Set(maskProductsFromDB().map(p => String(p.model || '').trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b));
+  return c.maskModels;
 }
 
 function maskSizeChoicesFromDB(model = '') {
   const wanted = String(model || '').trim().toLowerCase();
-  return [...new Set(maskProductsFromDB()
+  const c = productDerived();
+  if (!c.maskSizes.has(wanted)) c.maskSizes.set(wanted, [...new Set(maskProductsFromDB()
     .filter(p => !wanted || String(p.model || '').trim().toLowerCase() === wanted)
     .map(p => String(p.size || '').trim())
     .filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
+    .sort((a, b) => a.localeCompare(b)));
+  return c.maskSizes.get(wanted);
+}
+
+// Lower-cased names/brand/model of each product, for matching history rows without re-lowering per row
+function productsLower() {
+  const c = productDerived();
+  if (!c.lower) c.lower = (CACHE.products || []).map(p => ({
+    p,
+    names: [p.name, p.product_name, p.stock_name, p.po_name].filter(Boolean).map(x => String(x).trim().toLowerCase()),
+    brand: String(p.brand || '').trim().toLowerCase(),
+    model: String(p.model || '').trim().toLowerCase()
+  }));
+  return c.lower;
 }
 
 function optionHtml(value, selected, emptyLabel) {
@@ -2240,6 +2277,8 @@ function filteredProducts(prefix) {
   const cat = document.getElementById(prefix + 'Category')?.value || '';
   const brand = document.getElementById(prefix + 'Brand')?.value || '';
   const q = (document.getElementById(prefix + 'Search')?.value || '').toLowerCase().trim();
+  let fifo = null; // built on first use, once per call
+  const isFifoFirst = x => x._type === 'mask' && (fifo = fifo || fifoMaskRowSet()).has(Number(x._sheetRow || 0));
 
   if (prefix === 'manual' && MODE === 'out') {
     return [
@@ -2271,7 +2310,7 @@ function filteredProducts(prefix) {
       lot: x['LOT Number'] || '',
       gtin: x['GTIN / Barcode'] || '',
       qty: x['Qty'] || '',
-      fifoFirst: x._type === 'mask' && isFifoMaskStockRow(x),
+      fifoFirst: isFifoFirst(x),
       stockItem: x
     }));
   }
@@ -2303,24 +2342,30 @@ function filteredProducts(prefix) {
       lot: x['LOT Number'] || '',
       gtin: x['GTIN / Barcode'] || '',
       qty: x['Qty'] || '',
-      fifoFirst: x._type === 'mask' && isFifoMaskStockRow(x),
+      fifoFirst: isFifoFirst(x),
       stockItem: x
     }));
   }
 
+  const seen = new Set(); // one row per barcode in CACHE.products: list each product once
   return (CACHE.products || []).filter(p => {
     if (prefix === 'manual' && !p.product_code) return false;
     if (cat && p.category !== cat) return false;
     if (brand && p.brand !== brand) return false;
-    const hay = productSearchText(p);
-    return !q || hay.includes(q);
+    if (q && !productSearchText(p).includes(q)) return false;
+    const id = p.id || p.product_code;
+    if (id && seen.has(id)) return false;
+    if (id) seen.add(id);
+    return true;
   });
 }
 
 function renderManualProducts() {
   const el = document.getElementById('manualProductList');
   if (!el) return;
-  const rows = filteredProducts('manual').slice(0, 80);
+  const all = filteredProducts('manual');
+  const sig = [MODE, listFilterSig('manual'), PENDING_SCAN?.raw, PENDING_SCAN?.allowAllStock].join('|');
+  const rows = all.slice(0, pageLimit('manual', sig));
   el.innerHTML = rows.length ? rows.map((p, i) => `
     <div class="manual-row selectable" onclick="selectManualProduct(${i})">
       <div class="manual-row-main">
@@ -2328,7 +2373,7 @@ function renderManualProducts() {
         <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(p.stockItem ? stockBatchLabel(p) : (productVariantLabel(p) || p.category || '-'))}</span></div>
       </div>
       <button type="button" class="manual-select-btn" onclick="event.stopPropagation();selectManualProduct(${i})">เลือก</button>
-    </div>`).join('') : '<div class="empty">ไม่พบสินค้า</div>';
+    </div>`).join('') + showMoreHtml('manual', rows.length, all.length) : '<div class="empty">ไม่พบสินค้า</div>';
   if (!rows.length && MODE === 'out' && PENDING_SCAN && !PENDING_SCAN.allowAllStock) {
     el.innerHTML = `<div class="empty">ไม่พบ SN/LOT นี้ในสต็อก<br><button type="button" class="manual-select-btn" style="margin-top:8px" onclick="allowPendingStockSearch()">ค้นหาทั้งสต็อกเอง</button></div>`;
   }
@@ -2497,6 +2542,7 @@ function updateActionButtons() {
 }
 
 document.addEventListener('input', e => {
+  if (e.target.dataset?.salesField) e.target.dataset.dirty = '1'; // renderHist keeps these across re-renders
   if (['qtyI','locI','purposeI','purposeOtherI','snLotI'].includes(e.target.id)) updateActionButtons();
 });
 
@@ -2512,14 +2558,22 @@ function currentStockQtyForProduct(p) {
   return hit ? Number(hit['Qty'] || 0) : 0;
 }
 
+// Counts typed so far, by row: the list is rebuilt on every search and background sync
+const TAKE_COUNTS = new Map();
+
 function renderStocktake() {
   const el = document.getElementById('stocktakeList');
   if (!el) return;
-  const rows = filteredProducts('take').slice(0, 120);
-  el.innerHTML = rows.map(p => `
+  const all = filteredProducts('take');
+  const rows = all.slice(0, pageLimit('take', listFilterSig('take')));
+  el.innerHTML = rows.map(p => {
+    const key = String(p.stockItem?._sheetRow || [p.product_code, p.lot].join('|'));
+    return `
     <div class="manual-row">
       <div><b>${escapeHtml(stockDisplayName(p))}</b><br><span>${escapeHtml(p.product_code || '-')} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(stockBatchLabel(p))} · คงเหลือเดิม ${currentStockQtyForProduct(p)}</span></div>
       <input class="takeQty"
+        data-key="${escapeHtml(key)}"
+        value="${escapeHtml(TAKE_COUNTS.get(key)?.value)}"
         data-code="${escapeHtml(p.product_code || '')}"
         data-type="${escapeHtml(p.type || '')}"
         data-row="${escapeHtml(p.stockItem?._sheetRow || '')}"
@@ -2530,32 +2584,44 @@ function renderStocktake() {
         data-ref="${escapeHtml(p.ref || '')}"
         data-lot="${escapeHtml(p.lot || '')}"
         data-gtin="${escapeHtml(p.gtin || '')}"
-        type="number" min="0" placeholder="จำนวน" oninput="validateStocktakeSubmit()">
-    </div>`).join('') || '<div class="empty">ไม่พบสินค้า</div>';
+        type="number" min="0" placeholder="จำนวน" oninput="onTakeInput(this)">
+    </div>`;
+  }).join('') + showMoreHtml('take', rows.length, all.length) || '<div class="empty">ไม่พบสินค้า</div>';
   validateStocktakeSubmit();
 }
 
+function onTakeInput(el) {
+  if (el.value === '') TAKE_COUNTS.delete(el.dataset.key);
+  else TAKE_COUNTS.set(el.dataset.key, { ...el.dataset, value: el.value });
+  validateStocktakeSubmit();
+}
+
+function validCount(c) {
+  return c.value !== '' && Number(c.value) >= 0;
+}
+
 function validateStocktakeSubmit() {
-  const hasAny = [...document.querySelectorAll('.takeQty')].some(x => x.value !== '' && Number(x.value) >= 0);
+  const hasAny = [...TAKE_COUNTS.values()].some(validCount);
   const btn = document.getElementById('stocktakeSubmit');
   if (btn) btn.disabled = !hasAny;
 }
 
 async function submitStocktake() {
-  const items = [...document.querySelectorAll('.takeQty')]
-    .filter(x => x.value !== '' && (x.dataset.row || x.dataset.code))
-    .map(x => ({
-      sheetRow: Number(x.dataset.row || 0) || '',
-      type: x.dataset.type || '',
-      productCode: x.dataset.code || '',
-      name: x.dataset.name || '',
-      brand: x.dataset.brand || '',
-      model: x.dataset.model || '',
-      size: x.dataset.size || '',
-      ref: x.dataset.ref || '',
-      lot: x.dataset.lot || '',
-      gtin: x.dataset.gtin || '',
-      qty: Number(x.value)
+  // every count typed, including rows the current search hides
+  const items = [...TAKE_COUNTS.values()]
+    .filter(c => validCount(c) && (c.row || c.code))
+    .map(c => ({
+      sheetRow: Number(c.row || 0) || '',
+      type: c.type || '',
+      productCode: c.code || '',
+      name: c.name || '',
+      brand: c.brand || '',
+      model: c.model || '',
+      size: c.size || '',
+      ref: c.ref || '',
+      lot: c.lot || '',
+      gtin: c.gtin || '',
+      qty: Number(c.value)
     }));
   if (!items.length) return;
   setPill('busy');
@@ -2563,6 +2629,7 @@ async function submitStocktake() {
     const res = await apiPost({ action:'batch_stocktake', items, user:CUR_USER, staffName:CUR_STAFF });
     if (!res.ok) throw new Error(res.error || 'API error');
     toast('บันทึกการนับสต็อก ' + (res.updated || items.length) + ' รายการแล้ว', 'ok');
+    TAKE_COUNTS.clear();
     await loadAll();
     setPill('ok');
   } catch(e) {
@@ -2601,7 +2668,7 @@ function stopScannerOnly() {
 
 function setMode(m) {
   MODE = m;
-  if (LAST) resetScan({ clearLocation:false, keepScanner:true });
+  if (LAST || PENDING_SCAN) resetScan({ clearLocation:false, keepScanner:true });
   renderManualProducts();
   updateModeUI();
 }
@@ -2773,20 +2840,21 @@ function _patchCache(action, b) {
   }
 
   if (action === 'out') {
+    // Exact row first: an earlier row with the same SN/LOT must not be the one decremented
+    const sameRow = x => !!b.sheetRow && Number(x._sheetRow) === Number(b.sheetRow);
     if (type === 'device') {
-      const idx = CACHE.device.findIndex(x =>
-        (b.sheetRow && Number(x._sheetRow) === Number(b.sheetRow)) ||
+      let idx = CACHE.device.findIndex(sameRow);
+      if (idx === -1) idx = CACHE.device.findIndex(x =>
         (b.sn && (x['Serial Number (SN)'] || '').toUpperCase() === b.sn.toUpperCase()) ||
         (b.lot && _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot))
       );
       if (idx !== -1) CACHE.device.splice(idx, 1);
     } else {
       const arr = type === 'mask' ? CACHE.mask : CACHE.accessory;
-      const hit = arr.find(x =>
-        (b.sheetRow && Number(x._sheetRow) === Number(b.sheetRow)) ||
-        (_gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '') &&
+      const hit = arr.find(sameRow) || arr.find(x =>
+        _gs1NormLot(x['LOT Number'] || '') === _gs1NormLot(b.lot || '') &&
           (x['Product Name'] || '') === (b.name || '') &&
-          (type !== 'mask' || (x['Size'] || '') === (b.size || '')))
+          (type !== 'mask' || (x['Size'] || '') === (b.size || ''))
       );
       if (hit) {
         hit['Qty'] = Math.max(0, (Number(hit['Qty']) || 0) - qty);
@@ -3214,9 +3282,9 @@ function _expDaysOf(it) {
   const expRaw = it['Expiry'] || it['Expiry Date'] || '';
   if (!expRaw) return null;
   const today = new Date(); today.setHours(0,0,0,0);
-  const parts = String(expRaw).split('/');
-  let expDate = parts.length === 3 ? new Date(+parts[2], +parts[1]-1, +parts[0]) : new Date(expRaw);
-  if (isNaN(expDate)) return null;
+  // local midnight: new Date('yyyy-mm-dd') is UTC and was a day off in Bangkok; yyyy-mm means end of month
+  const expDate = parseStockDate(toIsoDate(expRaw) || expRaw);
+  if (!expDate) return null;
   return Math.ceil((expDate - today) / 86400000);
 }
 
@@ -3310,6 +3378,32 @@ function renderAttention(items) {
   });
 }
 
+// Long lists show one page at a time; a different search/filter (sig) starts again from page 1,
+// a re-render with the same sig (background sync) keeps what was already shown
+const LIST_PAGE = 50;
+const PAGER = {};
+const PAGE_RENDER = { stock: () => renderStock(), manual: () => renderManualProducts(), take: () => renderStocktake(), names: () => renderProductNameManager() };
+
+function pageLimit(list, sig) {
+  if (!PAGER[list] || PAGER[list].sig !== sig) PAGER[list] = { sig, shown: LIST_PAGE };
+  return PAGER[list].shown;
+}
+
+function showMoreHtml(list, shown, total) {
+  if (total <= shown) return '';
+  return `<div class="list-more"><button type="button" class="bfull bout2" onclick="showMore('${list}')">แสดงเพิ่ม (${shown} จาก ${total})</button></div>`;
+}
+
+function showMore(list) {
+  if (!PAGER[list]) return;
+  PAGER[list].shown += LIST_PAGE;
+  PAGE_RENDER[list]();
+}
+
+function listFilterSig(prefix) {
+  return ['Category', 'Brand', 'Search'].map(k => document.getElementById(prefix + k)?.value || '').join('|');
+}
+
 function renderStock() {
   const list = document.getElementById('stList');
   const q = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
@@ -3343,7 +3437,8 @@ function renderStock() {
     return;
   }
 
-  list.innerHTML = items.map((it, idx) => {
+  const shown = items.slice(0, pageLimit('stock', q + '|' + sflt));
+  list.innerHTML = shown.map((it, idx) => {
     const badgeCls = it._type === 'device' ? 'bd2' : it._type === 'mask' ? 'bm' : 'ba';
     const qty   = Number(it['Qty'] || 0);
     const loc   = it['Location'] || it['Location / Hospital'] || '-';
@@ -3388,11 +3483,11 @@ function renderStock() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + showMoreHtml('stock', shown.length, items.length);
 
   const buttons = list.querySelectorAll('.btn-co');
   buttons.forEach((btn, i) => {
-    btn.onclick = function() { quickOut(items[i]); };
+    btn.onclick = function() { quickOut(shown[i]); };
   });
 }
 
@@ -3796,13 +3891,10 @@ function inferHistoryModelSize(it) {
   const lotHit = inferFromLot(serialLot);
   const productName = String(it['Product Name'] || '').trim().toLowerCase();
   const brand = String(it['Brand'] || '').trim().toLowerCase();
-  const productHit = (CACHE.products || []).find(p => {
-    const names = [p.name, p.product_name, p.stock_name, p.po_name].filter(Boolean).map(x => String(x).trim().toLowerCase());
-    const sameName = names.includes(productName);
-    const sameBrand = !brand || String(p.brand || '').trim().toLowerCase() === brand;
-    const sameLotModel = lotHit && lotHit.model && String(p.model || '').trim().toLowerCase() === String(lotHit.model).trim().toLowerCase();
-    return sameBrand && (sameName || sameLotModel);
-  });
+  const lotModel = lotHit && lotHit.model ? String(lotHit.model).trim().toLowerCase() : '';
+  const productHit = productsLower().find(x =>
+    (!brand || x.brand === brand) && (x.names.includes(productName) || (lotModel && x.model === lotModel))
+  )?.p;
 
   return {
     model: current.model || lotHit?.model || productHit?.model || '',
@@ -3811,7 +3903,7 @@ function inferHistoryModelSize(it) {
 }
 
 function salesDetailForm(it) {
-  if (String(it['Action'] || '') !== 'Stock Out' || !it._sheetRow) return '';
+  if (String(it['Action'] || '') !== 'Stock Out' || !it._sheetRow || it._canEdit === false) return '';
   const row = String(it._sheetRow);
   const inferred = inferHistoryModelSize(it);
   return `
@@ -3888,6 +3980,7 @@ async function saveSalesDetails(historyRow) {
       item['Model'] = payload.model || '';
       item['Size'] = payload.size || '';
     }
+    form.querySelectorAll('[data-dirty]').forEach(el => delete el.dataset.dirty); // saved: let server data show again
     const alerts = await apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' }));
     CACHE.salesAlerts = alerts && alerts.ok ? (alerts.alerts || []) : CACHE.salesAlerts;
     renderHist(false);
@@ -3950,7 +4043,22 @@ function renderHist(append, items) {
   if (append) {
     list.insertAdjacentHTML('beforeend', html);
   } else {
+    // A background sync or search re-renders the list: keep sales details typed but not yet saved
+    const typed = [...list.querySelectorAll('[data-sales-field][data-dirty]')].map(el => ({
+      row: el.closest('.mform')?.dataset.historyRow || '',
+      field: el.dataset.salesField,
+      value: el.value,
+      focused: el === document.activeElement
+    }));
     list.innerHTML = html;
+    typed.forEach(t => {
+      const el = list.querySelector(`.mform[data-history-row="${CSS.escape(t.row)}"] [data-sales-field="${CSS.escape(t.field)}"]`);
+      if (!el) return;
+      el.value = t.value;
+      el.dataset.dirty = '1';
+      if (t.field === 'model') updateHistoryMaskSizeChoices(el);
+      if (t.focused) el.focus();
+    });
   }
 
   
@@ -3964,11 +4072,11 @@ async function loadMoreHist() {
     const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_PAGE, offset:HIST_OFFSET }));
     if (!res.ok) throw new Error(res.error);
     const more = res.history || [];
-    const seen = new Set(CACHE.history.map(h =>
-      [h['Date'], h['Time'], h['Product Name'], h['Action']].join('|')
-    ));
+    // By transaction id: several scans of one product in the same minute are separate rows, not duplicates
+    const histKey = h => h._txId || [h['Date'], h['Time'], h['Product Name'], h['Action']].join('|');
+    const seen = new Set(CACHE.history.map(histKey));
     const fresh = more.filter(h => {
-      const key = [h['Date'], h['Time'], h['Product Name'], h['Action']].join('|');
+      const key = histKey(h);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -3978,7 +4086,8 @@ async function loadMoreHist() {
     CACHE.history = CACHE.history.concat(fresh);
     renderHist(true, fresh);
 
-    if (more.length < HIST_PAGE) document.getElementById('hiMore').style.display = 'none';
+    // the page size, not the deduped count, says whether more pages exist
+    document.getElementById('hiMore').style.display = more.length < HIST_PAGE ? 'none' : 'block';
   } catch(e) {
     toast('โหลดประวัติเพิ่มเติมไม่สำเร็จ: ' + e.message, 'err');
     HIST_OFFSET -= HIST_PAGE;
@@ -3987,16 +4096,17 @@ async function loadMoreHist() {
 
 function productNameRows() {
   const q = (document.getElementById('nameSearch')?.value || '').toLowerCase().trim();
+  const seen = new Set(); // CACHE.products has one row per barcode: list each product once
   return (CACHE.products || [])
-    .filter(p => p.product_code)
-    .filter(p => !q || productSearchText(p).includes(q))
-    .slice(0, 80);
+    .filter(p => p.product_code && !seen.has(p.product_code) && seen.add(p.product_code))
+    .filter(p => !q || productSearchText(p).includes(q));
 }
 
 function renderProductNameManager() {
   const list = document.getElementById('nameProductList');
   if (!list) return;
-  const rows = productNameRows();
+  const all = productNameRows();
+  const rows = all.slice(0, pageLimit('names', document.getElementById('nameSearch')?.value || ''));
   list.innerHTML = rows.length ? rows.map(p => {
     const code = escapeHtml(p.product_code || '');
     const active = p.product_code === SELECTED_NAME_PRODUCT_CODE ? ' on' : '';
@@ -4007,7 +4117,7 @@ function renderProductNameManager() {
         <span>${code} · ${escapeHtml(p.brand || '-')} · ${escapeHtml(productVariantLabel(p) || p.category || '-')} · PO: ${escapeHtml(po || '-')}</span>
       </div>
     `;
-  }).join('') : '<div class="empty">ไม่พบสินค้า</div>';
+  }).join('') + showMoreHtml('names', rows.length, all.length) : '<div class="empty">ไม่พบสินค้า</div>';
 }
 
 function selectProductName(code) {
@@ -4074,6 +4184,7 @@ function goTab(tab) {
   });
   
   if ((tab === 'stock' || tab === 'analysis' || tab === 'sales') && Date.now() - _lastSyncTime > 60_000) {
+    _lastSyncTime = Date.now(); // quick tab switches must not start more full reloads while this one runs
     loadAll().then(() => { _lastSyncTime = Date.now(); }).catch(() => {});
   }
   if (tab === 'cfg') renderProductNameManager();
@@ -4115,7 +4226,7 @@ async function exportCSV() {
     const headers = Object.keys(items[0]);
     const csv = [
       headers.join(','),
-      ...items.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
+      ...items.map(row => headers.map(h => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
 
