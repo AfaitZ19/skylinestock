@@ -2490,12 +2490,19 @@ async function submitStocktake() {
 
 async function startScan() {
   if (scanOn || IS_PROCESSING) return;
-  scanner = new Html5Qrcode('reader');
+  scanner = new Html5Qrcode('reader', {
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.DATA_MATRIX, Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.QR_CODE
+    ],
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+    verbose: false
+  });
 
   try {
     await scanner.start(
       { facingMode:'environment' },
-      { fps:10, qrbox:{width:260,height:110}, aspectRatio:1.6 },
+      { fps:10, qrbox:(w, h) => { const s = Math.floor(Math.min(w, h) * 0.8); return { width: s, height: s }; }, aspectRatio:1.6 },
       txt => processScannerText(txt),
       () => {}
     );
