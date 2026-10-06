@@ -668,7 +668,7 @@ function adaptProducts(list) {
       stock_name: p.stockDisplayName || '', po_name: p.poPrintName || '', aliases: p.searchAliases || '',
       brand: p.brand, type: p.stockType, model: p.model || '', size: p.size || '', ref: p.ref || '',
       product_code: p.productCode, category: p.categoryName || '', has_barcode: (p.barcodes || []).length > 0,
-      photoUrl: p.photoUrl || '', is_sizeless: !!p.isSizeless
+      photoUrl: p.photoUrl || '', is_sizeless: !!p.isSizeless, shelf_life_months: p.shelfLifeMonths ?? null
     };
     const values = type => (p.barcodes || []).filter(b => b.matchType === type).map(b => b.value);
     const gtin = values('GTIN'), snExact = values('SN_EXACT'), snPrefix = values('SN_PREFIX'), lotPattern = values('LOT_PATTERN');
@@ -948,6 +948,15 @@ async function legacyCall(params) {
       if (!product) return { ok: false, error: 'ไม่พบสินค้า' };
       const res = await rest('PUT', `/stock/products/${encodeURIComponent(product.id)}/names`, {
         stockDisplayName: p.stockName || null, poPrintName: p.poName || null, searchAliases: p.aliases || null
+      });
+      return res.success ? { ok: true } : fail(res);
+    }
+
+    case 'update_product_shelf_life': { // E19
+      const product = (CACHE.products || []).find(x => x.product_code === p.productCode && x.id);
+      if (!product) return { ok: false, error: 'ไม่พบสินค้า' };
+      const res = await rest('PUT', `/stock/products/${encodeURIComponent(product.id)}/shelf-life`, {
+        shelfLifeMonths: p.shelfLifeMonths
       });
       return res.success ? { ok: true } : fail(res);
     }
@@ -2586,6 +2595,7 @@ function showResult(d) {
   if (d.gtin) rows.push(['บาร์โค้ด', d.gtin]);
   if (d.mfgDate) rows.push(['Mfg Date', d.mfgDate]);
   if (d.expiry) rows.push(['Expiry', d.expiry]);
+  else if (d.mfgDate && d.p && d.p.shelf_life_months) rows.push(['Expiry (คำนวณจากอายุสินค้า)', expiryFromShelfLife(d.mfgDate, d.p.shelf_life_months)]);
 
   if (!rows.length) rows.push(['ข้อมูล', d.raw]);
 
@@ -3985,6 +3995,7 @@ function selectProductName(code) {
   document.getElementById('stockNameI').value = p.stock_name || p.name || '';
   document.getElementById('poNameI').value = p.po_name || p.product_name || p.name || '';
   document.getElementById('aliasNameI').value = p.aliases || '';
+  document.getElementById('shelfLifeI').value = p.shelf_life_months ?? '';
   renderProductNameManager();
 }
 
@@ -4030,6 +4041,29 @@ async function saveProductNames() {
   } catch(e) {
     setPill('err');
     toast('บันทึกชื่อสินค้าไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+async function saveShelfLife() {
+  if (!SELECTED_NAME_PRODUCT_CODE) {
+    toast('กรุณาเลือกสินค้าก่อน', 'warn');
+    return;
+  }
+  const raw = document.getElementById('shelfLifeI')?.value.trim() || '';
+  const months = raw ? Number(raw) : null;
+  if (months !== null && !(Number.isInteger(months) && months >= 1 && months <= 600)) {
+    toast('อายุสินค้าต้องเป็นจำนวนเดือน 1–600', 'warn');
+    return;
+  }
+  try {
+    const res = await apiPost({ action: 'update_product_shelf_life', productCode: SELECTED_NAME_PRODUCT_CODE, shelfLifeMonths: months });
+    if (!res.ok) throw new Error(res.error || 'API error');
+    // every per-barcode row of the product, since lookup can return any of them
+    (CACHE.products || []).filter(x => String(x.product_code || '') === SELECTED_NAME_PRODUCT_CODE)
+      .forEach(x => { x.shelf_life_months = months; });
+    toast('บันทึกอายุสินค้าแล้ว', 'ok');
+  } catch(e) {
+    toast('บันทึกอายุสินค้าไม่สำเร็จ: ' + e.message, 'err');
   }
 }
 

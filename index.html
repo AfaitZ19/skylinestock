@@ -290,6 +290,11 @@
           <label class="flbl">ชื่ออื่น / คำค้นหา</label>
           <input class="finp" id="aliasNameI" type="text" placeholder="เช่น R25V, R-25V, Beyond BPAP">
           <button class="bfull bout2" onclick="saveProductNames()">บันทึกชื่อสินค้า</button>
+          <div class="admin-only">
+            <label class="flbl">อายุสินค้า (เดือน)</label>
+            <input class="finp" id="shelfLifeI" type="number" min="1" max="600" inputmode="numeric" placeholder="เช่น 60 — ใช้คำนวณวันหมดอายุเมื่อฉลากมีแค่วันผลิต">
+            <button class="bfull bout2" onclick="saveShelfLife()">บันทึกอายุสินค้า</button>
+          </div>
         </div>
       </div>
 
