@@ -255,6 +255,7 @@ button{-webkit-tap-highlight-color:transparent}
 /* Role: admin-only elements hidden for stock */
 .admin-only{display:none}
 body.admin .admin-only{display:inline-flex}
+body.admin div.admin-only{display:block}
 /* Sales (stock.view only, spec §8): stock / analysis / own sales data, no stock movements */
 body.sales-scope #t-scan, body.sales-scope #t-take, body.sales-scope .fab-add,
 body.sales-scope .btn-co, body.sales-scope #nameManagerCard{display:none !important}
