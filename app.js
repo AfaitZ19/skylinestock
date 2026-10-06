@@ -1407,7 +1407,7 @@ function findStockItemForScan(d) {
   const rows = activeStockItems();
   const hint = lookup(d) || {};
 
-  let matches = rows.filter(x => {
+  const matches = rows.filter(x => {
     if (x._type === 'device') {
       const rowSn = normalizeSerialForMatch(x['Serial Number (SN)'] || '');
       const rowLot = _gs1NormLot(x['LOT Number'] || '');
@@ -1420,12 +1420,6 @@ function findStockItemForScan(d) {
     }
     return stockRowMatchesScan(x, { lot, gtin });
   });
-
-  // Stock received before all-digit LOTs were kept has a blank LOT (spec §5.1); match it by GTIN
-  if (!matches.length && lot && gtin) {
-    matches = rows.filter(x => x._type !== 'device' && !_gs1NormLot(x['LOT Number'] || '') &&
-      stockRowMatchesScan(x, { lot: '', gtin }));
-  }
 
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) {
