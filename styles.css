@@ -84,6 +84,11 @@ button{-webkit-tap-highlight-color:transparent}
 .scan-btn-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .scan-btn{background:var(--B);color:#fff;border:none;border-radius:var(--ra-s);padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
 .scan-btn.alt{background:#fff;color:var(--B);border:1px solid var(--B)}
+.scan-btn.photo{grid-column:1 / -1}
+.photo-picks{display:grid;gap:6px;margin:0 0 10px}
+.photo-picks:empty{display:none}
+.photo-pick-hd{font-size:13px;font-weight:700;color:var(--mu)}
+.photo-pick{text-align:left}
 
 .mform{background:var(--sf);border-radius:var(--ra-s);padding:12px;margin-top:10px;display:block}
 .mform input{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--ra-s);font-size:14px;font-family:inherit;outline:none;background:#fff}

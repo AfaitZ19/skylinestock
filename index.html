@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Skyline Medical — Stock</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap">
@@ -81,7 +82,10 @@
         <div class="scan-btn-wrap">
           <button class="scan-btn" onclick="startScan()">ใช้กล้อง</button>
           <button class="scan-btn alt" onclick="stopScannerOnly()">หยุดสแกน</button>
+          <button class="scan-btn photo" onclick="openLabelPhoto()">ถ่ายรูปฉลาก</button>
         </div>
+        <input type="file" id="labelPhotoI" accept="image/*" hidden onchange="onLabelPhoto(this)">
+        <div id="labelPhotoChoices" class="photo-picks"></div>
 
         <div id="reader"></div>
 
@@ -376,6 +380,7 @@
 
 <script src="gs1.js"></script>
 <script src="app.js"></script>
+<script src="label-photo.js"></script>
 <!-- ===== MANGA-STYLE IN-APP GUIDE ===== -->
 <link rel="stylesheet" href="guide.css">
 
