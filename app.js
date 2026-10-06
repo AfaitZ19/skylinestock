@@ -2866,7 +2866,7 @@ async function doAct(action) {
       lot,
       gtin,
       mfgDate: LAST.mfgDate,
-      expiry: LAST.expiry,
+      expiry: LAST.expiry || (action === 'in' ? expiryFromShelfLife(LAST.mfgDate, LAST.p && LAST.p.shelf_life_months) : ''),
       location: loc,
       recipient: loc,
       purpose,
@@ -4047,6 +4047,10 @@ async function saveProductNames() {
 async function saveShelfLife() {
   if (!SELECTED_NAME_PRODUCT_CODE) {
     toast('กรุณาเลือกสินค้าก่อน', 'warn');
+    return;
+  }
+  if (document.getElementById('shelfLifeI').validity.badInput) {
+    toast('อายุสินค้าต้องเป็นจำนวนเดือน 1–600', 'warn');
     return;
   }
   const raw = document.getElementById('shelfLifeI')?.value.trim() || '';

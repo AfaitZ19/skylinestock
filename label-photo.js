@@ -46,6 +46,11 @@ async function onLabelPhoto(input) {
   const box = document.getElementById('labelPhotoChoices');
   box.innerHTML = '';
   try {
+    if (typeof ZXingWASM === 'undefined') {
+      toast('โหลดตัวอ่านบาร์โค้ดไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่', 'err');
+      return;
+    }
+    toast('กำลังอ่านบาร์โค้ด...', 'ok');
     const texts = pickLabelScan(await decodeLabelPhoto(file));
     if (!texts.length) {
       toast('ไม่พบบาร์โค้ดในรูป — ถ่ายใหม่ให้ใกล้และชัดขึ้น', 'warn');
