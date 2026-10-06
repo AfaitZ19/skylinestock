@@ -2,6 +2,8 @@
 const _labelGs1 = typeof gs1Decode === 'function' ? gs1Decode : require('./gs1.js').gs1Decode;
 const LABEL_FORMATS = ['DataMatrix', 'Code128', 'EAN-13', 'UPC-A', 'QRCode'];
 
+const _labelDataKeys = ['sn', 'lot', 'mfgDate', 'expiry'];
+
 // One raw text per distinct GTIN (the one carrying most fields wins); without any GTIN, the distinct texts
 function pickLabelScan(results) {
   const texts = [...new Set((results || []).map(x => String(x.text || '').trim()).filter(Boolean))];
@@ -9,11 +11,23 @@ function pickLabelScan(results) {
   for (const text of texts) {
     const g = _labelGs1(text);
     if (!g.gtin) continue;
-    const score = ['sn', 'lot', 'mfgDate', 'expiry'].filter(k => g[k]).length;
+    const score = _labelDataKeys.filter(k => g[k]).length;
     const cur = byGtin.get(g.gtin);
     if (!cur || score > cur.score) byGtin.set(g.gtin, { text, score });
   }
-  return byGtin.size ? [...byGtin.values()].map(x => x.text) : texts;
+  if (!byGtin.size) return texts;
+  const picked = [...byGtin.values()].map(x => x.text);
+  // Two-line GS1-128 labels put (01) in one symbol and (17)/(10)/(21) in another; with one product, join them.
+  // Companions go first so the GTIN symbol's own values win on a repeated AI.
+  if (picked.length === 1 && picked[0].startsWith('(')) {
+    const companions = texts.filter(t => {
+      if (!t.startsWith('(')) return false;
+      const g = _labelGs1(t);
+      return !g.gtin && _labelDataKeys.some(k => g[k]);
+    });
+    return [companions.join('') + picked[0]];
+  }
+  return picked;
 }
 
 async function decodeLabelPhoto(file) {
