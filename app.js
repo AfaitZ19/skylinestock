@@ -1,6 +1,7 @@
 // SkylineApi (spec §4.3, §8). Production by default; ?api=dev or ?api=local for testing
 const API_ENVS = {
   local: 'https://localhost:5001/api',
+  same: location.origin + '/api', // dev: tools/dev-server.js forwards /api to the local API (e.g. a phone via a tunnel)
   dev: 'https://api-dev.skylinemedical.co.th/api',
   prod: 'https://api.skylinemedical.co.th/api'
 };
@@ -12,6 +13,8 @@ const OCR_URL = localStorage.getItem('skl_api') || ''; // label OCR stays in App
 let AUTH_TOKEN = localStorage.getItem('skl2_token') || '';
 let REFRESH_TOKEN = localStorage.getItem('skl2_refresh') || '';
 let CUR_USER = localStorage.getItem('skl2_user') || '', CUR_ROLE = localStorage.getItem('skl2_role') || 'stock', CUR_STAFF = localStorage.getItem('skl2_name') || '';
+let DEFAULT_RECEIVER = ''; // the คนรับเข้า name the app filled in (applyDefaultReceiver)
+let SCAN_FROM_IMAGE = false; // set by label-photo.js while a camera/photo read is processed
 let MODE = 'in', LAST = null, scanner = null, scanOn = false, sflt = 'all';
 let CACHE = { device:[], mask:[], accessory:[], history:[], products:[], monthlyOut:null, salesAlerts:[] };
 let PRODUCT_LOOKUP = { byGtin:new Map(), byRef:new Map(), byCode:new Map() };
@@ -36,7 +39,7 @@ let HID_BUFFER = '';
 let HID_AUTO_RESUME = false;
 let HID_LAST_TEXT = '';
 let HID_LAST_TIME = 0;
-const AUTO_SAVE_ON_SCAN_IN = true;
+const AUTO_SAVE_ON_SCAN_IN = false; // stock-in shows a preview (product, SN/LOT, expiry, qty) and saves on รับเข้า
 const AUTO_STOCK_OUT_ON_SCAN_OUT = false;
 const DEFAULT_HOSPITAL_CHOICES = [
   'สถาบันการแพทย์จักรีนฤบดินทร์',
@@ -114,7 +117,7 @@ async function resumeStoredSession() {
     saveSession();
     await loadAll();
     _lastSyncTime = Date.now();
-    enableHIDMode(true);
+    restoreScanWay(true);
   } catch (e) {
     if (!handleAuthExpired(e)) {
       signOut();
@@ -157,16 +160,58 @@ function focusScanInput(delay = 80) {
   }, delay);
 }
 
+// The "วิธีสแกน" row shows one choice: the camera while it runs, else the USB scanner or typing
+function renderScanWay() {
+  const way = scanOn ? 'cam' : HID_ENABLED ? 'hid' : 'manual';
+  [['hidToggleBtn', 'hid'], ['camWayBtn', 'cam'], ['manualToggleBtn', 'manual']].forEach(([id, w]) =>
+    document.getElementById(id)?.classList.toggle('on', way === w));
+  const stop = document.getElementById('camStopBtn');
+  if (stop) stop.hidden = !scanOn;
+  // Each way shows only its own controls: the typing box for พิมพ์เอง, the picture for กล้อง
+  const mf = document.getElementById('mf');
+  if (mf) mf.hidden = way !== 'manual';
+  const hidReady = document.getElementById('hidReady');
+  if (hidReady) hidReady.hidden = way !== 'hid';
+  const reader = document.getElementById('reader');
+  if (reader) {
+    if (!scanOn) reader.innerHTML = '';
+    reader.hidden = !scanOn;
+  }
+}
+
+function toggleCamera() {
+  unlockScanSound(); // iOS plays the scan beep only after a tap
+  if (scanOn) {
+    stopScannerOnly();
+    rememberScanWay(HID_ENABLED ? 'hid' : 'manual');
+  } else {
+    startScan();
+    rememberScanWay('cam');
+  }
+}
+
+// This device reopens in the scan way it used last; saved only on the user's own choice, never when the app
+// stops the camera itself after a scan
+function rememberScanWay(way) {
+  try { localStorage.setItem('skl2_scan_way', way); } catch (e) { /* private mode: just not remembered */ }
+}
+
+function restoreScanWay(auto) {
+  let way = '';
+  try { way = localStorage.getItem('skl2_scan_way') || ''; } catch (e) { /* not remembered: default way */ }
+  if (way === 'manual') {
+    HID_AUTO_RESUME = false;
+    disableHIDMode(true);
+    focusScanInput(80);
+    return;
+  }
+  enableHIDMode(auto);
+  if (way === 'cam') startScan();
+}
+
 function enableHIDMode(auto = false) {
   HID_ENABLED = true;
-  const hidBtn = document.getElementById('hidToggleBtn');
-  const manualBtn = document.getElementById('manualToggleBtn');
-  if (hidBtn) {
-    hidBtn.classList.add('on');
-    hidBtn.textContent = 'เครื่องสแกนเปิด';
-    hidBtn.title = 'เครื่องสแกนเปิดอยู่';
-  }
-  if (manualBtn) manualBtn.classList.remove('on');
+  renderScanWay();
   clearHidInput();
   focusScanInput(80);
   if (!auto) toast('เปิดเครื่องสแกนแล้ว', 'ok');
@@ -177,16 +222,7 @@ function disableHIDMode(updateButtons = true) {
   HID_BUFFER = '';
   clearTimeout(hidBufferTimer);
   clearHidInput();
-  if (updateButtons) {
-    const hidBtn = document.getElementById('hidToggleBtn');
-    const manualBtn = document.getElementById('manualToggleBtn');
-    if (hidBtn) {
-      hidBtn.classList.remove('on');
-      hidBtn.textContent = 'ใช้เครื่องสแกน';
-      hidBtn.title = 'คลิกเพื่อเปิดเครื่องสแกน';
-    }
-    if (manualBtn) manualBtn.classList.add('on');
-  }
+  if (updateButtons) renderScanWay();
 }
 
 function tryAutoResumeHID() {
@@ -202,16 +238,22 @@ function toggleHIDMode() {
   if (HID_ENABLED) {
     HID_AUTO_RESUME = false;
     disableHIDMode(true);
+    rememberScanWay('manual');
     toast('ปิดเครื่องสแกนแล้ว', 'ok');
   } else {
     HID_AUTO_RESUME = false;
+    if (scanOn) stopScannerOnly();
     enableHIDMode(true);
+    rememberScanWay('hid');
   }
 }
 
 function focusManualInput() {
   HID_AUTO_RESUME = false;
+  if (scanOn) stopScannerOnly();
   disableHIDMode(true);
+  rememberScanWay('manual');
+  focusScanInput(80);
 }
 
 const THAI_KEDMANEE_TO_EN = {
@@ -421,7 +463,7 @@ async function startSession(login, email) {
   setSetupLoading(true, 'กำลังโหลดข้อมูล...');
   await loadAll();
   _lastSyncTime = Date.now();
-  enableHIDMode(false);
+  restoreScanWay(false);
 }
 
 function setSetupLoading(isLoading, msg = '') {
@@ -443,6 +485,7 @@ function signOut() {
   REFRESH_TOKEN = '';
   CUR_ROLE = 'stock';
   CUR_STAFF = '';
+  applyDefaultReceiver(); // the next person must not see this name
   STOCK_ME = null;
   LOOKUPS = null;
   LAST = null;
@@ -532,6 +575,7 @@ async function loadMe() {
   if (!res.success) throw new Error(res.message || 'ตรวจสิทธิ์ไม่สำเร็จ');
   STOCK_ME = res.data;
   CUR_STAFF = STOCK_ME.fullName || CUR_STAFF;
+  applyDefaultReceiver();
   CUR_ROLE = STOCK_ME.canAdmin ? 'admin' : STOCK_ME.canOperate ? 'stock' : 'sales';
   applyRoleUi();
   showApp();
@@ -1334,12 +1378,15 @@ function parseCode(raw) {
   }
 
   if (!d.p && (d.gtin || d.sn || d.lot)) {
+    const candidates = productsForGtin(d.gtin);
     PENDING_SCAN = {
       raw: key,
       gtin: d.gtin || '',
       sn: d.sn || '',
       lot: d.lot || '',
-      reason: 'unknown_product',
+      reason: candidates.length > 1 ? 'ambiguous_product' : 'unknown_product',
+      candidateIds: candidates.map(p => p.id || p.product_code),
+      fromImage: SCAN_FROM_IMAGE,
       allowAllStock: false
     };
     LAST = null;
@@ -1360,12 +1407,13 @@ function parseCode(raw) {
 
   const autoInCanContinue = MODE === 'in' && AUTO_SAVE_ON_SCAN_IN && scanOn && d.p && d.p.type &&
     !((d.p.type === 'device' && !d.sn) || ((d.p.type === 'mask' || d.p.type === 'accessory') && !d.lot));
+  d.fromCamera = scanOn; // stock-in restarts the camera after the preview is saved
   if (!autoInCanContinue) stopScannerOnly();
   showResult(d);
   if (MODE === 'out') {
     prepareOutFormAfterScan(d);
     maybeAutoStockOutAfterScan(d);
-  } else toast('สแกนสำเร็จ', 'ok');
+  } else toast('สแกนสำเร็จ — ตรวจสอบแล้วกดรับเข้า', 'ok');
   return d;
 }
 
@@ -1558,7 +1606,8 @@ function lookup(d) {
   if (wildcardLotHit) return _mergeLotDetails(wildcardLotHit, lot);
 
 
-  if (gtinRaw) {
+  // A GTIN the catalog knows but cannot narrow to one product must not be guessed from its digits
+  if (gtinRaw && !productsForGtin(gtinRaw).length) {
     const apexMatch = _apexGtinLookup(gtinRaw);
     if (apexMatch) return apexMatch;
   }
@@ -1587,6 +1636,17 @@ function rebuildProductLookupIndex() {
     if (ref) addLookupBucket(PRODUCT_LOOKUP.byRef, ref, p);
     const code = normalizeSkuToken(p.product_code || p.productCode || '');
     if (code && code !== '-') addLookupBucket(PRODUCT_LOOKUP.byCode, code, p);
+  });
+}
+
+// Catalog products carrying this GTIN, one entry per product (CACHE.products has one row per barcode)
+function productsForGtin(gtin) {
+  const seen = new Set();
+  return (PRODUCT_LOOKUP.byGtin.get(normalizeGtinForMatch(gtin || '')) || []).filter(p => {
+    const id = p.id || p.product_code;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
   });
 }
 
@@ -2100,7 +2160,31 @@ function renderManualScanNotice() {
     return;
   }
 
-  notice.innerHTML = `ไม่รู้จักบาร์โค้ดนี้: ${scan}<br>เลือกสินค้าด้านล่างเพื่อผูกบาร์โค้ด/SN/LOT ครั้งแรก แล้วระบบจะจำไว้รอบถัดไป`;
+  if (PENDING_SCAN.reason === 'ambiguous_product') {
+    notice.innerHTML = `บาร์โค้ดนี้ตรงกับสินค้า ${PENDING_SCAN.candidateIds.length} รายการ: ${scan}<br>เลือกสินค้าที่ถูกต้องจากรายการด้านล่าง`;
+    return;
+  }
+  if (!PENDING_SCAN.gtin && PENDING_SCAN.fromImage) {
+    // the camera/photo found only a side barcode (REF, internal code), not the UDI one that names the product
+    // raw text: a bare number like REF 1094051 would otherwise be summarised as GS1 "LOT 94051"
+    notice.innerHTML = `อ่านได้แค่บาร์โค้ด ${escapeHtml(PENDING_SCAN.raw)} ซึ่งไม่ใช่บาร์โค้ด UDI ของสินค้า<br>ถ่ายหรือเล็งให้เห็นบาร์โค้ดที่มีเลข (01) แล้วสแกนใหม่ หรือเลือกสินค้าด้านล่าง`;
+    return;
+  }
+  const addBtn = PENDING_SCAN.gtin && STOCK_ME?.canOperate
+    ? '<br><button type="button" onclick="addProductFromScan()">เพิ่มสินค้าใหม่ด้วย GTIN นี้</button>'
+    : '';
+  notice.innerHTML = `ไม่รู้จักบาร์โค้ดนี้: ${scan}<br>เลือกสินค้าด้านล่างเพื่อผูกบาร์โค้ด/SN/LOT ครั้งแรก แล้วระบบจะจำไว้รอบถัดไป${addBtn}`;
+}
+
+// A GTIN the catalog does not know yet: open เพิ่มสินค้าใหม่ with it filled in
+function addProductFromScan() {
+  const gtin = PENDING_SCAN?.gtin || '';
+  openAddProductModal();
+  const field = document.getElementById('newGtin');
+  if (field && gtin) {
+    field.value = gtin;
+    normalizeNewGtinField();
+  }
 }
 
 function allowPendingStockSearch() {
@@ -2200,8 +2284,11 @@ function filteredProducts(prefix) {
   }
 
   const seen = new Set(); // one row per barcode in CACHE.products: list each product once
+  // A scanned GTIN shared by several products: offer just those until the user searches
+  const only = prefix === 'manual' && !q && PENDING_SCAN?.reason === 'ambiguous_product' ? new Set(PENDING_SCAN.candidateIds) : null;
   return (CACHE.products || []).filter(p => {
     if (prefix === 'manual' && !p.product_code) return false;
+    if (only && !only.has(p.id || p.product_code)) return false;
     if (cat && p.category !== cat) return false;
     if (brand && p.brand !== brand) return false;
     if (q && !productSearchText(p).includes(q)) return false;
@@ -2492,44 +2579,56 @@ async function submitStocktake() {
 
 
 async function startScan() {
-  if (scanOn || IS_PROCESSING) return;
-  scanner = new Html5Qrcode('reader', {
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.DATA_MATRIX, Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.QR_CODE
-    ],
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-    verbose: false
-  });
-
+  if (scanOn || IS_PROCESSING || startScan.busy) return;
+  if (typeof ZXingWASM === 'undefined') {
+    toast('โหลดตัวอ่านบาร์โค้ดไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่', 'err');
+    return;
+  }
+  startScan.busy = true; // the camera permission prompt can take a while; ignore taps meanwhile
+  const reader = document.getElementById('reader');
+  reader.hidden = false; // some phones will not start a video inside a hidden element
   try {
-    await scanner.start(
-      { facingMode:'environment' },
-      { fps:10, qrbox:(w, h) => { const s = Math.floor(Math.min(w, h) * 0.8); return { width: s, height: s }; }, aspectRatio:1.6 },
-      txt => processScannerText(txt),
-      () => {}
-    );
+    scanner = await startLiveBarcodeScan(reader, handleScannedTexts, DUP_MS);
     scanOn = true;
+    renderScanWay();
   } catch(e) {
-    document.getElementById('reader').innerHTML =
+    // the note stays until another way is picked
+    reader.innerHTML =
       '<p style="text-align:center;padding:18px;color:#aaa;font-size:12px">เปิดกล้องไม่สำเร็จ<br>กรุณาอนุญาตกล้องหรือกรอกเอง</p>';
+  } finally {
+    startScan.busy = false;
   }
 }
 
 function stopScannerOnly() {
   if (scanner) {
     try { scanner.stop(); } catch(e) {}
-    try { scanner.clear(); } catch(e) {}
   }
   scanner = null;
   scanOn = false;
+  renderScanWay();
 }
 
 function setMode(m) {
   MODE = m;
   if (LAST || PENDING_SCAN) resetScan({ clearLocation:false, keepScanner:true });
+  document.getElementById('locI').value = ''; // each mode starts from its own default (updateModeUI below)
   renderManualProducts();
   updateModeUI();
+}
+
+// รับเข้า: คนรับเข้า/ผู้บันทึก defaults to the logged-in user; จ่ายออก uses the same box for the recipient,
+// so the default is taken back out there. A name the user typed is never overwritten.
+function applyDefaultReceiver() {
+  const el = document.getElementById('locI');
+  if (!el) return;
+  const typed = el.value.trim();
+  const isDefault = !typed || typed === DEFAULT_RECEIVER;
+  if (MODE === 'in') {
+    if (isDefault) el.value = DEFAULT_RECEIVER = CUR_STAFF || '';
+  } else if (typed && typed === DEFAULT_RECEIVER) {
+    el.value = '';
+  }
 }
 
 function updateModeUI() {
@@ -2542,8 +2641,9 @@ function updateModeUI() {
   document.getElementById('locLabel').textContent = isIn ? 'คนรับเข้า/ผู้บันทึก' : 'เซลล์หรือผู้รับสินค้า';
   document.getElementById('locI').placeholder = isIn ? 'เช่น ฝ้าย, แอดมิน, ทีมสต็อก' : 'เลือกหรือพิมพ์ชื่อเซลล์/ผู้รับสินค้า';
   document.getElementById('locI').setAttribute('list', isIn ? '' : 'recipientChoices');
+  applyDefaultReceiver();
   document.getElementById('scanHint').innerHTML = isIn
-    ? '<span class="dot"></span>รับเข้า: สแกนแล้วบันทึกอัตโนมัติ'
+    ? '<span class="dot"></span>รับเข้า: สแกนแล้วตรวจสอบก่อนกดรับเข้า'
     : '<span class="dot"></span>สแกนจ่ายออก แล้วตรวจสอบก่อนกดจ่ายออก';
 
   
@@ -2637,7 +2737,10 @@ function resetScan(opts = {}) {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  if (opts.clearLocation) document.getElementById('locI').value = '';
+  if (opts.clearLocation) {
+    document.getElementById('locI').value = '';
+    applyDefaultReceiver();
+  }
   if (!opts.keepScanner) {
     stopScannerOnly();
     document.getElementById('reader').innerHTML = '';
@@ -2774,6 +2877,7 @@ async function doAct(action) {
   }
   if (IS_PROCESSING) return;
   IS_PROCESSING = true;
+  let resumeCamera = false; // stock-in from the camera: start it again once this save is done
 
   const stockItem = action === 'out' ? LAST.stockItem : null;
   const type = stockItem?._type || document.getElementById('iType').value;
@@ -2907,10 +3011,17 @@ async function doAct(action) {
     renderHist(false);
     updateStats();
     setPill('ok');
+    resumeCamera = action === 'in' && LAST?.fromCamera && !scanOn;
+    const savedKey = LAST?.raw || '';
     resetScan({
       clearLocation: action === 'in',
       keepScanner: action === 'in' && scanOn
     });
+    if (resumeCamera) {
+      // the saved label is usually still in view: do not offer the same item again straight away
+      LAST_SCAN_TEXT = savedKey;
+      LAST_SCAN_TIME = Date.now();
+    }
 
     if (action === 'out') {
       document.getElementById('locI').value = '';
@@ -2943,7 +3054,8 @@ async function doAct(action) {
     document.getElementById('bOut').disabled = false;
     updateActionButtons();
     IS_PROCESSING = false;
-    focusScanInput(120);
+    if (resumeCamera) startScan();
+    else focusScanInput(120);
   }
 }
 
@@ -3160,10 +3272,11 @@ function renderAttention(items) {
     return { it, qty, expDays, low, exp };
   }).filter(x => x.low || x.exp);
   const salesAlerts = (CACHE.salesAlerts || []).map(a => ({ sales:a }));
+  const countEl = document.getElementById('attnCount');
 
   if (!flagged.length && !salesAlerts.length) {
-    box.style.display = 'none';
-    box.innerHTML = '';
+    if (countEl) countEl.textContent = '';
+    box.innerHTML = `<div class="empty"><div>ไม่มีรายการที่ต้องตรวจสอบ</div></div>`;
     return;
   }
 
@@ -3173,9 +3286,9 @@ function renderAttention(items) {
     return pa - pb;
   });
 
-  const combined = [...salesAlerts, ...flagged].slice(0, 8);
-  const total = salesAlerts.length + flagged.length;
-  const more = total - combined.length;
+  const combined = [...salesAlerts, ...flagged];
+  const total = combined.length;
+  if (countEl) countEl.textContent = total;
 
   box.innerHTML = `
     <div class="attn-hd">ต้องตรวจสอบ (${total} รายการ)</div>
@@ -3214,9 +3327,7 @@ function renderAttention(items) {
         </div>
       `;
     }).join('')}
-    ${more > 0 ? `<div class="attn-more">…และอีก ${more} รายการ</div>` : ''}
   `;
-  box.style.display = 'block';
 
   box.querySelectorAll('.attn-row').forEach(row => {
     row.onclick = () => {
@@ -3232,9 +3343,17 @@ function renderAttention(items) {
       const q = row.getAttribute('data-q') || '';
       const input = document.getElementById('stockSearch');
       if (input) { input.value = q; }
+      stockSub('list');
       renderStock();
-      box.scrollIntoView({behavior:'smooth', block:'start'});
+      document.getElementById('v-stock').scrollIntoView({behavior:'smooth', block:'start'});
     };
+  });
+}
+
+function stockSub(name) {
+  ['list', 'sum', 'attn'].forEach(n => {
+    document.getElementById('sp-' + n).style.display = n === name ? '' : 'none';
+    document.getElementById('st-' + n).classList.toggle('on', n === name);
   });
 }
 

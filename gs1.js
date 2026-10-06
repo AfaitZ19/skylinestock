@@ -173,4 +173,22 @@ function expiryFromShelfLife(mfgDate, months) {
   return `${ty}-${String(tm).padStart(2, '0')}-${String(Math.min(d, lastDay(ty, tm))).padStart(2, '0')}`;
 }
 
-if (typeof module !== 'undefined') module.exports = { gs1Decode, _gs1NormLot, normalizeLot, expiryFromShelfLife };
+// GS1 mod-10 check digit. gs1Decode strips leading zeros, so pad back to GTIN-14 (zeros do not change the sum).
+function isValidGtin(gtin) {
+  const s = String(gtin || '');
+  if (!/^\d{1,14}$/.test(s)) return false;
+  const d = s.padStart(14, '0');
+  let sum = 0;
+  for (let i = 0; i < 13; i++) sum += Number(d[i]) * (i % 2 === 0 ? 3 : 1);
+  return (10 - (sum % 10)) % 10 === Number(d[13]);
+}
+
+// A date gs1Decode produced ('YYYY-MM-DD', or 'YYYY-MM' for day 00) that exists on the calendar
+function isValidGs1Date(date) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(String(date || ''));
+  if (!m) return false;
+  const y = +m[1], mo = +m[2], d = m[3] ? +m[3] : 1;
+  return mo >= 1 && mo <= 12 && d >= 1 && d <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
+}
+
+if (typeof module !== 'undefined') module.exports = { gs1Decode, _gs1NormLot, normalizeLot, expiryFromShelfLife, isValidGtin, isValidGs1Date };

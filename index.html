@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Skyline Medical — Stock</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link rel="icon" type="image/png" href="favicon.png">
 <script defer src="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,20 +74,18 @@
       <div class="sbox">
         <div class="shint" id="scanHint"><span class="dot"></span>สแกนรับเข้า หรือกรอก QR / Barcode</div>
 
-        <div class="toolrow">
-          <button class="toolbtn" id="hidToggleBtn" onclick="toggleHIDMode()">ใช้เครื่องสแกน</button>
-          <button class="toolbtn on" id="manualToggleBtn" onclick="focusManualInput()">กรอกเอง</button>
-        </div>
-
-        <div class="scan-btn-wrap">
-          <button class="scan-btn" onclick="startScan()">ใช้กล้อง</button>
-          <button class="scan-btn alt" onclick="stopScannerOnly()">หยุดสแกน</button>
-          <button class="scan-btn photo" onclick="openLabelPhoto()">ถ่ายรูปฉลาก</button>
+        <div class="scanway" role="group" aria-label="วิธีสแกน">
+          <button class="scanway-btn" id="hidToggleBtn" onclick="toggleHIDMode()">เครื่องสแกน</button>
+          <button class="scanway-btn" id="camWayBtn" onclick="toggleCamera()">กล้อง</button>
+          <button class="scanway-btn" id="photoWayBtn" onclick="openLabelPhoto()">ถ่ายรูป</button>
+          <button class="scanway-btn on" id="manualToggleBtn" onclick="focusManualInput()">พิมพ์เอง</button>
         </div>
         <input type="file" id="labelPhotoI" accept="image/*" hidden onchange="onLabelPhoto(this)">
         <div id="labelPhotoChoices" class="photo-picks"></div>
 
-        <div id="reader"></div>
+        <div class="hid-ready" id="hidReady" hidden>พร้อมรับจากเครื่องสแกน — ยิงบาร์โค้ดได้เลย</div>
+        <div id="reader" hidden></div>
+        <button class="cam-stop" id="camStopBtn" onclick="toggleCamera()" hidden>หยุดกล้อง</button>
 
         <div class="mform" id="mf">
           <input type="text" id="mc" placeholder="Barcode / SN / LOT">
@@ -199,10 +197,21 @@
         <div class="sc2"><div class="sl">Accessory</div><div class="sv" id="sAc">0</div></div>
       </div>
 
-      <div class="bdash" id="stockBreakdown"></div>
+      <div class="stabs">
+        <button class="stab on" id="st-list" onclick="stockSub('list')">รายการ</button>
+        <button class="stab" id="st-sum" onclick="stockSub('sum')">สรุปตามรุ่น</button>
+        <button class="stab" id="st-attn" onclick="stockSub('attn')">ต้องตรวจสอบ <span class="stab-n" id="attnCount"></span></button>
+      </div>
 
-      <div class="attn" id="attnBox" style="display:none"></div>
+      <div id="sp-sum" style="display:none">
+        <div class="bdash" id="stockBreakdown"></div>
+      </div>
 
+      <div id="sp-attn" style="display:none">
+        <div class="attn" id="attnBox"></div>
+      </div>
+
+      <div id="sp-list">
       <div class="search-wrap">
         <svg class="search-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="search-inp" id="stockSearch" type="search" placeholder="ค้นหาชื่อ, Brand, SN, LOT..." oninput="renderStock()">
@@ -216,6 +225,7 @@
       </div>
 
       <div id="stList"></div>
+      </div>
     </div>
 
     <div id="v-analysis" style="display:none">

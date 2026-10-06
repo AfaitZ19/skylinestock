@@ -48,3 +48,25 @@ test('expiryFromShelfLife matches DateOnly.AddMonths', () => {
   assert.strictEqual(expiryFromShelfLife('', 60), '');
   assert.strictEqual(expiryFromShelfLife('2026-05-20', null), '');
 });
+
+const { isValidGtin, isValidGs1Date } = require('../gs1.js');
+
+test('GTIN check digit: every GTIN from the sample labels is valid', () => {
+  for (const g of ['6958949905648', '606959006829', '4719893347999', '16958949927319', '4713025000172', '4716872506873', '4713025000189'])
+    assert.strictEqual(isValidGtin(g), true, g);
+});
+
+test('GTIN check digit: one wrong digit is rejected', () => {
+  assert.strictEqual(isValidGtin('4719893347998'), false);
+  assert.strictEqual(isValidGtin('16958949927318'), false);
+  assert.strictEqual(isValidGtin('12AB'), false);
+  assert.strictEqual(isValidGtin(''), false);
+});
+
+test('GS1 dates must be real calendar dates (day 00 = month only)', () => {
+  assert.strictEqual(isValidGs1Date('2026-05-20'), true);
+  assert.strictEqual(isValidGs1Date('2026-05'), true);
+  assert.strictEqual(isValidGs1Date('2026-13-01'), false);
+  assert.strictEqual(isValidGs1Date('2026-02-30'), false);
+  assert.strictEqual(isValidGs1Date('2026-00-10'), false);
+});

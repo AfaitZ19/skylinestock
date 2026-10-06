@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { pickLabelScan } = require('../label-photo.js');
+const { pickLabelScan, createReadGate } = require('../label-photo.js');
 const { gs1Decode } = require('../gs1.js');
 
 const r = (...texts) => texts.map(text => ({ text }));
@@ -47,4 +47,60 @@ test('no GTIN anywhere → distinct raw texts', () => {
 
 test('nothing found → empty', () => {
   assert.deepStrictEqual(pickLabelScan([]), []);
+});
+
+test('a read with a wrong GTIN check digit is dropped, the good read wins', () => {
+  assert.deepStrictEqual(pickLabelScan(r('(01)04719893347998(10)0126050125', '(01)04719893347999(10)0126050125')),
+    ['(01)04719893347999(10)0126050125']);
+});
+
+test('a read with an impossible date is dropped', () => {
+  assert.deepStrictEqual(pickLabelScan(r('(01)04719893347999(11)261320(10)0126050125')), []);
+});
+
+const UDI = ['(01)04719893347999(11)260520(10)0126050125'];
+const REF = ['1094051'];
+
+test('read gate: a code is accepted only when a second frame agrees', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  assert.strictEqual(gate.offer(UDI, 0).fire, false);
+  assert.strictEqual(gate.offer(UDI, 300).fire, true);
+});
+
+test('read gate: frames without a code do not cancel a pending code (zoom frames alternate)', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  gate.offer(UDI, 0);
+  gate.offer([], 150);
+  assert.strictEqual(gate.offer(UDI, 300).fire, true);
+});
+
+test('read gate: a second sighting too late starts over', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  gate.offer(UDI, 0);
+  assert.strictEqual(gate.offer(UDI, 2000).fire, false);
+  assert.strictEqual(gate.offer(UDI, 2200).fire, true);
+});
+
+test('read gate: the same code is not offered again within repeatMs', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  gate.offer(UDI, 0); gate.offer(UDI, 100);
+  assert.strictEqual(gate.offer(UDI, 500).fire, false);
+  assert.strictEqual(gate.offer(UDI, 600).fire, false);
+  gate.offer(UDI, 9000);
+  assert.strictEqual(gate.offer(UDI, 9100).fire, true);
+});
+
+test('read gate: a barcode without GTIN asks to aim at the UDI first, then is accepted if nothing better shows', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  assert.deepStrictEqual(gate.offer(REF, 0), { fire: false, guide: true });
+  assert.deepStrictEqual(gate.offer(REF, 1000), { fire: false, guide: true });
+  assert.deepStrictEqual(gate.offer(REF, 2000), { fire: false, guide: true });
+  assert.deepStrictEqual(gate.offer(REF, 2600), { fire: true, guide: false });
+});
+
+test('read gate: the UDI barcode wins as soon as it shows up after a REF', () => {
+  const gate = createReadGate({ repeatMs: 8000 });
+  gate.offer(REF, 0); gate.offer(REF, 500);
+  gate.offer(UDI, 700);
+  assert.deepStrictEqual(gate.offer(UDI, 900), { fire: true, guide: false });
 });
