@@ -27,6 +27,9 @@ let LAST_SCAN_TIME = 0;
 const DUP_MS = 8000;
 let HIST_OFFSET = 0;
 const HIST_PAGE = 50;
+const HIST_SEARCH_MAX = 200;
+let HIST_SEARCH = { q: '', items: [] }; // server matches for the typed search, beyond the pages loaded
+let histSearchTimer = null;
 let SELECTED_OUT_MONTH = currentMonthValue();
 localStorage.removeItem('skl_last_out_recipient');
 localStorage.removeItem('skl_last_out_purpose');
@@ -751,7 +754,7 @@ function serialLotText(sn, lot) {
 
 function adaptTx(t) {
   return {
-    _sheetRow: rowNo('tx', t.id, {}), _txId: t.id, _canEdit: t.canEditSalesDetail,
+    _sheetRow: rowNo('tx', t.id, {}), _txId: t.id, _canEdit: t.canEditSalesDetail, _occurredAt: t.occurredAt || '',
     'Date': fmtDmy(t.occurredAt), 'Time': fmtHm(t.occurredAt), 'Type': TYPE_LABEL[t.stockType] || t.stockType,
     'Product Name': t.productName, 'Brand': t.brand, 'Serial / LOT': serialLotText(t.serialNumber, t.lotNumber),
     'Action': ACTION_LABEL[t.txType] || t.txType, 'Location / Recipient': t.recipientName || '',
@@ -875,8 +878,9 @@ async function legacyCall(params) {
       const pageSize = Math.min(200, n);
       const rows = [];
       let page = Math.floor(offset / pageSize) + 1;
+      const search = p.search ? '&search=' + encodeURIComponent(p.search) : '';
       while (rows.length < n) {
-        const res = await rest('GET', `/stock/transactions?pageNumber=${page}&pageSize=${pageSize}`);
+        const res = await rest('GET', `/stock/transactions?pageNumber=${page}&pageSize=${pageSize}${search}`);
         if (!res.success) return fail(res);
         const items = res.data.items || [];
         rows.push(...items.map(adaptTx));
@@ -1496,7 +1500,8 @@ function stockRowMatchesScan(row, scan) {
     checked++;
   }
   if (scanGtin) {
-    if (!rowGtin || rowGtin !== scanGtin) return false;
+    // the import stored some lots under the carton GTIN (1695…) while the bag scans as the unit GTIN (695…)
+    if (!rowGtin || gtinItemKey(rowGtin) !== gtinItemKey(scanGtin)) return false;
     checked++;
   }
 
@@ -1566,7 +1571,7 @@ function lookup(d) {
   const scanText = [d.raw, d.lot, d.ref].join(' ');
 
   const inferred = inferFromLot(lot || scanText);
-  const gtinHit = lookupProductByGtin(gtinRaw, inferred);
+  const gtinHit = lotSizeCheckedProduct(lookupProductByGtin(gtinRaw, inferred), inferred);
   if (gtinHit) return _mergeLotDetails(gtinHit, lot || d.raw || '', { preferProductIdentity:true });
 
   const indexed = lookupProductFromIndex({ gtin:gtinRaw, lot, sn, ref:d.ref, raw:d.raw });
@@ -1596,7 +1601,7 @@ function lookup(d) {
     }
   }
 
-  if (gtinRows.length === 1) return _mergeLotDetails(gtinRows[0], lot, { preferProductIdentity:true });
+  if (gtinRows.length === 1) return _mergeLotDetails(lotSizeCheckedProduct(gtinRows[0], inferred), lot, { preferProductIdentity:true });
   if (gtinRows.length > 1) {
     const hinted = lookupUniqueProductRows(gtinRows, inferred);
     if (hinted) return _mergeLotDetails(hinted, lot, { preferProductIdentity:true });
@@ -1613,6 +1618,18 @@ function lookup(d) {
   }
 
   return inferred;
+}
+
+// A BYOND mask LOT names its size after the model (BY-C2604NM5L081 = NM5 size L). When the GTIN points at the
+// same model in another size, use the catalog product of the LOT's size; with none, drop the product id so
+// stock-in asks for the right product instead of filing the lot under the wrong size.
+function lotSizeCheckedProduct(p, inferred) {
+  if (!p || p.type !== 'mask' || !inferred?.size || !p.size || sameText(p.size, inferred.size)) return p;
+  const ids = new Set();
+  const sameModel = (CACHE.products || []).filter(x =>
+    x.type === 'mask' && sameText(x.model, p.model) && sameText(x.size, inferred.size) && !ids.has(x.id) && ids.add(x.id));
+  if (sameModel.length === 1) return sameModel[0];
+  return { ...p, id: '', product_code: '', size: inferred.size, ref: '' };
 }
 
 function rebuildProductLookupIndex() {
@@ -3260,17 +3277,37 @@ function _expDaysOf(it) {
   return Math.ceil((expDate - today) / 86400000);
 }
 
-function renderAttention(items) {
+// Each lot is its own row (to see which lot went to whom), but "low" means the product's total over all its lots
+const stockProductKey = it => it._productId || ['Product Name', 'Brand', 'Model', 'Size'].map(k => textKey(it[k])).join('|');
+
+function productQtyTotals(items) {
+  const totals = new Map();
+  items.forEach(it => {
+    if (it._type === 'device') return;
+    const key = stockProductKey(it);
+    totals.set(key, (totals.get(key) || 0) + Number(it['Qty'] || 0));
+  });
+  return totals;
+}
+
+function renderAttention(items, totals) {
   const box = document.getElementById('attnBox');
   if (!box) return;
 
+  const lowListed = new Set();
   const flagged = items.map((it) => {
     const expDays = _expDaysOf(it);
-    const qty = Number(it['Qty'] || 0);
+    const key = stockProductKey(it);
+    const qty = totals.get(key) || 0;
     const low = it._type !== 'device' && qty <= LOW_QTY;
     const exp = expDays !== null && expDays <= WARN_DAYS;
-    return { it, qty, expDays, low, exp };
-  }).filter(x => x.low || x.exp);
+    return { it, key, qty, expDays, low, exp };
+  }).filter(x => {
+    if (x.exp) return true;
+    if (!x.low || lowListed.has(x.key)) return false; // one low-stock row per product, not one per lot
+    lowListed.add(x.key);
+    return true;
+  });
   const salesAlerts = (CACHE.salesAlerts || []).map(a => ({ sales:a }));
   const countEl = document.getElementById('attnCount');
 
@@ -3308,7 +3345,9 @@ function renderAttention(items) {
       const name = x.it['Product Name'] || '-';
       const sub = x.it._type === 'device'
         ? ('SN ' + (x.it['Serial Number (SN)'] || '-'))
-        : ('LOT ' + (x.it['LOT Number'] || '-'));
+        : x.exp
+          ? ('LOT ' + (x.it['LOT Number'] || '-'))
+          : [x.it['Model'], x.it['Size'] ? 'ไซส์ ' + x.it['Size'] : '', 'คงเหลือรวมทุกล็อต'].filter(Boolean).join(' · ');
       let tag = '';
       if (x.expDays !== null && x.expDays <= WARN_DAYS) {
         tag = x.expDays <= 0
@@ -3398,7 +3437,8 @@ function renderStock() {
     ...CACHE.accessory.map(x => ({...x, _type:'accessory'}))
   ];
 
-  renderAttention(allItems);
+  const totals = productQtyTotals(allItems);
+  renderAttention(allItems, totals);
 
   const items = allItems.filter(x => {
     if (sflt !== 'all' && x._type !== sflt) return false;
@@ -3437,7 +3477,7 @@ function renderStock() {
         : `<span class="badge-exp">${expDays} วัน</span>`;
     }
 
-    const lowBadge = (it._type !== 'device' && qty <= LOW_QTY)
+    const lowBadge = (it._type !== 'device' && (totals.get(stockProductKey(it)) || 0) <= LOW_QTY)
       ? `<span class="badge-low">สต็อกต่ำ</span>` : '';
 
     return `
@@ -3948,8 +3988,8 @@ async function saveSalesDetails(historyRow) {
   try {
     const res = await apiPost(payload);
     if (!res.ok) throw new Error(res.error || 'API error');
-    const item = CACHE.history.find(h => Number(h._sheetRow) === Number(historyRow));
-    if (item) {
+    // an older row found by server search lives only in HIST_SEARCH
+    CACHE.history.concat(HIST_SEARCH.items).filter(h => Number(h._sheetRow) === Number(historyRow)).forEach(item => {
       item['Buyer Name'] = payload.buyerName || '';
       item['Hospital'] = payload.hospital || '';
       item['PO No'] = payload.poNo || '';
@@ -3958,7 +3998,7 @@ async function saveSalesDetails(historyRow) {
       item['Wholesale Price'] = payload.wholesalePrice || '';
       item['Model'] = payload.model || '';
       item['Size'] = payload.size || '';
-    }
+    });
     form.querySelectorAll('[data-dirty]').forEach(el => delete el.dataset.dirty); // saved: let server data show again
     const alerts = await apiFetch(buildApiUrl(API_URL, { action:'sales_detail_alerts' }));
     CACHE.salesAlerts = alerts && alerts.ok ? (alerts.alerts || []) : CACHE.salesAlerts;
@@ -3968,6 +4008,35 @@ async function saveSalesDetails(historyRow) {
   } catch(e) {
     toast('บันทึกข้อมูลขายไม่สำเร็จ: ' + e.message, 'err');
   }
+}
+
+function onHistSearchInput() {
+  renderHist(false);
+  clearTimeout(histSearchTimer);
+  histSearchTimer = setTimeout(searchHistServer, 350);
+}
+
+// The loaded pages hold only the newest rows: a typed search also asks the server, which searches all history
+async function searchHistServer() {
+  const q = (document.getElementById('histSearch')?.value || '').trim();
+  if (!q) return;
+  try {
+    const res = await apiFetch(buildApiUrl(API_URL, { action:'history', n:HIST_SEARCH_MAX, offset:0, search:q }));
+    if (!res.ok) throw new Error(res.error);
+    if ((document.getElementById('histSearch')?.value || '').trim() !== q) return; // the user typed on meanwhile
+    HIST_SEARCH = { q, items: res.history || [] };
+    renderHist(false);
+  } catch(e) {
+    toast('ค้นหาประวัติไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+// Loaded rows win over server copies (they carry sales details saved since), newest first like the server
+function withServerSearchHits(items, q) {
+  if (!q || HIST_SEARCH.q !== q) return items;
+  const seen = new Set(items.map(h => h._txId));
+  return items.concat(HIST_SEARCH.items.filter(h => !seen.has(h._txId)))
+    .sort((a, b) => String(b._occurredAt).localeCompare(String(a._occurredAt)) || String(b._txId).localeCompare(String(a._txId)));
 }
 
 function renderHist(append, items) {
@@ -3980,7 +4049,7 @@ function renderHist(append, items) {
   const q = (document.getElementById('histSearch')?.value || '').trim();
   if (q) append = false;
   const sourceItems = items;
-  items = filteredHistoryItems(items);
+  items = filteredHistoryItems(withServerSearchHits(items, q));
 
   if (!items.length && !append) {
     const msg = q
@@ -4017,7 +4086,9 @@ function renderHist(append, items) {
         <div class="ht">${escapeHtml(it['Date'] || '-')}<br>${escapeHtml(it['Time'] || '-')}</div>
       </div>
     `;
-  }).join('');
+  }).join('') + (q && HIST_SEARCH.q === q && HIST_SEARCH.items.length >= HIST_SEARCH_MAX
+    ? `<div class="hm" style="text-align:center;padding:8px">แสดง ${HIST_SEARCH_MAX} รายการล่าสุดที่ตรงคำค้น — พิมพ์คำค้นให้เจาะจงขึ้นเพื่อหารายการที่เก่ากว่า</div>`
+    : '');
 
   if (append) {
     list.insertAdjacentHTML('beforeend', html);

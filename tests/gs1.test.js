@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { gs1Decode, _gs1NormLot, expiryFromShelfLife } = require('../gs1.js');
+const { gs1Decode, _gs1NormLot, expiryFromShelfLife, gtinItemKey } = require('../gs1.js');
 
 const pick = (g, ...keys) => Object.fromEntries(keys.map(k => [k, g[k]]));
 
@@ -69,4 +69,14 @@ test('GS1 dates must be real calendar dates (day 00 = month only)', () => {
   assert.strictEqual(isValidGs1Date('2026-13-01'), false);
   assert.strictEqual(isValidGs1Date('2026-02-30'), false);
   assert.strictEqual(isValidGs1Date('2026-00-10'), false);
+});
+
+test('NM6 M (BY-C2607NM6M115): the bag GTIN matches the carton GTIN stored on the stock row', () => {
+  assert.strictEqual(gtinItemKey('6958949938509'), gtinItemKey('16958949938506'));
+  assert.strictEqual(gtinItemKey('06958949938509'), gtinItemKey('6958949938509'));
+});
+
+test('GTIN item key still tells different items apart', () => {
+  assert.notStrictEqual(gtinItemKey('6958949938509'), gtinItemKey('6958949938516')); // NM6 M vs NM6 S
+  assert.notStrictEqual(gtinItemKey('16958949938506'), gtinItemKey('16958949938513'));
 });

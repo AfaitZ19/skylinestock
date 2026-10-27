@@ -183,6 +183,14 @@ function isValidGtin(gtin) {
   return (10 - (sum % 10)) % 10 === Number(d[13]);
 }
 
+// GTIN-14 indicator digits 1-8 mark a carton of the same item (16958949938506 = carton of bag 6958949938509),
+// so match on the item reference alone, without the indicator and check digit
+function gtinItemKey(gtin) {
+  const s = String(gtin || '').replace(/\s/g, '').toUpperCase();
+  if (!/^\d{8,14}$/.test(s)) return s.replace(/^0+/, '');
+  return s.padStart(14, '0').slice(1, 13);
+}
+
 // A date gs1Decode produced ('YYYY-MM-DD', or 'YYYY-MM' for day 00) that exists on the calendar
 function isValidGs1Date(date) {
   const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(String(date || ''));
@@ -191,4 +199,4 @@ function isValidGs1Date(date) {
   return mo >= 1 && mo <= 12 && d >= 1 && d <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
 }
 
-if (typeof module !== 'undefined') module.exports = { gs1Decode, _gs1NormLot, normalizeLot, expiryFromShelfLife, isValidGtin, isValidGs1Date };
+if (typeof module !== 'undefined') module.exports = { gs1Decode, _gs1NormLot, normalizeLot, expiryFromShelfLife, isValidGtin, isValidGs1Date, gtinItemKey };
