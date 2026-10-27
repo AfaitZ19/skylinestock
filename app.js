@@ -736,7 +736,8 @@ function adaptItem(it) {
   const common = {
     _sheetRow: rowNo(it.kind, it.id, stockRowRef(it)), _type: it.stockType, _id: it.id, _productId: it.stockProductId,
     'Date In': fmtDmy(it.receivedAt), 'Time': fmtHm(it.receivedAt), 'Product Name': it.productName, 'Status': 'Active',
-    'Brand': it.brand, 'GTIN / Barcode': it.gtin || '', 'Mfg Date': fmtIsoDate(it.mfgDate), 'Expiry': fmtIsoDate(it.expiryDate), 'Note': ''
+    'Brand': it.brand, 'GTIN / Barcode': it.gtin || '', 'Mfg Date': fmtIsoDate(it.mfgDate), 'Expiry': fmtIsoDate(it.expiryDate), 'Note': '',
+    _lowThreshold: it.lowStockThreshold ?? null
   };
   if (it.stockType === 'device') {
     return { ...common, 'Model': it.model || '', 'Serial Number (SN)': it.serialNumber || '', 'LOT Number': it.lotNumber || '',
@@ -3267,7 +3268,7 @@ function flt(type, el) {
 }
 
 const WARN_DAYS = 90;
-const LOW_QTY   = 3;
+const LOW_QTY   = 3; // fallback only: the API sends each product's threshold (its own, else the system setting)
 
 function _expDaysOf(it) {
   const expRaw = it['Expiry'] || it['Expiry Date'] || '';
@@ -3287,10 +3288,16 @@ function productQtyTotals(items) {
   items.forEach(it => {
     if (it._type === 'device') return;
     const key = stockProductKey(it);
-    totals.set(key, (totals.get(key) || 0) + Number(it['Qty'] || 0));
+    const cur = totals.get(key) || { qty: 0, threshold: null };
+    cur.qty += Number(it['Qty'] || 0);
+    // a row added locally since the last sync has no threshold; another lot of the product does
+    if (cur.threshold == null && it._lowThreshold != null) cur.threshold = it._lowThreshold;
+    totals.set(key, cur);
   });
   return totals;
 }
+
+const isLowTotal = t => !!t && t.qty <= (t.threshold ?? LOW_QTY);
 
 function renderAttention(items, totals) {
   const box = document.getElementById('attnBox');
@@ -3300,8 +3307,9 @@ function renderAttention(items, totals) {
   const flagged = items.map((it) => {
     const expDays = _expDaysOf(it);
     const key = stockProductKey(it);
-    const qty = totals.get(key) || 0;
-    const low = it._type !== 'device' && qty <= LOW_QTY;
+    const total = totals.get(key);
+    const qty = total?.qty || 0;
+    const low = it._type !== 'device' && isLowTotal(total);
     const exp = expDays !== null && expDays <= WARN_DAYS;
     return { it, key, qty, expDays, low, exp };
   }).filter(x => {
@@ -3479,7 +3487,7 @@ function renderStock() {
         : `<span class="badge-exp">${expDays} วัน</span>`;
     }
 
-    const lowBadge = (it._type !== 'device' && (totals.get(stockProductKey(it)) || 0) <= LOW_QTY)
+    const lowBadge = (it._type !== 'device' && isLowTotal(totals.get(stockProductKey(it))))
       ? `<span class="badge-low">สต็อกต่ำ</span>` : '';
 
     return `
