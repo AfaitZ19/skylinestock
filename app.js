@@ -757,6 +757,8 @@ function adaptTx(t) {
     _sheetRow: rowNo('tx', t.id, {}), _txId: t.id, _canEdit: t.canEditSalesDetail, _occurredAt: t.occurredAt || '',
     'Date': fmtDmy(t.occurredAt), 'Time': fmtHm(t.occurredAt), 'Type': TYPE_LABEL[t.stockType] || t.stockType,
     'Product Name': t.productName, 'Brand': t.brand, 'Serial / LOT': serialLotText(t.serialNumber, t.lotNumber),
+    // searched separately: 'Serial / LOT' shows only the SN of a device that also has a LOT
+    'Serial Number (SN)': t.serialNumber || '', 'LOT Number': t.lotNumber || '',
     'Action': ACTION_LABEL[t.txType] || t.txType, 'Location / Recipient': t.recipientName || '',
     'Recorded By': t.operatorName || '', 'Operator': t.operatorName || '', 'Purpose': t.purposeLabel || '',
     'Qty': t.qty, 'Before Qty': t.beforeQty ?? '', 'After Qty': t.afterQty ?? '', 'Note': t.note || '',
