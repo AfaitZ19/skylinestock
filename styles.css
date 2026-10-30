@@ -227,7 +227,7 @@ button{-webkit-tap-highlight-color:transparent}
 .empty{text-align:center;padding:36px 20px;color:var(--mu)}
 .empty-ic{font-size:36px;margin-bottom:8px}
 .toast{position:fixed;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);left:50%;transform:translateX(-50%);background:#1d2939;color:#fff;padding:11px 18px;border-radius:4px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:normal;max-width:92vw;text-align:center}
-.toast.on{opacity:1}.toast.ok{background:var(--G)}.toast.err{background:var(--R)}.toast.warn{background:var(--A)}
+.toast.on{opacity:1}.toast.ok{background:var(--G)}.toast.err{background:var(--R);display:block}.toast.warn{background:var(--A)}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(16,24,40,.5);z-index:500;display:none;align-items:flex-end;justify-content:center}

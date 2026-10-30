@@ -4289,7 +4289,7 @@ function toast(msg, type='ok') {
   el.textContent = msg;
   el.className = 'toast on ' + type;
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(() => { el.className = 'toast'; }, 2200);
+  window.__toastTimer = setTimeout(() => { el.className = 'toast'; }, 4000);
 }
 
 function escapeHtml(str) {
